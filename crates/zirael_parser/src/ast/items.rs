@@ -52,7 +52,7 @@ pub struct ConstItem {
 #[derive(Debug, Clone)]
 pub struct FunctionItem {
   pub id: NodeId,
-  pub is_const: bool,
+  pub is_comptime: bool,
   pub name: Identifier,
   pub generics: Option<GenericParams>,
   pub params: Vec<Param>,

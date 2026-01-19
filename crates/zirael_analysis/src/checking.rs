@@ -442,7 +442,7 @@ impl<'a> TyChecker<'a> {
         InferTy::Tuple(tys)
       }
 
-      ExprKind::Array(exprs) => {
+      ExprKind::Array(exprs, repeat) => {
         if exprs.is_empty() {
           InferTy::Array {
             ty: Box::new(self.infcx.fresh()),

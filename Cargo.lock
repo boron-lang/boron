@@ -1350,6 +1350,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "zirael_comptime"
+version = "0.1.0"
+dependencies = [
+ "zirael_diagnostic_macro",
+ "zirael_diagnostics",
+ "zirael_hir",
+ "zirael_resolver",
+ "zirael_utils",
+]
+
+[[package]]
 name = "zirael_core"
 version = "0.1.0"
 dependencies = [
@@ -1357,6 +1368,7 @@ dependencies = [
  "fs-err",
  "zirael_analysis",
  "zirael_c_compiler",
+ "zirael_comptime",
  "zirael_diagnostics",
  "zirael_hir",
  "zirael_parser",
@@ -1396,6 +1408,7 @@ name = "zirael_hir"
 version = "0.1.0"
 dependencies = [
  "dashmap 7.0.0-rc2",
+ "itertools",
  "zirael_diagnostics",
  "zirael_parser",
  "zirael_resolver",

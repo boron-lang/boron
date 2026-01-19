@@ -1,6 +1,8 @@
 use crate::prelude::*;
+use std::any::type_name;
 use std::process::exit;
 use zirael_analysis::{TypeTable, typeck_hir};
+use zirael_comptime::validator::validate_comptime;
 use zirael_hir::hir::Hir;
 use zirael_hir::lower::lower_to_hir;
 use zirael_parser::module::{Module, Modules};
@@ -37,9 +39,18 @@ impl<'ctx> CompilationUnit<'ctx> {
 
     self.resolver.build_import_graph(&self.modules);
     self.resolve_names();
-
     self.lower_to_hir();
+    self.validate_comptime();
+
     self.typeck();
+  }
+
+  fn validate_comptime(&mut self) {
+    let Some(hir) = &self.hir else { return };
+    let dcx = self.ctx.dcx();
+
+    validate_comptime(hir, dcx, &self.resolver);
+    self.emit_errors();
   }
 
   fn typeck(&mut self) {

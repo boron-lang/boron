@@ -33,6 +33,7 @@ pub enum TokenType {
   Var,       // var
   Const,     // const
   Mut,       // mut
+  Comptime,  // comptime
 
   // Modules
   Mod,       // mod
@@ -190,6 +191,7 @@ impl fmt::Display for TokenType {
       Self::Var => write!(f, "keyword `var`"),
       Self::Const => write!(f, "keyword `const`"),
       Self::Mut => write!(f, "keyword `mut`"),
+      Self::Comptime => write!(f, "keyword `comptime`"),
 
       // Keywords - Modules
       Self::Mod => write!(f, "keyword `mod`"),

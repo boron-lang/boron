@@ -14,7 +14,7 @@ pub struct Function {
   pub def_id: DefId,
   pub name: Identifier,
   pub visibility: Visibility,
-  pub is_const: bool,
+  pub is_comptime: bool,
   pub generics: Generics,
   pub params: Vec<Param>,
   pub return_type: Ty,

@@ -1,0 +1,4 @@
+//#error: compile time functions don't take generic parameters
+comptime func square<T>() {}
+
+func main() {}

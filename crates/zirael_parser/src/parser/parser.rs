@@ -14,6 +14,7 @@ pub const ITEM_TOKENS: &[TokenType] = &[
   TokenType::Const,
   TokenType::Func,
   TokenType::Import,
+  TokenType::Comptime,
 ];
 
 pub struct Parser<'dcx> {

@@ -1,4 +1,5 @@
 use crate::DefId;
+use crate::builtin_kind::BuiltInKind;
 use crate::def::{DefKind, Definition};
 use crate::errors::{
   DuplicateDefinition, InvalidPathRoot, UndefinedName, UndefinedNameInModule,
@@ -20,7 +21,7 @@ use zirael_parser::ast::types::Type;
 use zirael_parser::import::ImportDecl;
 use zirael_parser::module::Modules;
 use zirael_parser::{
-  BuiltinArg, ElseBranch, IfExpr, ImportKind, ImportSpec, NodeId, Path,
+  ComptimeArg, ElseBranch, IfExpr, ImportKind, ImportSpec, NodeId, Path,
   StructMember, VariantField, VariantPayload,
 };
 use zirael_source::prelude::{SourceFileId, Span};
@@ -997,19 +998,46 @@ impl<'a> ResolveVisitor<'a> {
         }
       }
 
-      ExprKind::Tuple(exprs) | ExprKind::Array { values: exprs, .. } => {
+      ExprKind::Array {
+        values: exprs,
+        repeat,
+      } => {
+        for e in exprs {
+          self.resolve_expr(e);
+        }
+
+        if let Some(repeat) = repeat {
+          self.resolve_expr(repeat)
+        }
+      }
+
+      ExprKind::Tuple(exprs) => {
         for e in exprs {
           self.resolve_expr(e);
         }
       }
 
-      ExprKind::Builtin { args, .. } => {
+      ExprKind::Comptime { callee, args } => {
+        if let ExprKind::Path(p) = &callee.kind
+          && p.segments.len() == 1
+        {
+          let name = p.segments[0].identifier.text();
+
+          if let Some(kind) = BuiltInKind::try_constructing(&name) {
+            self.resolver().record_comptime_builtin(callee.id, kind);
+          } else {
+            self.resolve_expr(callee);
+          }
+        } else {
+          self.resolve_expr(callee);
+        }
+
         for arg in args {
           match arg {
-            BuiltinArg::Expr(e) => {
+            ComptimeArg::Expr(e) => {
               self.resolve_expr(e);
             }
-            BuiltinArg::Type(t) => {
+            ComptimeArg::Type(t) => {
               self.resolve_type(t);
             }
           }

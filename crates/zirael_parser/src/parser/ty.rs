@@ -174,7 +174,7 @@ impl Parser<'_> {
     Type::Path(path)
   }
 
-  fn parse_function_type(&mut self, is_const: bool, span: Span) -> Type {
+  fn parse_function_type(&mut self, is_comptime: bool, span: Span) -> Type {
     let mut params = Vec::new();
 
     if self
@@ -207,7 +207,7 @@ impl Parser<'_> {
 
     Type::Function(FunctionType {
       id: NodeId::new(),
-      is_const,
+      is_comptime,
       params,
       return_type,
       span: self.span_from(span),

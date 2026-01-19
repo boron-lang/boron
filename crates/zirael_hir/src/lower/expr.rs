@@ -1,10 +1,13 @@
 use crate::expr::{
-  Block, Expr, ExprKind, FieldInit, Literal, Local, MatchArm, PathExpr,
-  PathSegment, Stmt, StmtKind,
+  Block, ComptimeArg, Expr, ExprKind, FieldInit, Literal, Local, MatchArm,
+  PathExpr, PathSegment, Stmt, StmtKind,
 };
 use crate::lower::context::LoweringContext;
 use crate::pat::{Pat, PatKind};
-use zirael_parser::ast::expressions::{self, ExprKind as AstExprKind};
+use itertools::Itertools;
+use zirael_parser::ast::expressions::{
+  self, ComptimeArg as AstComptimeArg, ExprKind as AstExprKind,
+};
 use zirael_parser::ast::statements;
 use zirael_source::prelude::Span;
 use zirael_utils::prelude::Identifier;
@@ -118,8 +121,13 @@ impl LoweringContext<'_> {
         ExprKind::Tuple(exprs.iter().map(|e| self.lower_expr(e)).collect())
       }
 
-      AstExprKind::Array { values, .. } => {
-        ExprKind::Array(values.iter().map(|e| self.lower_expr(e)).collect())
+      AstExprKind::Array { values, repeat } => {
+        let repeat = repeat.as_ref().map(|e| Box::new(self.lower_expr(e)));
+
+        ExprKind::Array(
+          values.iter().map(|e| self.lower_expr(e)).collect(),
+          repeat,
+        )
       }
 
       AstExprKind::Block(block) => ExprKind::Block(self.lower_block(block)),
@@ -174,7 +182,22 @@ impl LoweringContext<'_> {
         else_branch: Some(Box::new(self.lower_expr(else_expr))),
       },
 
-      AstExprKind::Builtin { name: _, args: _ } => todo!("handle builtins"),
+      AstExprKind::Comptime { callee, args } => {
+        let args = args
+          .iter()
+          .map(|a| match a {
+            AstComptimeArg::Expr(expr) => {
+              ComptimeArg::Expr(Box::new(self.lower_expr(expr)))
+            }
+            AstComptimeArg::Type(ty) => ComptimeArg::Type(self.lower_type(ty)),
+          })
+          .collect_vec();
+
+        ExprKind::Comptime {
+          callee: Box::new(self.lower_expr(callee)),
+          args,
+        }
+      }
     };
 
     Expr {

@@ -20,4 +20,5 @@ pub mod prelude {
   pub use crate::diagnostics::*;
   pub use crate::output_type::*;
   pub use anyhow::Result;
+  pub use crate::ctx::*;
 }

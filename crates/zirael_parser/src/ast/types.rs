@@ -118,7 +118,7 @@ pub struct FunctionType {
   pub params: Vec<Type>,
   pub return_type: Box<Type>,
   pub span: Span,
-  pub is_const: bool,
+  pub is_comptime: bool,
 }
 
 #[derive(Debug, Clone)]

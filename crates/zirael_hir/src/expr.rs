@@ -49,6 +49,11 @@ pub enum ExprKind {
     args: Vec<Expr>,
   },
 
+  Comptime {
+    callee: Box<Expr>,
+    args: Vec<ComptimeArg>,
+  },
+
   MethodCall {
     receiver: Box<Expr>,
     method: Identifier,
@@ -82,7 +87,7 @@ pub enum ExprKind {
   Tuple(Vec<Expr>),
 
   /// Array: `[1, 2, 3]`
-  Array(Vec<Expr>),
+  Array(Vec<Expr>, Option<Box<Expr>>),
 
   Block(Block),
 
@@ -112,6 +117,12 @@ pub enum ExprKind {
   },
 
   Err,
+}
+
+#[derive(Debug, Clone)]
+pub enum ComptimeArg {
+  Expr(Box<Expr>),
+  Type(Ty),
 }
 
 #[derive(Debug, Clone)]

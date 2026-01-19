@@ -70,7 +70,7 @@ impl Parser<'_> {
 
   fn parse_function(
     &mut self,
-    is_const: bool,
+    is_comptime: bool,
     span_start: Span,
   ) -> Option<FunctionItem> {
     let name = self.parse_identifier();
@@ -124,7 +124,7 @@ impl Parser<'_> {
 
     Some(FunctionItem {
       id: NodeId::new(),
-      is_const,
+      is_comptime,
       name,
       generics,
       params,
@@ -142,10 +142,6 @@ impl Parser<'_> {
 
   fn parse_const(&mut self, span: Span) -> Option<ItemKind> {
     match self.peek().kind {
-      TokenType::Func => Some(ItemKind::Function(log_parse_failure!(
-        self.parse_function(true, span),
-        "module item"
-      )?)),
       TokenType::Identifier(_) => {
         let ident = self.parse_identifier();
 
@@ -242,6 +238,27 @@ impl Parser<'_> {
           return None;
         } else {
           None
+        }
+      }
+      TokenType::Comptime => {
+        let span = self.peek().span;
+        match self.peek().kind {
+          TokenType::Func => {
+            self.eat(TokenType::Func);
+
+            Some(ItemKind::Function(log_parse_failure!(
+              self.parse_function(true, span),
+              "module item"
+            )?))
+          }
+          _ => {
+            self.expect(
+              TokenType::Func,
+              "after `comptime` only `func` is a valid keyword",
+            );
+            self.synchronize_to_next_item();
+            None
+          }
         }
       }
       TokenType::Const => {

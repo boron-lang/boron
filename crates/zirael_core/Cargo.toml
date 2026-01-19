@@ -17,6 +17,7 @@ zirael_c_compiler = { workspace = true }
 fs-err = { workspace = true }
 zirael_source = { workspace = true }
 zirael_analysis = { workspace = true }
+zirael_comptime = { workspace = true }
 
 [lints]
 workspace = true

@@ -173,6 +173,33 @@ impl Parser<'_> {
           },
           self.span_from(start),
         );
+      } else if self.eat(TokenType::Not) {
+        self.expect(TokenType::LeftParen, "after builtin name");
+
+        let mut args = vec![];
+        while !self.check(TokenType::RightParen) && !self.is_at_end() {
+          if self.is_type_start() {
+            let ty = self.parse_type();
+            args.push(ComptimeArg::Type(ty));
+          } else {
+            let expr = self.parse_expr();
+            args.push(ComptimeArg::Expr(expr));
+          }
+
+          if !self.eat(TokenType::Comma) {
+            break;
+          }
+        }
+
+        self.expect(TokenType::RightParen, "to close builtin call");
+
+        expr = Expr::new_const(
+          ExprKind::Comptime {
+            callee: Box::new(expr),
+            args,
+          },
+          self.span_from(start),
+        );
       } else if self.eat(TokenType::Dot) {
         // Field access or tuple index
         if self.is_identifier() {
@@ -270,8 +297,6 @@ impl Parser<'_> {
       TokenType::Break => self.parse_break_expr(),
       TokenType::Continue => self.parse_continue_expr(),
       TokenType::Return => self.parse_return_expr(),
-
-      TokenType::At => self.parse_builtin_expr(),
 
       TokenType::Identifier(_) | TokenType::Package | TokenType::Super => {
         self.parse_path_or_struct_expr()
@@ -1008,43 +1033,6 @@ impl Parser<'_> {
         | TokenType::Plus
         | TokenType::At
     )
-  }
-
-  fn parse_builtin_expr(&mut self) -> Expr {
-    let start = self.current_span();
-    self.eat(TokenType::At);
-
-    if !self.is_identifier() {
-      self.emit(ExpectedBuiltinName {
-        found: self.peek().kind.clone(),
-        span: self.peek().span,
-      });
-      return Expr::dummy();
-    }
-
-    let name = self.parse_identifier();
-
-    self.expect(TokenType::LeftParen, "after builtin name");
-
-    let mut args = vec![];
-
-    while !self.check(TokenType::RightParen) && !self.is_at_end() {
-      if self.is_type_start() {
-        let ty = self.parse_type();
-        args.push(BuiltinArg::Type(ty));
-      } else {
-        let expr = self.parse_expr();
-        args.push(BuiltinArg::Expr(expr));
-      }
-
-      if !self.eat(TokenType::Comma) {
-        break;
-      }
-    }
-
-    self.expect(TokenType::RightParen, "to close builtin call");
-
-    Expr::new_const(ExprKind::Builtin { name, args }, self.span_from(start))
   }
 
   fn is_type_start(&self) -> bool {

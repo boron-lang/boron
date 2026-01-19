@@ -94,9 +94,9 @@ pub enum ExprKind {
   Return(ReturnExpr),
 
   Range(RangeExpr),
-  Builtin {
-    name: Identifier,
-    args: Vec<BuiltinArg>,
+  Comptime {
+    callee: Box<Expr>,
+    args: Vec<ComptimeArg>,
   },
 
   // Composite literals
@@ -225,7 +225,7 @@ pub struct RangeExpr {
 }
 
 #[derive(Debug, Clone)]
-pub enum BuiltinArg {
+pub enum ComptimeArg {
   Type(Type),
   Expr(Expr),
 }
