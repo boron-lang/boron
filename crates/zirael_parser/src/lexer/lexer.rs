@@ -138,6 +138,7 @@ impl<'ctx> Lexer<'ctx> {
 
       // Byte literal (b'...')
       Some('b') if self.peek_ahead(1) == Some('\'') => self.lex_byte(),
+      Some('b') if self.peek_ahead(1) == Some('\"') => self.lex_byte_string(),
 
       // Character literal
       Some('\'') => self.lex_char(),

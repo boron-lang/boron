@@ -6,7 +6,6 @@ use zirael_source::prelude::SourceFileId;
 
 pub struct LoweringContext<'a> {
   pub resolver: &'a Resolver,
-  /// The HIR being built.
   pub hir: &'a Hir,
   pub source_file: SourceFileId,
   pub current_owner: Option<DefId>,

@@ -37,7 +37,7 @@ pub struct PrimitiveType {
   pub span: Span,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PrimitiveKind {
   // Signed integers
   I8,
@@ -106,7 +106,7 @@ impl PrimitiveKind {
   }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Mutability {
   Mut,
   Const,

@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter};
 use zirael_parser::ast::types::{Mutability, PrimitiveKind};
 use zirael_resolver::DefId;
 use zirael_utils::ident_table::Identifier;
@@ -48,6 +49,12 @@ pub enum InferTy {
     name: Identifier,
   },
   Err,
+}
+
+impl Display for InferTy {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    todo!()
+  }
 }
 
 impl InferTy {

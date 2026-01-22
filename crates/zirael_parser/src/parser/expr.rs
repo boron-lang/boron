@@ -8,7 +8,7 @@ use crate::parser::errors::{
   InvalidRepeatSyntax, MissingColonInTernary, MissingInKeyword,
   RepeatSyntaxOnlyAtStart, RepeatSyntaxRequiredValue,
 };
-use crate::{NodeId, Path, PathSegment, TokenType};
+use crate::{IntBase, NodeId, Path, PathSegment, TokenType};
 use std::collections::HashMap;
 use zirael_source::prelude::Span;
 use zirael_utils::prelude::Identifier;
@@ -211,10 +211,12 @@ impl Parser<'_> {
             },
             self.span_from(start),
           );
-        } else if let TokenType::IntegerLiteral(base) = &self.peek().kind {
+        } else if let TokenType::IntegerLiteral(base, digits) =
+          &self.peek().kind
+        {
           // tuple field access
-          let value = if let LexIntBase::Decimal(s) = base {
-            s.clone()
+          let value = if let LexIntBase::Decimal = base {
+            digits.clone()
           } else {
             self.emit(ExpectedFieldName {
               found: self.peek().kind.clone(),
@@ -270,7 +272,7 @@ impl Parser<'_> {
 
     match &token.kind {
       // Literals
-      TokenType::IntegerLiteral(_) => self.parse_int_literal(),
+      TokenType::IntegerLiteral(..) => self.parse_int_literal(),
       TokenType::FloatLiteral(_) => self.parse_float_literal(),
       TokenType::StringLiteral(_) => self.parse_string_literal(),
       TokenType::CharLiteral(_) => self.parse_char_literal(),
@@ -316,12 +318,12 @@ impl Parser<'_> {
     let start = self.current_span();
     let token = self.advance();
 
-    if let TokenType::IntegerLiteral(base) = token.kind {
+    if let TokenType::IntegerLiteral(base, digits) = token.kind {
       let (value, int_base) = match base {
-        LexIntBase::Decimal(s) => (s, IntBase::Decimal),
-        LexIntBase::Binary(s) => (s, IntBase::Binary),
-        LexIntBase::Octal(s) => (s, IntBase::Octal),
-        LexIntBase::Hexadecimal(s) => (s, IntBase::Hexadecimal),
+        LexIntBase::Decimal => (digits, IntBase::Decimal),
+        LexIntBase::Binary => (digits, IntBase::Binary),
+        LexIntBase::Octal => (digits, IntBase::Octal),
+        LexIntBase::Hexadecimal => (digits, IntBase::Hexadecimal),
       };
 
       let suffix = IntSuffix::parse_int_suffix(&token.lexeme, &value);
@@ -510,7 +512,8 @@ impl Parser<'_> {
     let first_elem = self.parse_expr();
 
     if self.eat(TokenType::Semicolon) {
-      let repeat_count = self.parse_const_expr();
+      let mut repeat_count = self.parse_const_expr();
+      repeat_count.is_const = true;
 
       if self.eat(TokenType::Comma) || self.check(TokenType::Semicolon) {
         let error_start = self.peek().span;
@@ -738,7 +741,7 @@ impl Parser<'_> {
           span: token.span,
         }))
       }
-      TokenType::IntegerLiteral(_) => {
+      TokenType::IntegerLiteral(..) => {
         let expr = self.parse_int_literal();
         if let ExprKind::Literal(lit) = expr.kind {
           Pattern::Literal(lit)
@@ -1011,7 +1014,7 @@ impl Parser<'_> {
   fn is_range_end_start(&self) -> bool {
     matches!(
       self.peek().kind,
-      TokenType::IntegerLiteral(_)
+      TokenType::IntegerLiteral(..)
         | TokenType::FloatLiteral(_)
         | TokenType::StringLiteral(_)
         | TokenType::CharLiteral(_)

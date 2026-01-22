@@ -127,7 +127,7 @@ impl Parser<'_> {
       self.advance_until_one_of(&[TokenType::RightBracket]);
     }
 
-    let size = self.parse_array_size_expr();
+    let size = self.parse_const_expr();
 
     self.expect(TokenType::RightBracket, "to close array type");
 
@@ -137,18 +137,6 @@ impl Parser<'_> {
       size,
       span: self.span_from(start),
     })
-  }
-
-  fn parse_array_size_expr(&mut self) -> Expr {
-    if self.check(TokenType::RightBracket) || self.is_at_end() {
-      return Expr::dummy();
-    }
-
-    while !self.check(TokenType::RightBracket) && !self.is_at_end() {
-      self.advance();
-    }
-
-    Expr::dummy()
   }
 
   fn parse_identifier_type(&mut self, start: Span, name: String) -> Type {

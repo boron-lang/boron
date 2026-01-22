@@ -1,8 +1,8 @@
 use crate::prelude::*;
 use std::any::type_name;
 use std::process::exit;
+use zirael_analysis::validator::validate_comptime;
 use zirael_analysis::{TypeTable, typeck_hir};
-use zirael_comptime::validator::validate_comptime;
 use zirael_hir::hir::Hir;
 use zirael_hir::lower::lower_to_hir;
 use zirael_parser::module::{Module, Modules};
@@ -100,6 +100,7 @@ impl<'ctx> CompilationUnit<'ctx> {
       return None;
     }
     let node = node.expect("handle correctly");
+
     let module = Module::new(id, node);
     self.modules.add(module);
 

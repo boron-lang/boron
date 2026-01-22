@@ -47,7 +47,6 @@ zirael_source = { path = "crates/zirael_source" }
 zirael_utils = { path = "crates/zirael_utils" }
 zirael_hir = { path = "crates/zirael_hir" }
 zirael_analysis = { path = "crates/zirael_analysis" }
-zirael_comptime = { path = "crates/zirael_comptime" }
 
 [workspace.lints.rust]
 unsafe_code = "deny"

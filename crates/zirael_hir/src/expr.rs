@@ -3,7 +3,7 @@ use crate::pat::Pat;
 use crate::ty::Ty;
 use zirael_parser::ast::expressions::{AssignOp, BinaryOp, UnaryOp};
 use zirael_parser::ast::types::Mutability;
-use zirael_parser::{FloatSuffix, IntSuffix, expressions::IntBase};
+use zirael_parser::{FloatSuffix, IntBase, IntSuffix};
 use zirael_resolver::DefId;
 use zirael_utils::ident_table::Identifier;
 use zirael_utils::prelude::Span;
@@ -200,7 +200,6 @@ pub enum Literal {
   },
   Bool(bool),
   Char(char),
-  Byte(u8),
   String(String),
   Unit,
 }

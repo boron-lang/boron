@@ -60,7 +60,7 @@ impl Lexer<'_> {
     let span = self.make_span(start_offset);
 
     Ok(Token::new(
-      TokenType::IntegerLiteral(IntBase::Binary(digits)),
+      TokenType::IntegerLiteral(IntBase::Binary, digits),
       span,
       lexeme,
     ))
@@ -112,7 +112,7 @@ impl Lexer<'_> {
     let span = self.make_span(start_offset);
 
     Ok(Token::new(
-      TokenType::IntegerLiteral(IntBase::Octal(digits)),
+      TokenType::IntegerLiteral(IntBase::Octal, digits),
       span,
       lexeme,
     ))
@@ -161,7 +161,7 @@ impl Lexer<'_> {
     let span = self.make_span(start_offset);
 
     Ok(Token::new(
-      TokenType::IntegerLiteral(IntBase::Hexadecimal(digits)),
+      TokenType::IntegerLiteral(IntBase::Hexadecimal, digits),
       span,
       lexeme,
     ))
@@ -229,7 +229,7 @@ impl Lexer<'_> {
     let token_type = if has_dot || has_exponent {
       TokenType::FloatLiteral(lexeme.clone())
     } else {
-      TokenType::IntegerLiteral(IntBase::Decimal(lexeme.clone()))
+      TokenType::IntegerLiteral(IntBase::Decimal, lexeme.clone())
     };
 
     Ok(Token::new(token_type, span, lexeme))

@@ -1,13 +1,16 @@
-func identity<T>(value: T) -> T {
-    value
-}
+//func identity<T>(value: T) -> T {
+//    value
+//}
 
-comptime func square(a: i32) -> i32 {
-    return a * a;
-}
+//comptime func square(a: i32) -> i32 {
+//    return a * a;
+//}
+
+//func x(t: [i32; 10 + 10]) {}
+
+const ARRAY_LEN: i32 = 10;
 
 pub func test() {
-    var a = identity(10);
-    var b = square!(20);
-    var c = sizeOf!(i32);
+    var array: [i32; ARRAY_LEN + 10 / 0] = [10, 20];
+    var a = 0.1;
 }

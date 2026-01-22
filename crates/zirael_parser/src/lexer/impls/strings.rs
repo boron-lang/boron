@@ -281,4 +281,92 @@ impl Lexer<'_> {
       lexeme,
     ))
   }
+
+  pub(crate) fn lex_byte_string(&mut self) -> LexResult<Token> {
+    let start_offset = self.offset;
+    let mut lexeme = String::from("b\"");
+    let mut bytes = Vec::new();
+
+    self.advance();
+    self.advance();
+
+    loop {
+      match self.peek() {
+        None => {
+          let span = self.make_span(start_offset);
+          return Err(LexError::new(LexErrorKind::UnterminatedString, span));
+        }
+        Some('\r') => {
+          lexeme.push('\r');
+          self.advance();
+          if self.peek() == Some('\n') {
+            lexeme.push('\n');
+            self.advance();
+          }
+          let span = self.make_span(start_offset);
+          return Err(LexError::new(LexErrorKind::UnterminatedString, span));
+        }
+        Some('\n') => {
+          let span = self.make_span(start_offset);
+          return Err(LexError::new(LexErrorKind::UnterminatedString, span));
+        }
+        Some('"') => {
+          lexeme.push('"');
+          self.advance();
+          break;
+        }
+        Some('\\') => {
+          lexeme.push('\\');
+          self.advance();
+          match self.parse_escape_sequence(false) {
+            Ok(escaped) => {
+              lexeme.push_str(&escaped);
+              let ch = escaped.chars().next().unwrap();
+              let value = ch as u32;
+
+              if value > 255 {
+                let span = self.make_span(start_offset);
+                self.dcx.emit(LexError::new(
+                  LexErrorKind::InvalidByteValue { value },
+                  span,
+                ));
+                bytes.push(0);
+              } else {
+                bytes.push(value as u8);
+              }
+            }
+            Err(err) => {
+              self.dcx.emit(err);
+              bytes.push(0);
+            }
+          }
+        }
+        Some(ch) => {
+          let value = ch as u32;
+
+          if value > 255 {
+            let span = self.make_span(start_offset);
+            self.dcx.emit(LexError::new(
+              LexErrorKind::InvalidByteValue { value },
+              span,
+            ));
+            bytes.push(0);
+          } else {
+            bytes.push(value as u8);
+          }
+
+          lexeme.push(ch);
+          self.advance();
+        }
+      }
+    }
+
+    let span = self.make_span(start_offset);
+
+    Ok(Token::new(
+      TokenType::ByteStringLiteral(bytes),
+      span,
+      lexeme,
+    ))
+  }
 }

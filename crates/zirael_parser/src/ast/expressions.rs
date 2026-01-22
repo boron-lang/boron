@@ -2,6 +2,7 @@ use crate::ast::NodeId;
 use crate::ast::import::Path;
 use crate::ast::statements::Block;
 use crate::ast::types::{Mutability, Type};
+use crate::{IntBase, PrimitiveKind};
 use zirael_utils::ident_table::Identifier;
 use zirael_utils::prelude::Span;
 
@@ -280,16 +281,16 @@ pub enum BinaryOp {
 impl BinaryOp {
   pub fn precedence(&self) -> u8 {
     match self {
-      Self::Or => 12,
-      Self::And => 11,
-      Self::BitOr => 10,
-      Self::BitXor => 9,
-      Self::BitAnd => 8,
-      Self::Eq | Self::Ne => 7,
-      Self::Lt | Self::Le | Self::Gt | Self::Ge => 6,
-      Self::Shl | Self::Shr => 5,
-      Self::Add | Self::Sub => 4,
-      Self::Mul | Self::Div | Self::Mod => 3,
+      Self::Or => 1,
+      Self::And => 2,
+      Self::BitOr => 3,
+      Self::BitXor => 4,
+      Self::BitAnd => 5,
+      Self::Eq | Self::Ne => 6,
+      Self::Lt | Self::Le | Self::Gt | Self::Ge => 7,
+      Self::Shl | Self::Shr => 8,
+      Self::Add | Self::Sub => 9,
+      Self::Mul | Self::Div | Self::Mod => 10,
     }
   }
 
@@ -394,6 +395,7 @@ pub enum Literal {
   String(StringLit),
   Char(CharLit),
   Byte(ByteLit),
+  ByteString(ByteStringLit),
   Bool(BoolLit),
   Unit(UnitLit),
 }
@@ -414,14 +416,6 @@ pub struct IntLit {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum IntBase {
-  Decimal,
-  Binary,
-  Octal,
-  Hexadecimal,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum IntSuffix {
   I8,
   I16,
@@ -438,8 +432,7 @@ pub enum IntSuffix {
 }
 
 impl IntSuffix {
-  pub fn to_primitive_kind(&self) -> crate::ast::types::PrimitiveKind {
-    use crate::ast::types::PrimitiveKind;
+  pub fn to_primitive_kind(&self) -> PrimitiveKind {
     match self {
       Self::I8 => PrimitiveKind::I8,
       Self::I16 => PrimitiveKind::I16,
@@ -502,8 +495,7 @@ pub enum FloatSuffix {
 }
 
 impl FloatSuffix {
-  pub fn to_primitive_kind(&self) -> crate::ast::types::PrimitiveKind {
-    use crate::ast::types::PrimitiveKind;
+  pub fn to_primitive_kind(&self) -> PrimitiveKind {
     match self {
       Self::F32 => PrimitiveKind::F32,
       Self::F64 => PrimitiveKind::F64,
@@ -539,5 +531,13 @@ pub struct ByteLit {
 pub struct BoolLit {
   pub id: NodeId,
   pub value: bool,
+  pub span: Span,
+}
+
+#[derive(Debug, Clone)]
+pub struct ByteStringLit {
+  pub id: NodeId,
+  pub value: Vec<u8>,
+  pub raw: String,
   pub span: Span,
 }

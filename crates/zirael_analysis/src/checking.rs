@@ -1,7 +1,11 @@
-use std::collections::HashMap;
-
+use crate::errors::ArrayLenNotANumber;
+use crate::interpreter::{
+  Interpreter, InterpreterCache, InterpreterContext, InterpreterMode,
+  values::ConstValue,
+};
 use crate::table::{InferCtx, TypeEnv, TypeTable};
 use crate::ty::{Expectation, InferTy, TyVar, TyVarKind, TypeScheme};
+use std::collections::HashMap;
 use zirael_diagnostics::DiagnosticCtx;
 use zirael_hir::expr::PathExpr;
 use zirael_hir::ty::ArrayLen;
@@ -46,6 +50,7 @@ pub struct TyChecker<'a> {
   pub resolver: &'a Resolver,
   pub table: TypeTable,
   pub infcx: InferCtx,
+  pub interpreter_cache: InterpreterCache,
 }
 
 impl<'a> TyChecker<'a> {
@@ -60,6 +65,7 @@ impl<'a> TyChecker<'a> {
       resolver,
       table: TypeTable::new(),
       infcx: InferCtx::new(),
+      interpreter_cache: InterpreterCache::new(),
     }
   }
 
@@ -230,6 +236,21 @@ impl<'a> TyChecker<'a> {
     TypeScheme::mono(fn_ty)
   }
 
+  fn new_interpreter(
+    &'a self,
+    mode: InterpreterMode,
+    ctx: InterpreterContext,
+  ) -> Interpreter<'a> {
+    Interpreter::new(
+      self.dcx(),
+      &self.interpreter_cache,
+      self.resolver,
+      self.hir,
+      mode,
+      ctx,
+    )
+  }
+
   fn lower_hir_ty(&self, ty: &Ty) -> InferTy {
     match &ty.kind {
       TyKind::Infer => self.infcx.fresh(),
@@ -262,7 +283,26 @@ impl<'a> TyChecker<'a> {
       TyKind::Array { ty, len } => {
         let array_len = match len {
           ArrayLen::Const(n) => *n,
-          ArrayLen::ConstExpr(_) => 0, // TODO: Evaluate const expression
+          ArrayLen::ConstExpr(expr) => {
+            let value = self
+              .new_interpreter(
+                InterpreterMode::Const,
+                InterpreterContext::ArrayLen,
+              )
+              .evaluate_expr(expr);
+
+            match value {
+              ConstValue::Int(i) => i as usize,
+              ConstValue::Poison => 0,
+              _ => {
+                self.dcx().emit(ArrayLenNotANumber {
+                  found: value.to_string(),
+                  span: expr.span,
+                });
+                0
+              }
+            }
+          }
         };
         InferTy::Array {
           ty: Box::new(self.lower_hir_ty(ty)),
@@ -546,12 +586,17 @@ impl<'a> TyChecker<'a> {
         mutability: Mutability::Const,
         ty: Box::new(InferTy::Primitive(PrimitiveKind::U8)),
       },
-      Literal::Byte(_) => InferTy::Primitive(PrimitiveKind::U8),
       Literal::Unit => InferTy::Unit,
     }
   }
 
   fn check_path(&self, path: &PathExpr, env: &TypeEnv) -> InferTy {
+    if let Some(cnst) = self.hir.get_const(path.def_id) {
+      let _ = self
+        .new_interpreter(InterpreterMode::Const, InterpreterContext::Const)
+        .evaluate_const(&cnst);
+    }
+
     if let Some(ty) = env.lookup(path.def_id) {
       return ty.clone();
     }

@@ -1,0 +1,6 @@
+//#error: attempted to divide `{}` by 0
+const X: i32 = 10 / 0;
+
+func main() {
+    var val = X + 10;
+}

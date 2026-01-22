@@ -13,6 +13,9 @@ zirael_resolver = { workspace = true }
 zirael_utils = { workspace = true }
 dashmap = { workspace = true }
 parking_lot = { workspace = true }
+num-bigint = "0.4.6"
+zirael_diagnostic_macro = { workspace = true }
+num-traits = "0.2.19"
 
 [lints]
 workspace = true
