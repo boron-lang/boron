@@ -70,7 +70,7 @@ impl Parser<'_> {
 
   fn parse_function(
     &mut self,
-    is_const: bool,
+    is_comptime: bool,
     span_start: Span,
   ) -> Option<FunctionItem> {
     let name = self.parse_identifier();
@@ -124,7 +124,7 @@ impl Parser<'_> {
 
     Some(FunctionItem {
       id: NodeId::new(),
-      is_const,
+      is_comptime,
       name,
       generics,
       params,
@@ -141,57 +141,49 @@ impl Parser<'_> {
   }
 
   fn parse_const(&mut self, span: Span) -> Option<ItemKind> {
-    match self.peek().kind {
-      TokenType::Func => Some(ItemKind::Function(log_parse_failure!(
-        self.parse_function(true, span),
-        "module item"
-      )?)),
-      TokenType::Identifier(_) => {
-        let ident = self.parse_identifier();
+    if let TokenType::Identifier(_) = self.peek().kind {
+      let ident = self.parse_identifier();
 
-        let colon = self.eat(TokenType::Colon);
-        let ty = if !colon {
+      let colon = self.eat(TokenType::Colon);
+      let ty = if !colon {
+        self.emit(ConstItemsNeedTypeAnnotation {
+          span: self.previous().span,
+        });
+        Type::Invalid
+      } else {
+        let ty = self.parse_type();
+        if matches!(ty, Type::Invalid) {
           self.emit(ConstItemsNeedTypeAnnotation {
             span: self.previous().span,
           });
-          Type::Invalid
-        } else {
-          let ty = self.parse_type();
-          if matches!(ty, Type::Invalid) {
-            self.emit(ConstItemsNeedTypeAnnotation {
-              span: self.previous().span,
-            });
-          }
+        }
 
-          ty
-        };
+        ty
+      };
 
-        let expr = if !self.eat(TokenType::Assign) {
-          self.emit(ConstCannotBeUninitialized {
-            span: self.peek().span,
-          });
-          Expr::dummy()
-        } else {
-          self.parse_expr()
-        };
-
-        Some(ItemKind::Const(ConstItem {
-          id: NodeId::new(),
-          name: ident,
-          ty,
-          value: expr,
-          span: self.span_from(span),
-        }))
-      }
-
-      _ => {
-        self.emit(ConstExpectedFuncOrIdent {
+      let expr = if !self.eat(TokenType::Assign) {
+        self.emit(ConstCannotBeUninitialized {
           span: self.peek().span,
-          found: self.peek().kind.clone(),
         });
+        Expr::dummy()
+      } else {
+        self.parse_expr()
+      };
 
-        None
-      }
+      Some(ItemKind::Const(ConstItem {
+        id: NodeId::new(),
+        name: ident,
+        ty,
+        value: expr,
+        span: self.span_from(span),
+      }))
+    } else {
+      self.emit(ConstExpectedFuncOrIdent {
+        span: self.peek().span,
+        found: self.peek().kind.clone(),
+      });
+
+      None
     }
   }
 
@@ -241,6 +233,24 @@ impl Parser<'_> {
           self.eat_semis();
           return None;
         } else {
+          None
+        }
+      }
+      TokenType::Comptime => {
+        let span = self.peek().span;
+        if self.peek().kind == TokenType::Func {
+          self.eat(TokenType::Func);
+
+          Some(ItemKind::Function(log_parse_failure!(
+            self.parse_function(true, span),
+            "module item"
+          )?))
+        } else {
+          self.expect(
+            TokenType::Func,
+            "after `comptime` only `func` is a valid keyword",
+          );
+          self.synchronize_to_next_item();
           None
         }
       }
@@ -328,7 +338,7 @@ impl Parser<'_> {
           self.advance();
           let _ = self.parse_identifier();
 
-          self.emit(AliasingABinding { span })
+          self.emit(AliasingABinding { span });
         }
 
         ImportKind::Binding(identifier)

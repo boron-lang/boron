@@ -1,29 +1,27 @@
 use crate::{InferTy, TyChecker, TyVarKind, UnifyError, UnifyResult};
-use zirael_utils::prelude::Span;
 
 impl TyChecker<'_> {
-  pub fn unify(&self, a: &InferTy, b: &InferTy, span: Span) -> UnifyResult {
+  #[must_use = "the caller should handle the result"]
+  pub fn unify(&self, a: &InferTy, b: &InferTy) -> UnifyResult {
     let a = self.infcx.resolve(a);
     let b = self.infcx.resolve(b);
 
     match (&a, &b) {
       _ if a == b => UnifyResult::Ok,
 
-      (InferTy::Err, _) | (_, InferTy::Err) => UnifyResult::Ok,
+      (InferTy::Err(_), _) | (_, InferTy::Err(_)) => UnifyResult::Ok,
 
-      (InferTy::Never, _) | (_, InferTy::Never) => UnifyResult::Ok,
+      (InferTy::Never(_), _) | (_, InferTy::Never(_)) => UnifyResult::Ok,
 
-      (InferTy::Var(v1), InferTy::Var(v2)) => {
+      (InferTy::Var(v1, _), InferTy::Var(v2, _)) => {
         let k1 = self.infcx.var_kind(*v1);
         let k2 = self.infcx.var_kind(*v2);
 
         match (k1, k2) {
-          (TyVarKind::General, TyVarKind::Integer)
-          | (TyVarKind::General, TyVarKind::Float) => {
+          (TyVarKind::General, TyVarKind::Integer | TyVarKind::Float) => {
             self.infcx.unify_var(*v1, b.clone());
           }
-          (TyVarKind::Integer, TyVarKind::General)
-          | (TyVarKind::Float, TyVarKind::General) => {
+          (TyVarKind::Integer | TyVarKind::Float, TyVarKind::General) => {
             self.infcx.unify_var(*v2, a.clone());
           }
           (TyVarKind::Integer, TyVarKind::Float)
@@ -40,7 +38,7 @@ impl TyChecker<'_> {
         UnifyResult::Ok
       }
 
-      (InferTy::Var(v), t) | (t, InferTy::Var(v)) => {
+      (InferTy::Var(v, span), t) | (t, InferTy::Var(v, span)) => {
         if t.has_vars() {
           // TODO: Proper occurs check
         }
@@ -49,14 +47,18 @@ impl TyChecker<'_> {
         match kind {
           TyVarKind::Integer => {
             if !t.is_integer() {
-              return UnifyResult::Err(UnifyError::NotAnInteger {
-                ty: t.clone(),
+              return UnifyResult::Err(UnifyError::Mismatch {
+                expected: t.clone(),
+                found: InferTy::Var(*v, *span),
               });
             }
           }
           TyVarKind::Float => {
             if !t.is_float() {
-              return UnifyResult::Err(UnifyError::NotAFloat { ty: t.clone() });
+              return UnifyResult::Err(UnifyError::Mismatch {
+                expected: t.clone(),
+                found: InferTy::Var(*v, *span),
+              });
             }
           }
           TyVarKind::General => {}
@@ -70,41 +72,53 @@ impl TyChecker<'_> {
         InferTy::Ptr {
           mutability: m1,
           ty: t1,
+          span: span1,
         },
         InferTy::Ptr {
           mutability: m2,
           ty: t2,
+          span: span2,
         },
       ) => {
         if m1 != m2 {
+          //todo: with span
           return UnifyResult::Err(UnifyError::MutabilityMismatch {
             expected: *m1,
             found: *m2,
           });
         }
-        self.unify(t1, t2, span)
+        self.unify(t1, t2)
       }
 
-      (InferTy::Optional(t1), InferTy::Optional(t2)) => {
-        self.unify(t1, t2, span)
+      (InferTy::Optional(t1, _), InferTy::Optional(t2, _)) => {
+        self.unify(t1, t2)
       }
 
       (
-        InferTy::Array { ty: t1, len: l1 },
-        InferTy::Array { ty: t2, len: l2 },
+        InferTy::Array {
+          ty: t1,
+          len: l1,
+          span: span1,
+        },
+        InferTy::Array {
+          ty: t2,
+          len: l2,
+          span: span2,
+        },
       ) => {
         if l1 != l2 {
+          // todo: carry span
           return UnifyResult::Err(UnifyError::ArrayLenMismatch {
             expected: *l1,
             found: *l2,
           });
         }
-        self.unify(t1, t2, span)
+        self.unify(t1, t2)
       }
 
-      (InferTy::Slice(t1), InferTy::Slice(t2)) => self.unify(t1, t2, span),
+      (InferTy::Slice(t1, _), InferTy::Slice(t2, _)) => self.unify(t1, t2),
 
-      (InferTy::Tuple(ts1), InferTy::Tuple(ts2)) => {
+      (InferTy::Tuple(ts1, span1), InferTy::Tuple(ts2, span2)) => {
         if ts1.len() != ts2.len() {
           return UnifyResult::Err(UnifyError::ArityMismatch {
             expected: ts1.len(),
@@ -112,7 +126,7 @@ impl TyChecker<'_> {
           });
         }
         for (t1, t2) in ts1.iter().zip(ts2.iter()) {
-          let result = self.unify(t1, t2, span);
+          let result = self.unify(t1, t2);
           if result.is_err() {
             return result;
           }
@@ -124,10 +138,12 @@ impl TyChecker<'_> {
         InferTy::Fn {
           params: p1,
           ret: r1,
+          span: span1,
         },
         InferTy::Fn {
           params: p2,
           ret: r2,
+          span: span2,
         },
       ) => {
         if p1.len() != p2.len() {
@@ -137,22 +153,24 @@ impl TyChecker<'_> {
           });
         }
         for (t1, t2) in p1.iter().zip(p2.iter()) {
-          let result = self.unify(t1, t2, span);
+          let result = self.unify(t1, t2);
           if result.is_err() {
             return result;
           }
         }
-        self.unify(r1, r2, span)
+        self.unify(r1, r2)
       }
 
       (
         InferTy::Adt {
           def_id: d1,
           args: a1,
+          span: span1,
         },
         InferTy::Adt {
           def_id: d2,
           args: a2,
+          span: span2,
         },
       ) => {
         if d1 != d2 {
@@ -168,7 +186,7 @@ impl TyChecker<'_> {
           });
         }
         for (t1, t2) in a1.iter().zip(a2.iter()) {
-          let result = self.unify(t1, t2, span);
+          let result = self.unify(t1, t2);
           if result.is_err() {
             return result;
           }

@@ -1,7 +1,13 @@
+mod builtin;
 mod checking;
+mod errors;
+pub mod interpreter;
+mod literals;
 mod table;
 mod ty;
+mod ty_formatter;
 mod unify;
+pub mod validator;
 
 pub use checking::{TyChecker, typeck_hir};
 pub use table::{Constraint, ConstraintKind, InferCtx, TypeEnv, TypeTable};

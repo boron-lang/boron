@@ -4,11 +4,12 @@ use zirael_utils::prelude::Span;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenType {
   // Literals
-  StringLiteral(String),   // "hello"
-  ByteLiteral(u8),         // b'A'
-  CharLiteral(char),       // 'x'
-  IntegerLiteral(IntBase), // 123, 0xFF, 0b1010
-  FloatLiteral(String),    // 3.14, 1e-10
+  StringLiteral(String),           // "hello"
+  ByteLiteral(u8),                 // b'A'
+  ByteStringLiteral(Vec<u8>),      // b"hello"
+  CharLiteral(char),               // 'x'
+  IntegerLiteral(IntBase, String), // 123, 0xFF, 0b1010
+  FloatLiteral(String),            // 3.14, 1e-10
 
   // Keywords
   // Control flow
@@ -33,6 +34,7 @@ pub enum TokenType {
   Var,       // var
   Const,     // const
   Mut,       // mut
+  Comptime,  // comptime
 
   // Modules
   Mod,       // mod
@@ -130,13 +132,23 @@ pub enum TokenType {
   Eof, // end of file
 }
 
-/// Integer literal base
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum IntBase {
-  Decimal(String),     // 123
-  Binary(String),      // 0b1010
-  Octal(String),       // 0o77
-  Hexadecimal(String), // 0xFF
+  Decimal,
+  Binary,
+  Octal,
+  Hexadecimal,
+}
+
+impl IntBase {
+  pub fn radix(&self) -> u32 {
+    match self {
+      Self::Binary => 2,
+      Self::Octal => 8,
+      Self::Decimal => 10,
+      Self::Hexadecimal => 16,
+    }
+  }
 }
 
 #[derive(Debug, Clone)]
@@ -162,8 +174,13 @@ impl fmt::Display for TokenType {
       // Literals
       Self::StringLiteral(s) => write!(f, "string literal \"{s}\""),
       Self::ByteLiteral(b) => write!(f, "byte literal b'{}'", *b as char),
+      Self::ByteStringLiteral(bytes) => write!(
+        f,
+        "byte string literal b\"{}\"",
+        String::from_utf8(bytes.clone()).unwrap_or("error".to_owned())
+      ),
       Self::CharLiteral(c) => write!(f, "character literal '{c}'"),
-      Self::IntegerLiteral(_) => write!(f, "integer literal"),
+      Self::IntegerLiteral(..) => write!(f, "integer literal"),
       Self::FloatLiteral(s) => write!(f, "float literal {s}"),
       Self::Identifier(s) => write!(f, "identifier `{s}`"),
       Self::DocComment(_) => write!(f, "doc comment"),
@@ -190,6 +207,7 @@ impl fmt::Display for TokenType {
       Self::Var => write!(f, "keyword `var`"),
       Self::Const => write!(f, "keyword `const`"),
       Self::Mut => write!(f, "keyword `mut`"),
+      Self::Comptime => write!(f, "keyword `comptime`"),
 
       // Keywords - Modules
       Self::Mod => write!(f, "keyword `mod`"),

@@ -1,4 +1,3 @@
-use crate::expressions::Expr;
 use crate::parser::Parser;
 use crate::parser::errors::{
   ConstAloneInType, ExpectedIdentifierInGeneric, ExpectedType,
@@ -6,7 +5,7 @@ use crate::parser::errors::{
 };
 use crate::{
   ArrayType, FunctionType, GenericParam, GenericParams, Mutability, NodeId,
-  OptionalType, Path, PointerType, PrimitiveKind, PrimitiveType, TokenType,
+  OptionalType, PointerType, PrimitiveKind, PrimitiveType, TokenType,
   TupleType, Type, TypeBound, UnitType,
 };
 use zirael_source::span::Span;
@@ -127,7 +126,7 @@ impl Parser<'_> {
       self.advance_until_one_of(&[TokenType::RightBracket]);
     }
 
-    let size = self.parse_array_size_expr();
+    let size = self.parse_const_expr();
 
     self.expect(TokenType::RightBracket, "to close array type");
 
@@ -137,18 +136,6 @@ impl Parser<'_> {
       size,
       span: self.span_from(start),
     })
-  }
-
-  fn parse_array_size_expr(&mut self) -> Expr {
-    if self.check(TokenType::RightBracket) || self.is_at_end() {
-      return Expr::dummy();
-    }
-
-    while !self.check(TokenType::RightBracket) && !self.is_at_end() {
-      self.advance();
-    }
-
-    Expr::dummy()
   }
 
   fn parse_identifier_type(&mut self, start: Span, name: String) -> Type {
@@ -174,7 +161,7 @@ impl Parser<'_> {
     Type::Path(path)
   }
 
-  fn parse_function_type(&mut self, is_const: bool, span: Span) -> Type {
+  fn parse_function_type(&mut self, is_comptime: bool, span: Span) -> Type {
     let mut params = Vec::new();
 
     if self
@@ -207,7 +194,7 @@ impl Parser<'_> {
 
     Type::Function(FunctionType {
       id: NodeId::new(),
-      is_const,
+      is_comptime,
       params,
       return_type,
       span: self.span_from(span),
@@ -297,7 +284,7 @@ impl Parser<'_> {
 
       let ty = self.parse_type();
 
-      if let Type::Invalid = ty {
+      if matches!(ty, Type::Invalid) {
         self.advance_until_one_of(&[TokenType::Comma, TokenType::Gt]);
         if self.check(TokenType::Gt) {
           break;

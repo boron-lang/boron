@@ -3,11 +3,12 @@ use crate::ast::types::Mutability;
 use crate::lexer::IntBase as LexIntBase;
 use crate::parser::Parser;
 use crate::parser::errors::{
-  DuplicateNamedArg, EmptyMatch, ExpectedBuiltinName, ExpectedExpressionFound,
-  ExpectedFatArrow, ExpectedFieldName, ExpectedPattern, InvalidAssignTarget,
-  MissingColonInTernary, MissingInKeyword,
+  DuplicateNamedArg, EmptyMatch, ExpectedExpressionFound, ExpectedFatArrow,
+  ExpectedFieldName, ExpectedPattern, InvalidAssignTarget, InvalidRepeatSyntax,
+  MissingColonInTernary, MissingInKeyword, RepeatSyntaxOnlyAtStart,
+  RepeatSyntaxRequiredValue,
 };
-use crate::{NodeId, Path, PathSegment, TokenType};
+use crate::{IntBase, NodeId, Path, PathSegment, TokenType};
 use std::collections::HashMap;
 use zirael_source::prelude::Span;
 use zirael_utils::prelude::Identifier;
@@ -172,6 +173,33 @@ impl Parser<'_> {
           },
           self.span_from(start),
         );
+      } else if self.eat(TokenType::Not) {
+        self.expect(TokenType::LeftParen, "after builtin name");
+
+        let mut args = vec![];
+        while !self.check(TokenType::RightParen) && !self.is_at_end() {
+          if self.is_type_start() {
+            let ty = self.parse_type();
+            args.push(ComptimeArg::Type(ty));
+          } else {
+            let expr = self.parse_expr();
+            args.push(ComptimeArg::Expr(expr));
+          }
+
+          if !self.eat(TokenType::Comma) {
+            break;
+          }
+        }
+
+        self.expect(TokenType::RightParen, "to close builtin call");
+
+        expr = Expr::new_const(
+          ExprKind::Comptime {
+            callee: Box::new(expr),
+            args,
+          },
+          self.span_from(start),
+        );
       } else if self.eat(TokenType::Dot) {
         // Field access or tuple index
         if self.is_identifier() {
@@ -183,10 +211,12 @@ impl Parser<'_> {
             },
             self.span_from(start),
           );
-        } else if let TokenType::IntegerLiteral(base) = &self.peek().kind {
+        } else if let TokenType::IntegerLiteral(base, digits) =
+          &self.peek().kind
+        {
           // tuple field access
-          let value = if let LexIntBase::Decimal(s) = base {
-            s.clone()
+          let value = if matches!(base, LexIntBase::Decimal) {
+            digits.clone()
           } else {
             self.emit(ExpectedFieldName {
               found: self.peek().kind.clone(),
@@ -242,7 +272,7 @@ impl Parser<'_> {
 
     match &token.kind {
       // Literals
-      TokenType::IntegerLiteral(_) => self.parse_int_literal(),
+      TokenType::IntegerLiteral(..) => self.parse_int_literal(),
       TokenType::FloatLiteral(_) => self.parse_float_literal(),
       TokenType::StringLiteral(_) => self.parse_string_literal(),
       TokenType::CharLiteral(_) => self.parse_char_literal(),
@@ -270,8 +300,6 @@ impl Parser<'_> {
       TokenType::Continue => self.parse_continue_expr(),
       TokenType::Return => self.parse_return_expr(),
 
-      TokenType::At => self.parse_builtin_expr(),
-
       TokenType::Identifier(_) | TokenType::Package | TokenType::Super => {
         self.parse_path_or_struct_expr()
       }
@@ -290,12 +318,12 @@ impl Parser<'_> {
     let start = self.current_span();
     let token = self.advance();
 
-    if let TokenType::IntegerLiteral(base) = token.kind {
+    if let TokenType::IntegerLiteral(base, digits) = token.kind {
       let (value, int_base) = match base {
-        LexIntBase::Decimal(s) => (s, IntBase::Decimal),
-        LexIntBase::Binary(s) => (s, IntBase::Binary),
-        LexIntBase::Octal(s) => (s, IntBase::Octal),
-        LexIntBase::Hexadecimal(s) => (s, IntBase::Hexadecimal),
+        LexIntBase::Decimal => (digits, IntBase::Decimal),
+        LexIntBase::Binary => (digits, IntBase::Binary),
+        LexIntBase::Octal => (digits, IntBase::Octal),
+        LexIntBase::Hexadecimal => (digits, IntBase::Hexadecimal),
       };
 
       let suffix = IntSuffix::parse_int_suffix(&token.lexeme, &value);
@@ -451,35 +479,91 @@ impl Parser<'_> {
 
   fn parse_array_expr(&mut self) -> Expr {
     let start = self.current_span();
-    self.eat(TokenType::LeftBracket);
+    self.expect(TokenType::LeftBracket, "to open array expr");
 
-    // Empty array
     if self.eat(TokenType::RightBracket) {
-      return Expr::new_const(ExprKind::Array(vec![]), self.span_from(start));
+      return Expr::new_const(
+        ExprKind::Array {
+          values: vec![],
+          repeat: None,
+        },
+        self.span_from(start),
+      );
     }
 
-    let first = self.parse_expr();
+    if self.check(TokenType::Semicolon) {
+      let semi_span = self.peek().span;
+      self.emit(RepeatSyntaxRequiredValue { span: semi_span });
 
-    // repeat syntax: [value; count]
-    // TODO: implement repeat syntax and add it to reference
-    if self.eat(TokenType::Semicolon) {
-      let _count = self.parse_expr();
+      while !self.check(TokenType::RightBracket) && !self.is_at_end() {
+        self.advance();
+      }
       self.expect(TokenType::RightBracket, "to close array");
-      return Expr::new(ExprKind::Array(vec![first]), self.span_from(start));
+
+      return Expr::new(
+        ExprKind::Array {
+          values: vec![],
+          repeat: None,
+        },
+        self.span_from(start),
+      );
     }
 
-    let mut elements = vec![first];
+    let first_elem = self.parse_expr();
+
+    if self.eat(TokenType::Semicolon) {
+      let mut repeat_count = self.parse_const_expr();
+      repeat_count.is_const = true;
+
+      if self.eat(TokenType::Comma) || self.check(TokenType::Semicolon) {
+        let error_start = self.peek().span;
+        self.emit(InvalidRepeatSyntax {
+          span: self.span_from(error_start),
+        });
+
+        while !self.check(TokenType::RightBracket) && !self.is_at_end() {
+          self.advance();
+        }
+      }
+
+      self.expect(TokenType::RightBracket, "to close array");
+
+      return Expr::new(
+        ExprKind::Array {
+          values: vec![first_elem],
+          repeat: Some(Box::new(repeat_count)),
+        },
+        self.span_from(start),
+      );
+    }
+
+    let mut elements = vec![first_elem];
 
     while self.eat(TokenType::Comma) {
       if self.check(TokenType::RightBracket) {
         break;
       }
+
       elements.push(self.parse_expr());
+
+      if self.check(TokenType::Semicolon) {
+        let semi_span = self.peek().span;
+        self.emit(RepeatSyntaxOnlyAtStart { span: semi_span });
+
+        self.advance(); // eat ;
+        self.advance_until_one_of(&[TokenType::RightBracket, TokenType::Comma]);
+      }
     }
 
     self.expect(TokenType::RightBracket, "to close array");
 
-    Expr::new(ExprKind::Array(elements), self.span_from(start))
+    Expr::new(
+      ExprKind::Array {
+        values: elements,
+        repeat: None,
+      },
+      self.span_from(start),
+    )
   }
 
   fn parse_path_or_struct_expr(&mut self) -> Expr {
@@ -657,7 +741,7 @@ impl Parser<'_> {
           span: token.span,
         }))
       }
-      TokenType::IntegerLiteral(_) => {
+      TokenType::IntegerLiteral(..) => {
         let expr = self.parse_int_literal();
         if let ExprKind::Literal(lit) = expr.kind {
           Pattern::Literal(lit)
@@ -930,7 +1014,7 @@ impl Parser<'_> {
   fn is_range_end_start(&self) -> bool {
     matches!(
       self.peek().kind,
-      TokenType::IntegerLiteral(_)
+      TokenType::IntegerLiteral(..)
         | TokenType::FloatLiteral(_)
         | TokenType::StringLiteral(_)
         | TokenType::CharLiteral(_)
@@ -952,43 +1036,6 @@ impl Parser<'_> {
         | TokenType::Plus
         | TokenType::At
     )
-  }
-
-  fn parse_builtin_expr(&mut self) -> Expr {
-    let start = self.current_span();
-    self.eat(TokenType::At);
-
-    if !self.is_identifier() {
-      self.emit(ExpectedBuiltinName {
-        found: self.peek().kind.clone(),
-        span: self.peek().span,
-      });
-      return Expr::dummy();
-    }
-
-    let name = self.parse_identifier();
-
-    self.expect(TokenType::LeftParen, "after builtin name");
-
-    let mut args = vec![];
-
-    while !self.check(TokenType::RightParen) && !self.is_at_end() {
-      if self.is_type_start() {
-        let ty = self.parse_type();
-        args.push(BuiltinArg::Type(ty));
-      } else {
-        let expr = self.parse_expr();
-        args.push(BuiltinArg::Expr(expr));
-      }
-
-      if !self.eat(TokenType::Comma) {
-        break;
-      }
-    }
-
-    self.expect(TokenType::RightParen, "to close builtin call");
-
-    Expr::new_const(ExprKind::Builtin { name, args }, self.span_from(start))
   }
 
   fn is_type_start(&self) -> bool {

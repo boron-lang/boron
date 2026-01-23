@@ -64,7 +64,7 @@ impl TypeTable {
   ) -> Option<InferTy> {
     self
       .field_types
-      .get(&(struct_id, field_name.to_string()))
+      .get(&(struct_id, field_name.to_owned()))
       .map(|t| t.clone())
   }
 
@@ -84,7 +84,7 @@ impl TypeTable {
   ) -> Option<TypeScheme> {
     self
       .method_types
-      .get(&(struct_id, method_name.to_string()))
+      .get(&(struct_id, method_name.to_owned()))
       .map(|s| s.clone())
   }
 }
@@ -102,7 +102,7 @@ pub struct InferCtx {
   pub(crate) var_kinds: DashMap<TyVar, TyVarKind>,
   /// maps type variables to their resolved types
   pub(crate) substitution: DashMap<TyVar, InferTy>,
-  /// Maps type parameter DefIds to their type variables
+  /// Maps type parameter `DefIds` to their type variables
   type_params: RwLock<HashMap<DefId, TyVar>>,
   /// Constraint set for delayed unification
   constraints: RwLock<Vec<Constraint>>,
@@ -178,16 +178,16 @@ impl InferCtx {
     var
   }
 
-  pub fn fresh(&self) -> InferTy {
-    InferTy::Var(self.fresh_var(TyVarKind::General))
+  pub fn fresh(&self, span: Span) -> InferTy {
+    InferTy::Var(self.fresh_var(TyVarKind::General), span)
   }
 
-  pub fn fresh_int(&self) -> InferTy {
-    InferTy::Var(self.fresh_var(TyVarKind::Integer))
+  pub fn fresh_int(&self, span: Span) -> InferTy {
+    InferTy::Var(self.fresh_var(TyVarKind::Integer), span)
   }
 
-  pub fn fresh_float(&self) -> InferTy {
-    InferTy::Var(self.fresh_var(TyVarKind::Float))
+  pub fn fresh_float(&self, span: Span) -> InferTy {
+    InferTy::Var(self.fresh_var(TyVarKind::Float), span)
   }
 
   pub fn var_kind(&self, var: TyVar) -> TyVarKind {
@@ -208,33 +208,45 @@ impl InferCtx {
 
   pub fn resolve(&self, ty: &InferTy) -> InferTy {
     match ty {
-      InferTy::Var(var) => {
+      InferTy::Var(var, span) => {
         if let Some(resolved) = self.probe_var(*var) {
           self.resolve(&resolved)
         } else {
           ty.clone()
         }
       }
-      InferTy::Adt { def_id, args } => InferTy::Adt {
+      InferTy::Adt { def_id, args, span } => InferTy::Adt {
         def_id: *def_id,
         args: args.iter().map(|t| self.resolve(t)).collect(),
+        span: *span,
       },
-      InferTy::Ptr { mutability, ty } => InferTy::Ptr {
+      InferTy::Ptr {
+        mutability,
+        ty,
+        span,
+      } => InferTy::Ptr {
         mutability: *mutability,
         ty: Box::new(self.resolve(ty)),
+        span: *span,
       },
-      InferTy::Optional(ty) => InferTy::Optional(Box::new(self.resolve(ty))),
-      InferTy::Array { ty, len } => InferTy::Array {
+      InferTy::Optional(ty, span) => {
+        InferTy::Optional(Box::new(self.resolve(ty)), *span)
+      }
+      InferTy::Array { ty, len, span } => InferTy::Array {
         ty: Box::new(self.resolve(ty)),
         len: *len,
+        span: *span,
       },
-      InferTy::Slice(ty) => InferTy::Slice(Box::new(self.resolve(ty))),
-      InferTy::Tuple(tys) => {
-        InferTy::Tuple(tys.iter().map(|t| self.resolve(t)).collect())
+      InferTy::Slice(ty, span) => {
+        InferTy::Slice(Box::new(self.resolve(ty)), *span)
       }
-      InferTy::Fn { params, ret } => InferTy::Fn {
+      InferTy::Tuple(tys, span) => {
+        InferTy::Tuple(tys.iter().map(|t| self.resolve(t)).collect(), *span)
+      }
+      InferTy::Fn { params, ret, span } => InferTy::Fn {
         params: params.iter().map(|t| self.resolve(t)).collect(),
         ret: Box::new(self.resolve(ret)),
+        span: *span,
       },
       _ => ty.clone(),
     }

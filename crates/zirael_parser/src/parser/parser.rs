@@ -14,6 +14,7 @@ pub const ITEM_TOKENS: &[TokenType] = &[
   TokenType::Const,
   TokenType::Func,
   TokenType::Import,
+  TokenType::Comptime,
 ];
 
 pub struct Parser<'dcx> {
@@ -85,7 +86,7 @@ impl<'dcx> Parser<'dcx> {
 
   #[inline]
   pub fn check(&self, token_type: TokenType) -> bool {
-    &self.peek().kind == &token_type
+    self.peek().kind == token_type
   }
 
   #[inline]

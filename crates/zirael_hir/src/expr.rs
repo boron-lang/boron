@@ -3,7 +3,7 @@ use crate::pat::Pat;
 use crate::ty::Ty;
 use zirael_parser::ast::expressions::{AssignOp, BinaryOp, UnaryOp};
 use zirael_parser::ast::types::Mutability;
-use zirael_parser::{FloatSuffix, IntSuffix, expressions::IntBase};
+use zirael_parser::{FloatSuffix, IntBase, IntSuffix};
 use zirael_resolver::DefId;
 use zirael_utils::ident_table::Identifier;
 use zirael_utils::prelude::Span;
@@ -49,6 +49,11 @@ pub enum ExprKind {
     args: Vec<Expr>,
   },
 
+  Comptime {
+    callee: Box<Expr>,
+    args: Vec<ComptimeArg>,
+  },
+
   MethodCall {
     receiver: Box<Expr>,
     method: Identifier,
@@ -82,7 +87,7 @@ pub enum ExprKind {
   Tuple(Vec<Expr>),
 
   /// Array: `[1, 2, 3]`
-  Array(Vec<Expr>),
+  Array(Vec<Expr>, Option<Box<Expr>>),
 
   Block(Block),
 
@@ -112,6 +117,12 @@ pub enum ExprKind {
   },
 
   Err,
+}
+
+#[derive(Debug, Clone)]
+pub enum ComptimeArg {
+  Expr(Box<Expr>),
+  Type(Ty),
 }
 
 #[derive(Debug, Clone)]
@@ -189,7 +200,6 @@ pub enum Literal {
   },
   Bool(bool),
   Char(char),
-  Byte(u8),
   String(String),
   Unit,
 }

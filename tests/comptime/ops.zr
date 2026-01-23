@@ -1,0 +1,8 @@
+//#error: invalid binary operation
+const X: i32 = 10 + "10";
+//#error: invalid unary operation
+const Y: i32 = ~"10";
+
+func main() {
+    var val = X + Y;
+}

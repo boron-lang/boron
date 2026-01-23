@@ -1,7 +1,12 @@
-use std::collections::HashMap;
-
+use crate::errors::{ArrayLenNotANumber, VarInitMismatch};
+use crate::interpreter::{
+  Interpreter, InterpreterCache, InterpreterContext, InterpreterMode,
+  values::ConstValue,
+};
 use crate::table::{InferCtx, TypeEnv, TypeTable};
 use crate::ty::{Expectation, InferTy, TyVar, TyVarKind, TypeScheme};
+use crate::{UnifyError, UnifyResult};
+use std::collections::HashMap;
 use zirael_diagnostics::DiagnosticCtx;
 use zirael_hir::expr::PathExpr;
 use zirael_hir::ty::ArrayLen;
@@ -24,16 +29,16 @@ pub fn typeck_hir(
 
   checker.collect_signatures();
 
-  for entry in hir.functions.iter() {
+  for entry in &hir.functions {
     let def_id = *entry.key();
     let func = entry.value();
-    checker.typeck_function(def_id, &func);
+    checker.typeck_function(def_id, func);
   }
 
-  for entry in hir.consts.iter() {
+  for entry in &hir.consts {
     let def_id = *entry.key();
     let konst = entry.value();
-    checker.typeck_const(def_id, &konst);
+    checker.typeck_const(def_id, konst);
   }
 
   checker.finalize_types();
@@ -46,6 +51,7 @@ pub struct TyChecker<'a> {
   pub resolver: &'a Resolver,
   pub table: TypeTable,
   pub infcx: InferCtx,
+  pub interpreter_cache: InterpreterCache,
 }
 
 impl<'a> TyChecker<'a> {
@@ -60,6 +66,7 @@ impl<'a> TyChecker<'a> {
       resolver,
       table: TypeTable::new(),
       infcx: InferCtx::new(),
+      interpreter_cache: InterpreterCache::new(),
     }
   }
 
@@ -72,14 +79,14 @@ impl<'a> TyChecker<'a> {
   }
 
   fn collect_signatures(&mut self) {
-    for entry in self.hir.functions.iter() {
+    for entry in &self.hir.functions {
       let def_id = *entry.key();
       let func = entry.value();
-      let scheme = self.function_signature(&func);
+      let scheme = self.function_signature(func);
       self.table.record_def_type(def_id, scheme);
     }
 
-    for entry in self.hir.structs.iter() {
+    for entry in &self.hir.structs {
       let def_id = *entry.key();
       let strukt = entry.value();
 
@@ -94,7 +101,11 @@ impl<'a> TyChecker<'a> {
 
       let struct_ty = InferTy::Adt {
         def_id,
-        args: ty_vars.iter().map(|&v| InferTy::Var(v)).collect(),
+        args: ty_vars
+          .iter()
+          .map(|&v| InferTy::Var(v, strukt.span))
+          .collect(),
+        span: strukt.span,
       };
       self.table.record_def_type(
         def_id,
@@ -115,7 +126,7 @@ impl<'a> TyChecker<'a> {
       }
     }
 
-    for entry in self.hir.enums.iter() {
+    for entry in &self.hir.enums {
       let def_id = *entry.key();
       let eenum = entry.value();
 
@@ -123,7 +134,11 @@ impl<'a> TyChecker<'a> {
 
       let enum_ty = InferTy::Adt {
         def_id,
-        args: ty_vars.iter().map(|&v| InferTy::Var(v)).collect(),
+        args: ty_vars
+          .iter()
+          .map(|&v| InferTy::Var(v, eenum.span))
+          .collect(),
+        span: eenum.span,
       };
       self.table.record_def_type(
         def_id,
@@ -136,7 +151,7 @@ impl<'a> TyChecker<'a> {
       // TODO: Record enum variant types
     }
 
-    for entry in self.hir.consts.iter() {
+    for entry in &self.hir.consts {
       let def_id = *entry.key();
       let konst = entry.value();
       self.infcx.clear_type_params();
@@ -167,6 +182,7 @@ impl<'a> TyChecker<'a> {
     let fn_ty = InferTy::Fn {
       params,
       ret: Box::new(ret),
+      span: func.span,
     };
 
     TypeScheme {
@@ -199,11 +215,12 @@ impl<'a> TyChecker<'a> {
       .return_type
       .as_ref()
       .map(|ty| self.lower_hir_ty(ty))
-      .unwrap_or(InferTy::Unit);
+      .unwrap_or(InferTy::Unit(method.span));
 
     let fn_ty = InferTy::Fn {
       params,
       ret: Box::new(ret),
+      span: method.span,
     };
 
     TypeScheme {
@@ -212,7 +229,7 @@ impl<'a> TyChecker<'a> {
     }
   }
 
-  #[allow(dead_code)]
+  #[expect(dead_code)]
   fn method_signature(&self, method: &Method) -> TypeScheme {
     let params = self.param_types(&method.params);
 
@@ -220,26 +237,51 @@ impl<'a> TyChecker<'a> {
       .return_type
       .as_ref()
       .map(|ty| self.lower_hir_ty(ty))
-      .unwrap_or(InferTy::Unit);
+      .unwrap_or(InferTy::Unit(method.span));
 
     let fn_ty = InferTy::Fn {
       params,
       ret: Box::new(ret),
+      span: method.span,
     };
 
     TypeScheme::mono(fn_ty)
   }
 
+  fn new_interpreter(
+    &'a self,
+    mode: InterpreterMode,
+    ctx: InterpreterContext,
+  ) -> Interpreter<'a> {
+    Interpreter::new(
+      self.dcx(),
+      &self.interpreter_cache,
+      self.resolver,
+      self.hir,
+      mode,
+      ctx,
+    )
+  }
+
+  fn handle_unify_result(&self, result: UnifyResult) {
+    match &result {
+      UnifyResult::Ok => {}
+      UnifyResult::Err(err) => match err {
+        _ => todo!("{:#?}", result),
+      },
+    }
+  }
+
   fn lower_hir_ty(&self, ty: &Ty) -> InferTy {
     match &ty.kind {
-      TyKind::Infer => self.infcx.fresh(),
-      TyKind::Primitive(p) => InferTy::Primitive(*p),
+      TyKind::Infer => self.infcx.fresh(ty.span),
+      TyKind::Primitive(p) => InferTy::Primitive(*p, ty.span),
       TyKind::Path { def_id, segments } => {
         if let Some(def) = self.resolver.get_definition(*def_id)
           && def.kind == DefKind::TypeParam
         {
           let var = self.infcx.get_or_create_type_param(*def_id);
-          return InferTy::Var(var);
+          return InferTy::Var(var, ty.span);
         }
 
         let infer_args: Vec<InferTy> = segments
@@ -250,35 +292,64 @@ impl<'a> TyChecker<'a> {
         InferTy::Adt {
           def_id: *def_id,
           args: infer_args,
+          span: ty.span,
         }
       }
-      TyKind::Ptr { mutability, ty } => InferTy::Ptr {
+      TyKind::Ptr {
+        mutability,
+        ty: inner,
+      } => InferTy::Ptr {
         mutability: *mutability,
-        ty: Box::new(self.lower_hir_ty(ty)),
+        ty: Box::new(self.lower_hir_ty(inner)),
+        span: ty.span,
       },
-      TyKind::Optional(ty) => {
-        InferTy::Optional(Box::new(self.lower_hir_ty(ty)))
+      TyKind::Optional(inner) => {
+        InferTy::Optional(Box::new(self.lower_hir_ty(inner)), ty.span)
       }
-      TyKind::Array { ty, len } => {
+      TyKind::Array { ty: inner, len } => {
         let array_len = match len {
           ArrayLen::Const(n) => *n,
-          ArrayLen::ConstExpr(_) => 0, // TODO: Evaluate const expression
+          ArrayLen::ConstExpr(expr) => {
+            let value = self
+              .new_interpreter(
+                InterpreterMode::Const,
+                InterpreterContext::ArrayLen,
+              )
+              .evaluate_expr(expr);
+
+            match value {
+              ConstValue::Int(i) => i as usize,
+              ConstValue::Poison => 0,
+              _ => {
+                self.dcx().emit(ArrayLenNotANumber {
+                  found: value.to_string(),
+                  span: expr.span,
+                });
+                0
+              }
+            }
+          }
         };
         InferTy::Array {
-          ty: Box::new(self.lower_hir_ty(ty)),
+          ty: Box::new(self.lower_hir_ty(inner)),
           len: array_len,
+          span: ty.span,
         }
       }
-      TyKind::Slice(ty) => InferTy::Slice(Box::new(self.lower_hir_ty(ty))),
-      TyKind::Tuple(tys) => {
-        InferTy::Tuple(tys.iter().map(|t| self.lower_hir_ty(t)).collect())
+      TyKind::Slice(inner) => {
+        InferTy::Slice(Box::new(self.lower_hir_ty(inner)), ty.span)
       }
-      TyKind::Unit => InferTy::Unit,
-      TyKind::Never => InferTy::Never,
-      TyKind::Err => InferTy::Err,
+      TyKind::Tuple(tys) => InferTy::Tuple(
+        tys.iter().map(|t| self.lower_hir_ty(t)).collect(),
+        ty.span,
+      ),
+      TyKind::Unit => InferTy::Unit(ty.span),
+      TyKind::Never => InferTy::Never(ty.span),
+      TyKind::Err => InferTy::Err(ty.span),
       TyKind::Fn { params, ret } => InferTy::Fn {
         params: params.iter().map(|t| self.lower_hir_ty(t)).collect(),
         ret: Box::new(self.lower_hir_ty(ret)),
+        span: ty.span,
       },
     }
   }
@@ -294,7 +365,8 @@ impl<'a> TyChecker<'a> {
         }
         ParamKind::Variadic { ty, .. } => {
           let param_ty = self.lower_hir_ty(ty);
-          env.bind(param.def_id, InferTy::Slice(Box::new(param_ty)));
+          env
+            .bind(param.def_id, InferTy::Slice(Box::new(param_ty), param.span));
         }
         ParamKind::SelfParam { .. } => {
           // TODO: Bind self parameter
@@ -310,7 +382,7 @@ impl<'a> TyChecker<'a> {
         &Expectation::has_type(expected_ret.clone()),
       );
 
-      self.unify(&body_ty, &expected_ret, func.span);
+      self.unify(&body_ty, &expected_ret);
     }
   }
 
@@ -323,7 +395,7 @@ impl<'a> TyChecker<'a> {
       &mut env,
       &Expectation::has_type(expected.clone()),
     );
-    self.unify(&init_ty, &expected, konst.span);
+    self.unify(&init_ty, &expected);
   }
 
   fn check_block(
@@ -334,7 +406,7 @@ impl<'a> TyChecker<'a> {
   ) -> InferTy {
     env.push_scope();
 
-    let mut last_ty = InferTy::Unit;
+    let mut last_ty = InferTy::Unit(block.span);
 
     for stmt in &block.stmts {
       last_ty = self.check_stmt(stmt, env);
@@ -353,7 +425,7 @@ impl<'a> TyChecker<'a> {
       StmtKind::Local(local) => {
         let expected = match &local.ty {
           Some(ty) => self.lower_hir_ty(ty),
-          None => self.infcx.fresh(),
+          None => self.infcx.fresh(local.span),
         };
 
         if let Some(init) = &local.init {
@@ -362,20 +434,33 @@ impl<'a> TyChecker<'a> {
             env,
             &Expectation::has_type(expected.clone()),
           );
-          self.unify(&init_ty, &expected, local.span);
+          let result = self.unify(&expected, &init_ty);
+
+          if let UnifyResult::Err(err) = &result {
+            match err {
+              UnifyError::Mismatch { expected, found } => {
+                self.dcx.emit(VarInitMismatch {
+                  expected: self.format_type(expected),
+                  found: self.format_type(found),
+                  span: local.span,
+                })
+              }
+              _ => self.handle_unify_result(result),
+            }
+          };
         }
 
         self.check_pattern(&local.pat, &expected, env);
 
-        InferTy::Unit
+        InferTy::Unit(local.span)
       }
       StmtKind::Expr(expr) => {
         self.check_expr(expr, env, &Expectation::none());
-        InferTy::Unit
+        InferTy::Unit(expr.span)
       }
       StmtKind::Semi(expr) => {
         self.check_expr(expr, env, &Expectation::none());
-        InferTy::Unit
+        InferTy::Unit(expr.span)
       }
     }
   }
@@ -387,22 +472,21 @@ impl<'a> TyChecker<'a> {
     expect: &Expectation,
   ) -> InferTy {
     let ty = match &expr.kind {
-      ExprKind::Literal(lit) => self.check_literal(lit),
+      ExprKind::Literal(lit) => self.check_literal_with_span(lit, expr.span),
 
       ExprKind::Path(path) => self.check_path(path, env),
 
       ExprKind::Binary { op: _, lhs, rhs } => {
         let lhs_ty = self.check_expr(lhs, env, &Expectation::none());
         let rhs_ty = self.check_expr(rhs, env, &Expectation::none());
-        // TODO: Implement operator type checking
-        self.unify(&lhs_ty, &rhs_ty, expr.span);
+        let x = self.unify(&lhs_ty, &rhs_ty);
+        self.handle_unify_result(x);
         lhs_ty
       }
 
       ExprKind::Unary { op: _, operand } => {
-        let operand_ty = self.check_expr(operand, env, &Expectation::none());
         // TODO: Implement unary operator type checking
-        operand_ty
+        self.check_expr(operand, env, &Expectation::none())
       }
 
       ExprKind::Call { callee, args } => {
@@ -417,18 +501,24 @@ impl<'a> TyChecker<'a> {
         let cond_ty = self.check_expr(
           condition,
           env,
-          &Expectation::has_type(InferTy::bool()),
+          &Expectation::has_type(InferTy::Primitive(
+            PrimitiveKind::Bool,
+            condition.span,
+          )),
         );
-        self.unify(&cond_ty, &InferTy::bool(), condition.span);
+        self.unify(
+          &cond_ty,
+          &InferTy::Primitive(PrimitiveKind::Bool, condition.span),
+        );
 
         let then_ty = self.check_block(then_block, env, expect);
 
         if let Some(else_expr) = else_branch {
           let else_ty = self.check_expr(else_expr, env, expect);
-          self.unify(&then_ty, &else_ty, expr.span);
+          self.unify(&then_ty, &else_ty);
           then_ty
         } else {
-          InferTy::Unit
+          InferTy::Unit(expr.span)
         }
       }
 
@@ -439,25 +529,27 @@ impl<'a> TyChecker<'a> {
           .iter()
           .map(|e| self.check_expr(e, env, &Expectation::none()))
           .collect();
-        InferTy::Tuple(tys)
+        InferTy::Tuple(tys, expr.span)
       }
 
-      ExprKind::Array(exprs) => {
+      ExprKind::Array(exprs, repeat) => {
         if exprs.is_empty() {
           InferTy::Array {
-            ty: Box::new(self.infcx.fresh()),
+            ty: Box::new(self.infcx.fresh(expr.span)),
             len: 0,
+            span: expr.span,
           }
         } else {
           let elem_ty = self.check_expr(&exprs[0], env, &Expectation::none());
           for e in exprs.iter().skip(1) {
             let ty =
               self.check_expr(e, env, &Expectation::has_type(elem_ty.clone()));
-            self.unify(&ty, &elem_ty, e.span);
+            self.unify(&ty, &elem_ty);
           }
           InferTy::Array {
             ty: Box::new(elem_ty),
             len: exprs.len(),
+            span: expr.span,
           }
         }
       }
@@ -469,15 +561,15 @@ impl<'a> TyChecker<'a> {
         // Index must be usize until we support operator overloading
         self.unify(
           &idx_ty,
-          &InferTy::Primitive(PrimitiveKind::USize),
-          index.span,
+          &InferTy::Primitive(PrimitiveKind::USize, index.span),
         );
 
         match self.infcx.resolve(&obj_ty) {
-          InferTy::Array { ty, .. } | InferTy::Slice(ty) => *ty,
+          InferTy::Array { ty, span, .. } => *ty,
+          InferTy::Slice(ty, span) => *ty,
           _ => {
             // TODO: Report error - not indexable
-            InferTy::Err
+            InferTy::Err(expr.span)
           }
         }
       }
@@ -494,29 +586,29 @@ impl<'a> TyChecker<'a> {
           env,
           &Expectation::has_type(target_ty.clone()),
         );
-        self.unify(&value_ty, &target_ty, expr.span);
-        InferTy::Unit
+        self.unify(&value_ty, &target_ty);
+        InferTy::Unit(expr.span)
       }
 
       ExprKind::Return { value } => {
         if let Some(val) = value {
           self.check_expr(val, env, expect);
         }
-        InferTy::Never
+        InferTy::Never(expr.span)
       }
 
       ExprKind::Break { value, .. } => {
         if let Some(val) = value {
           self.check_expr(val, env, &Expectation::none());
         }
-        InferTy::Never
+        InferTy::Never(expr.span)
       }
 
-      ExprKind::Continue { .. } => InferTy::Never,
+      ExprKind::Continue => InferTy::Never(expr.span),
 
       _ => {
         // TODO: Handle remaining expression kinds
-        self.infcx.fresh()
+        self.infcx.fresh(expr.span)
       }
     };
 
@@ -524,34 +616,40 @@ impl<'a> TyChecker<'a> {
     ty
   }
 
-  fn check_literal(&self, lit: &Literal) -> InferTy {
+  fn check_literal_with_span(&self, lit: &Literal, span: Span) -> InferTy {
     match lit {
       Literal::Int { suffix, .. } => {
         if let Some(suffix) = suffix {
-          InferTy::Primitive(suffix.to_primitive_kind())
+          InferTy::Primitive(suffix.to_primitive_kind(), span)
         } else {
-          self.infcx.fresh_int()
+          self.infcx.fresh_int(span)
         }
       }
       Literal::Float { suffix, .. } => {
         if let Some(suffix) = suffix {
-          InferTy::Primitive(suffix.to_primitive_kind())
+          InferTy::Primitive(suffix.to_primitive_kind(), span)
         } else {
-          self.infcx.fresh_float()
+          self.infcx.fresh_float(span)
         }
       }
-      Literal::Bool(_) => InferTy::bool(),
-      Literal::Char(_) => InferTy::Primitive(PrimitiveKind::Char),
+      Literal::Bool(_) => InferTy::Primitive(PrimitiveKind::Bool, span),
+      Literal::Char(_) => InferTy::Primitive(PrimitiveKind::Char, span),
       Literal::String(_) => InferTy::Ptr {
         mutability: Mutability::Const,
-        ty: Box::new(InferTy::Primitive(PrimitiveKind::U8)),
+        ty: Box::new(InferTy::Primitive(PrimitiveKind::U8, span)),
+        span,
       },
-      Literal::Byte(_) => InferTy::Primitive(PrimitiveKind::U8),
-      Literal::Unit => InferTy::Unit,
+      Literal::Unit => InferTy::Unit(span),
     }
   }
 
   fn check_path(&self, path: &PathExpr, env: &TypeEnv) -> InferTy {
+    if let Some(cnst) = self.hir.get_const(path.def_id) {
+      let _ = self
+        .new_interpreter(InterpreterMode::Const, InterpreterContext::Const)
+        .evaluate_const(&cnst);
+    }
+
     if let Some(ty) = env.lookup(path.def_id) {
       return ty.clone();
     }
@@ -560,7 +658,7 @@ impl<'a> TyChecker<'a> {
       return self.instantiate(&scheme);
     }
 
-    InferTy::Err
+    InferTy::Err(Default::default())
   }
 
   fn instantiate(&self, scheme: &TypeScheme) -> InferTy {
@@ -570,7 +668,7 @@ impl<'a> TyChecker<'a> {
 
     let mut subst: HashMap<TyVar, InferTy> = HashMap::new();
     for &var in &scheme.vars {
-      subst.insert(var, self.infcx.fresh());
+      subst.insert(var, self.infcx.fresh(scheme.ty.span()));
     }
 
     self.apply_subst(&scheme.ty, &subst)
@@ -582,40 +680,50 @@ impl<'a> TyChecker<'a> {
     subst: &HashMap<TyVar, InferTy>,
   ) -> InferTy {
     match ty {
-      InferTy::Var(var) => {
+      InferTy::Var(var, span) => {
         if let Some(replacement) = subst.get(var) {
           replacement.clone()
         } else {
           ty.clone()
         }
       }
-      InferTy::Adt { def_id, args } => InferTy::Adt {
+      InferTy::Adt { def_id, args, span } => InferTy::Adt {
         def_id: *def_id,
         args: args.iter().map(|t| self.apply_subst(t, subst)).collect(),
+        span: *span,
       },
       InferTy::Ptr {
         mutability,
         ty: inner,
+        span,
       } => InferTy::Ptr {
         mutability: *mutability,
         ty: Box::new(self.apply_subst(inner, subst)),
+        span: *span,
       },
-      InferTy::Optional(inner) => {
-        InferTy::Optional(Box::new(self.apply_subst(inner, subst)))
+      InferTy::Optional(inner, span) => {
+        InferTy::Optional(Box::new(self.apply_subst(inner, subst)), *span)
       }
-      InferTy::Array { ty: inner, len } => InferTy::Array {
+      InferTy::Array {
+        ty: inner,
+        len,
+        span,
+      } => InferTy::Array {
         ty: Box::new(self.apply_subst(inner, subst)),
         len: *len,
+        span: *span,
       },
-      InferTy::Slice(inner) => {
-        InferTy::Slice(Box::new(self.apply_subst(inner, subst)))
+      InferTy::Slice(inner, span) => {
+        InferTy::Slice(Box::new(self.apply_subst(inner, subst)), *span)
       }
-      InferTy::Tuple(tys) => {
-        InferTy::Tuple(tys.iter().map(|t| self.apply_subst(t, subst)).collect())
-      }
-      InferTy::Fn { params, ret } => InferTy::Fn {
+      InferTy::Tuple(tys, span) => InferTy::Tuple(
+        tys.iter().map(|t| self.apply_subst(t, subst)).collect(),
+        *span,
+      ),
+      InferTy::Fn { params, ret, span } => InferTy::Fn {
         params: params.iter().map(|t| self.apply_subst(t, subst)).collect(),
         ret: Box::new(self.apply_subst(ret, subst)),
+        span: *span,
       },
       _ => ty.clone(),
     }
@@ -632,37 +740,38 @@ impl<'a> TyChecker<'a> {
     let resolved = self.infcx.resolve(&callee_ty);
 
     match resolved {
-      InferTy::Fn { params, ret } => {
+      InferTy::Fn {
+        params,
+        ret,
+        span: _fn_span,
+      } => {
         if args.len() != params.len() {
           // TODO: Report arity mismatch error
         }
-
         for (arg, param_ty) in args.iter().zip(params.iter()) {
           let arg_ty =
             self.check_expr(arg, env, &Expectation::has_type(param_ty.clone()));
-          self.unify(param_ty, &arg_ty, arg.span);
+          self.unify(param_ty, &arg_ty);
         }
-
         *ret
       }
-      InferTy::Var(_) => {
+      InferTy::Var(_, _var_span) => {
         let arg_tys: Vec<InferTy> = args
           .iter()
           .map(|a| self.check_expr(a, env, &Expectation::none()))
           .collect();
-        let ret_ty = self.infcx.fresh();
-
+        let ret_ty = self.infcx.fresh(span);
         let expected_fn = InferTy::Fn {
           params: arg_tys,
           ret: Box::new(ret_ty.clone()),
+          span,
         };
-        self.unify(&callee_ty, &expected_fn, span);
-
+        self.unify(&callee_ty, &expected_fn);
         ret_ty
       }
       _ => {
         // TODO: Report error - not callable
-        InferTy::Err
+        InferTy::Err(span)
       }
     }
   }
@@ -676,15 +785,15 @@ impl<'a> TyChecker<'a> {
     let resolved = self.infcx.resolve(obj_ty);
 
     match resolved {
-      InferTy::Adt { def_id, .. } => {
+      InferTy::Adt { def_id, span, .. } => {
         if let Some(field_ty) = self.table.field_type(def_id, &field.text()) {
           field_ty
         } else {
           // TODO: Report unknown field error
-          InferTy::Err
+          InferTy::Err(span)
         }
       }
-      InferTy::Tuple(tys) => {
+      InferTy::Tuple(tys, span) => {
         // Check for tuple field access (e.g., tuple.0)
         if let Ok(idx) = field.text().parse::<usize>() {
           if idx < tys.len() {
@@ -692,11 +801,11 @@ impl<'a> TyChecker<'a> {
           }
         }
         // TODO: Report error
-        InferTy::Err
+        InferTy::Err(span)
       }
       _ => {
         // TODO: Report error - no fields on this type
-        InferTy::Err
+        InferTy::Err(_span)
       }
     }
   }
@@ -716,7 +825,7 @@ impl<'a> TyChecker<'a> {
         self.table.record_node_type(pat.hir_id, expected.clone());
       }
       PatKind::Tuple(pats) => {
-        if let InferTy::Tuple(tys) = expected {
+        if let InferTy::Tuple(tys, _) = expected {
           for (p, ty) in pats.iter().zip(tys.iter()) {
             self.check_pattern(p, ty, env);
           }
@@ -804,59 +913,66 @@ impl<'a> TyChecker<'a> {
 
   fn default_ty_vars_except(&self, ty: InferTy, except: &[TyVar]) -> InferTy {
     match ty {
-      InferTy::Var(v) => {
+      InferTy::Var(v, span) => {
         if except.contains(&v) {
-          InferTy::Var(v)
+          InferTy::Var(v, span)
         } else {
           match self.infcx.var_kind(v) {
-            TyVarKind::Integer => InferTy::Primitive(PrimitiveKind::I32),
-            TyVarKind::Float => InferTy::Primitive(PrimitiveKind::F64),
-            TyVarKind::General => {
-              // TODO: Emit "cannot infer type" diagnostic
-              InferTy::Err
-            }
+            TyVarKind::Integer => InferTy::Primitive(PrimitiveKind::I32, span),
+            TyVarKind::Float => InferTy::Primitive(PrimitiveKind::F64, span),
+            TyVarKind::General => InferTy::Err(span),
           }
         }
       }
-      InferTy::Adt { def_id, args } => InferTy::Adt {
+      InferTy::Adt { def_id, args, span } => InferTy::Adt {
         def_id,
         args: args
           .into_iter()
           .map(|t| self.default_ty_vars_except(t, except))
           .collect(),
+        span,
       },
-      InferTy::Ptr { mutability, ty } => InferTy::Ptr {
+      InferTy::Ptr {
+        mutability,
+        ty,
+        span,
+      } => InferTy::Ptr {
         mutability,
         ty: Box::new(self.default_ty_vars_except(*ty, except)),
+        span,
       },
-      InferTy::Optional(ty) => {
-        InferTy::Optional(Box::new(self.default_ty_vars_except(*ty, except)))
-      }
-      InferTy::Array { ty, len } => InferTy::Array {
+      InferTy::Optional(ty, span) => InferTy::Optional(
+        Box::new(self.default_ty_vars_except(*ty, except)),
+        span,
+      ),
+      InferTy::Array { ty, len, span } => InferTy::Array {
         ty: Box::new(self.default_ty_vars_except(*ty, except)),
         len,
+        span,
       },
-      InferTy::Slice(ty) => {
-        InferTy::Slice(Box::new(self.default_ty_vars_except(*ty, except)))
+      InferTy::Slice(ty, span) => {
+        InferTy::Slice(Box::new(self.default_ty_vars_except(*ty, except)), span)
       }
-      InferTy::Tuple(tys) => InferTy::Tuple(
+      InferTy::Tuple(tys, span) => InferTy::Tuple(
         tys
           .into_iter()
           .map(|t| self.default_ty_vars_except(t, except))
           .collect(),
+        span,
       ),
-      InferTy::Fn { params, ret } => InferTy::Fn {
+      InferTy::Fn { params, ret, span } => InferTy::Fn {
         params: params
           .into_iter()
           .map(|t| self.default_ty_vars_except(t, except))
           .collect(),
         ret: Box::new(self.default_ty_vars_except(*ret, except)),
+        span,
       },
-      InferTy::Primitive(_)
-      | InferTy::Unit
-      | InferTy::Never
+      InferTy::Primitive(_, _)
+      | InferTy::Unit(_)
+      | InferTy::Never(_)
       | InferTy::Param { .. }
-      | InferTy::Err => ty,
+      | InferTy::Err(_) => ty,
     }
   }
 }

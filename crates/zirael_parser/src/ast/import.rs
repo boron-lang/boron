@@ -1,8 +1,7 @@
+use crate::Type;
 use crate::ast::NodeId;
-use crate::{GenericParams, Type};
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
-use zirael_diagnostics::DiagnosticCtx;
 use zirael_utils::prelude::{Identifier, Span};
 
 #[derive(Debug, Clone)]
@@ -129,9 +128,9 @@ pub enum PathRoot {
 impl Display for PathRoot {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match self {
-      PathRoot::Super => write!(f, "super"),
-      PathRoot::SelfMod => write!(f, "self"),
-      PathRoot::Package => write!(f, "package"),
+      Self::Super => write!(f, "super"),
+      Self::SelfMod => write!(f, "self"),
+      Self::Package => write!(f, "package"),
     }
   }
 }

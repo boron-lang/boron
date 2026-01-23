@@ -5,6 +5,7 @@ pub mod ids;
 pub mod item;
 pub mod lower;
 pub mod pat;
+pub mod semantic_type;
 pub mod ty;
 
 pub use expr::{
@@ -18,4 +19,5 @@ pub use item::{
 };
 pub use lower::lower_to_hir;
 pub use pat::{Pat, PatKind};
+pub use semantic_type::*;
 pub use ty::{Ty, TyKind};

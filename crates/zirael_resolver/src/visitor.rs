@@ -1,13 +1,14 @@
 use crate::DefId;
+use crate::builtin_kind::BuiltInKind;
 use crate::def::{DefKind, Definition};
 use crate::errors::{
   DuplicateDefinition, InvalidPathRoot, UndefinedName, UndefinedNameInModule,
-  UndefinedType,
 };
 use crate::module_resolver::ModuleResolver;
 use crate::resolver::Resolver;
 use crate::scope::ScopeKind;
 use crate::symbol::{Symbol, SymbolKind};
+use zirael_parser::Pattern::Ident;
 use zirael_parser::ast::ProgramNode;
 use zirael_parser::ast::expressions::{Expr, ExprKind};
 use zirael_parser::ast::items::{
@@ -20,7 +21,7 @@ use zirael_parser::ast::types::Type;
 use zirael_parser::import::ImportDecl;
 use zirael_parser::module::Modules;
 use zirael_parser::{
-  BuiltinArg, ElseBranch, IfExpr, ImportKind, ImportSpec, NodeId, Path,
+  ComptimeArg, ElseBranch, IfExpr, ImportKind, ImportSpec, NodeId, Path,
   StructMember, VariantField, VariantPayload,
 };
 use zirael_source::prelude::{SourceFileId, Span};
@@ -123,7 +124,7 @@ impl<'a> ResolveVisitor<'a> {
       ImportKind::Wildcard => self.resolve_wildcard_import(target_file),
       ImportKind::Items(items) => self.resolve_items_import(target_file, items),
       ImportKind::Binding(name) => {
-        self.resolve_binding_import(target_file, *name, import)
+        self.resolve_binding_import(target_file, *name, import);
       }
     }
   }
@@ -134,8 +135,13 @@ impl<'a> ResolveVisitor<'a> {
     binding: Identifier,
     import: &ImportDecl,
   ) {
-    let def =
-      Definition::new(import.id, target_file, DefKind::Module, *binding.span());
+    let def = Definition::new(
+      String::new(),
+      import.id,
+      target_file,
+      DefKind::Module,
+      *binding.span(),
+    );
     let def_id = self.resolver().add_definition(def);
 
     let name = binding.text();
@@ -203,7 +209,7 @@ impl<'a> ResolveVisitor<'a> {
       .get(&target_file)
       .map(|v| v.clone())
     {
-      for entry in exports.iter() {
+      for entry in &exports {
         let name = entry.key().clone();
         let def_id = *entry.value();
         self.module_resolver.define_value(name, def_id);
@@ -216,7 +222,7 @@ impl<'a> ResolveVisitor<'a> {
       .get(&target_file)
       .map(|v| v.clone())
     {
-      for entry in exports.iter() {
+      for entry in &exports {
         let name = entry.key().clone();
         let def_id = *entry.value();
         self.module_resolver.define_type(name, def_id);
@@ -267,7 +273,8 @@ impl<'a> ResolveVisitor<'a> {
       }
     }
 
-    let def = Definition::new(node_id, self.current_file(), kind, span);
+    let def =
+      Definition::new(name.clone(), node_id, self.current_file(), kind, span);
     let def_id = self.resolver().add_definition(def);
     self.module_resolver.define_value(name.clone(), def_id);
 
@@ -307,7 +314,8 @@ impl<'a> ResolveVisitor<'a> {
       }
     }
 
-    let def = Definition::new(node_id, self.current_file(), kind, span);
+    let def =
+      Definition::new(name.clone(), node_id, self.current_file(), kind, span);
     let def_id = self.resolver().add_definition(def);
     self.module_resolver.define_type(name.clone(), def_id);
 
@@ -373,7 +381,13 @@ impl<'a> ResolveVisitor<'a> {
     let name = m.name.text();
     let span = *m.name.span();
 
-    let def = Definition::new(m.id, self.current_file(), DefKind::Module, span);
+    let def = Definition::new(
+      String::new(), // TODO: could be the stringified module path
+      m.id,
+      self.current_file(),
+      DefKind::Module,
+      span,
+    );
     let def_id = self.resolver().add_definition(def);
 
     self.module_resolver.define_value(name.clone(), def_id);
@@ -504,7 +518,7 @@ impl<'a> ResolveVisitor<'a> {
     }
 
     for import in &node.imports {
-      self.resolve_import(&import);
+      self.resolve_import(import);
     }
 
     for item in &node.items {
@@ -535,6 +549,7 @@ impl<'a> ResolveVisitor<'a> {
         let name = param.name.text();
         let span = *param.name.span();
         let def = Definition::new(
+          func.name.text(),
           param.id,
           self.current_file(),
           DefKind::TypeParam,
@@ -566,6 +581,7 @@ impl<'a> ResolveVisitor<'a> {
         let name = regular.name.text();
         let span = *regular.name.span();
         let def = Definition::new(
+          regular.name.text(),
           regular.id,
           self.current_file(),
           DefKind::Param,
@@ -579,6 +595,7 @@ impl<'a> ResolveVisitor<'a> {
         let name = variadic.name.text();
         let span = *variadic.name.span();
         let def = Definition::new(
+          name.clone(),
           variadic.id,
           self.current_file(),
           DefKind::Param,
@@ -602,6 +619,7 @@ impl<'a> ResolveVisitor<'a> {
         let name = param.name.text();
         let span = *param.name.span();
         let def = Definition::new(
+          name.clone(),
           param.id,
           self.current_file(),
           DefKind::TypeParam,
@@ -647,6 +665,7 @@ impl<'a> ResolveVisitor<'a> {
         let name = param.name.text();
         let span = *param.name.span();
         let def = Definition::new(
+          name.clone(),
           param.id,
           self.current_file(),
           DefKind::TypeParam,
@@ -720,8 +739,13 @@ impl<'a> ResolveVisitor<'a> {
 
         let name = var.name.text();
         let span = *var.name.span();
-        let def =
-          Definition::new(var.id, self.current_file(), DefKind::Local, span);
+        let def = Definition::new(
+          name.clone(),
+          var.id,
+          self.current_file(),
+          DefKind::Local,
+          span,
+        );
         let def_id = self.resolver().add_definition(def);
         self.module_resolver.define_value(name, def_id);
       }
@@ -733,8 +757,13 @@ impl<'a> ResolveVisitor<'a> {
 
         let name = c.name.text();
         let span = *c.name.span();
-        let def =
-          Definition::new(c.id, self.current_file(), DefKind::Const, span);
+        let def = Definition::new(
+          name.clone(),
+          c.id,
+          self.current_file(),
+          DefKind::Const,
+          span,
+        );
         let def_id = self.resolver().add_definition(def);
         self.module_resolver.define_value(name, def_id);
       }
@@ -964,6 +993,7 @@ impl<'a> ResolveVisitor<'a> {
         let name = for_expr.binding.text();
         let span = *for_expr.binding.span();
         let def = Definition::new(
+          name.clone(),
           for_expr.id,
           self.current_file(),
           DefKind::Local,
@@ -997,19 +1027,46 @@ impl<'a> ResolveVisitor<'a> {
         }
       }
 
-      ExprKind::Tuple(exprs) | ExprKind::Array(exprs) => {
+      ExprKind::Array {
+        values: exprs,
+        repeat,
+      } => {
+        for e in exprs {
+          self.resolve_expr(e);
+        }
+
+        if let Some(repeat) = repeat {
+          self.resolve_expr(repeat);
+        }
+      }
+
+      ExprKind::Tuple(exprs) => {
         for e in exprs {
           self.resolve_expr(e);
         }
       }
 
-      ExprKind::Builtin { args, .. } => {
+      ExprKind::Comptime { callee, args } => {
+        if let ExprKind::Path(p) = &callee.kind
+          && p.segments.len() == 1
+        {
+          let name = p.segments[0].identifier.text();
+
+          if let Some(kind) = BuiltInKind::try_constructing(&name) {
+            self.resolver().record_comptime_builtin(callee.id, kind);
+          } else {
+            self.resolve_expr(callee);
+          }
+        } else {
+          self.resolve_expr(callee);
+        }
+
         for arg in args {
           match arg {
-            BuiltinArg::Expr(e) => {
+            ComptimeArg::Expr(e) => {
               self.resolve_expr(e);
             }
-            BuiltinArg::Type(t) => {
+            ComptimeArg::Type(t) => {
               self.resolve_type(t);
             }
           }

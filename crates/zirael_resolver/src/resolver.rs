@@ -1,3 +1,4 @@
+use crate::builtin_kind::BuiltInKind;
 use crate::def::{DefId, Definition};
 use crate::import_order::ImportGraph;
 use crate::ribs::Rib;
@@ -21,7 +22,7 @@ pub struct Resolver {
   pub definitions: DashMap<DefId, Definition>,
   /// The import dependency graph
   pub import_graph: ImportGraph,
-  /// Path to SourceFileId mapping
+  /// Path to `SourceFileId` mapping
   pub path_to_files: DashMap<NodeId, SourceFileId>,
   /// Per-file exported symbols for cross-module resolution
   pub module_exports_values: DashMap<SourceFileId, DashMap<String, DefId>>,
@@ -32,6 +33,7 @@ pub struct Resolver {
   /// Per-DefId exported symbols for inline modules
   pub inline_module_exports_types: DashMap<DefId, DashMap<String, DefId>>,
   module_ribs: DashMap<SourceFileId, RwLock<(ScopeId, Rib)>>,
+  pub comptime_using_builtins: DashMap<NodeId, BuiltInKind>,
 }
 
 impl Resolver {
@@ -47,6 +49,7 @@ impl Resolver {
       inline_module_exports_types: DashMap::new(),
       path_to_files: DashMap::new(),
       module_ribs: DashMap::new(),
+      comptime_using_builtins: DashMap::new(),
     }
   }
 
@@ -64,6 +67,17 @@ impl Resolver {
         .entry(source_file)
         .or_insert_with(DashMap::new);
     }
+  }
+
+  pub fn record_comptime_builtin(&self, node: NodeId, kind: BuiltInKind) {
+    self.comptime_using_builtins.insert(node, kind);
+  }
+
+  pub fn get_recorded_comptime_builtin(
+    &self,
+    node: NodeId,
+  ) -> Option<BuiltInKind> {
+    self.comptime_using_builtins.get(&node).map(|b| b.clone())
   }
 
   pub fn add_import_edge(&self, from: SourceFileId, to: SourceFileId) {

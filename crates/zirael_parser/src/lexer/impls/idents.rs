@@ -77,6 +77,7 @@ impl Lexer<'_> {
       "async" => TokenType::Async,
       "mod" => TokenType::Mod,
       "from" => TokenType::From,
+      "comptime" => TokenType::Comptime,
       _ => TokenType::Identifier(normalized.clone()),
     };
 

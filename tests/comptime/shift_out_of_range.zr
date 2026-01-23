@@ -1,0 +1,6 @@
+//#error: shift amount must be in range 0..127 for `int`
+const X: i32 = 10 >> 128;
+
+func main() {
+    var val = X + 10;
+}

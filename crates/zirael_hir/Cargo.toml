@@ -12,6 +12,7 @@ zirael_resolver = { workspace = true }
 zirael_source = { workspace = true }
 zirael_utils = { workspace = true }
 dashmap = { workspace = true }
+itertools = { workspace = true }
 
 [lints]
 workspace = true

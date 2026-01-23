@@ -1,13 +1,14 @@
 use zirael_parser::ast::NodeId;
 use zirael_source::new_id;
 use zirael_source::prelude::SourceFileId;
-use zirael_utils::prelude::Span;
+use zirael_utils::prelude::{Identifier, Span};
 
 new_id!(DefId);
 
 /// A definition in the program is the "thing" that a name refers to.
 #[derive(Debug, Clone)]
 pub struct Definition {
+  pub name: String,
   pub id: DefId,
   /// original ast node
   pub node_id: NodeId,
@@ -18,12 +19,15 @@ pub struct Definition {
 
 impl Definition {
   pub fn new(
+    // TODO: this probably should be an identifier
+    name: String,
     node_id: NodeId,
     source_file: SourceFileId,
     kind: DefKind,
     span: Span,
   ) -> Self {
     Self {
+      name,
       id: DefId::new(),
       node_id,
       source_file,

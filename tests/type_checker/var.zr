@@ -1,0 +1,4 @@
+pub func test() {
+    //#error: attempted to initialize variable with `char`, but expected `f64`
+    var a: f64 = 'W';
+}

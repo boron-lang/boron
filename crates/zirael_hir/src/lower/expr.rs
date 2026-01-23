@@ -1,18 +1,50 @@
 use crate::expr::{
-  Block, Expr, ExprKind, FieldInit, Literal, Local, MatchArm, PathExpr,
-  PathSegment, Stmt, StmtKind,
+  Block, ComptimeArg, Expr, ExprKind, FieldInit, Literal, Local, MatchArm,
+  PathExpr, PathSegment, Stmt, StmtKind,
 };
 use crate::lower::context::LoweringContext;
 use crate::pat::{Pat, PatKind};
-use zirael_parser::ast::expressions::{self, ExprKind as AstExprKind};
+use expressions::Literal as AstLiteral;
+use itertools::Itertools as _;
+use zirael_parser::ast::expressions::{
+  self, ComptimeArg as AstComptimeArg, ExprKind as AstExprKind,
+};
 use zirael_parser::ast::statements;
+use zirael_parser::{IntBase, IntSuffix};
 use zirael_source::prelude::Span;
 use zirael_utils::prelude::Identifier;
+
+fn byte_literal(value: u8) -> Literal {
+  Literal::Int {
+    base: IntBase::Decimal,
+    value: value.to_string(),
+    suffix: Some(IntSuffix::U8),
+  }
+}
 
 impl LoweringContext<'_> {
   pub fn lower_expr(&mut self, expr: &expressions::Expr) -> Expr {
     let kind = match &expr.kind {
-      AstExprKind::Literal(lit) => ExprKind::Literal(self.lower_literal(lit)),
+      AstExprKind::Literal(lit) => {
+        if let AstLiteral::ByteString(lit) = lit {
+          let values = lit
+            .value
+            .iter()
+            .map(|v| Expr {
+              hir_id: self.next_hir_id(),
+              kind: ExprKind::Literal(byte_literal(*v)),
+              span: expr.span,
+            })
+            .collect_vec();
+
+          ExprKind::Array(values, None)
+        } else if let AstLiteral::Byte(byte) = lit {
+          println!("{byte:#?}");
+          ExprKind::Literal(byte_literal(byte.value))
+        } else {
+          ExprKind::Literal(self.lower_literal(lit))
+        }
+      }
 
       AstExprKind::Path(path) => {
         let def_id = self.get_def_id(expr.id);
@@ -118,8 +150,13 @@ impl LoweringContext<'_> {
         ExprKind::Tuple(exprs.iter().map(|e| self.lower_expr(e)).collect())
       }
 
-      AstExprKind::Array(exprs) => {
-        ExprKind::Array(exprs.iter().map(|e| self.lower_expr(e)).collect())
+      AstExprKind::Array { values, repeat } => {
+        let repeat = repeat.as_ref().map(|e| Box::new(self.lower_expr(e)));
+
+        ExprKind::Array(
+          values.iter().map(|e| self.lower_expr(e)).collect(),
+          repeat,
+        )
       }
 
       AstExprKind::Block(block) => ExprKind::Block(self.lower_block(block)),
@@ -174,7 +211,22 @@ impl LoweringContext<'_> {
         else_branch: Some(Box::new(self.lower_expr(else_expr))),
       },
 
-      AstExprKind::Builtin { name: _, args: _ } => todo!("handle builtins"),
+      AstExprKind::Comptime { callee, args } => {
+        let args = args
+          .iter()
+          .map(|a| match a {
+            AstComptimeArg::Expr(expr) => {
+              ComptimeArg::Expr(Box::new(self.lower_expr(expr)))
+            }
+            AstComptimeArg::Type(ty) => ComptimeArg::Type(self.lower_type(ty)),
+          })
+          .collect_vec();
+
+        ExprKind::Comptime {
+          callee: Box::new(self.lower_expr(callee)),
+          args,
+        }
+      }
     };
 
     Expr {
@@ -326,34 +378,35 @@ impl LoweringContext<'_> {
     }
   }
 
-  pub(crate) fn lower_literal(&self, lit: &expressions::Literal) -> Literal {
+  pub fn lower_literal(&self, lit: &AstLiteral) -> Literal {
     match lit {
-      expressions::Literal::Int(i) => Literal::Int {
+      AstLiteral::Int(i) => Literal::Int {
         value: i.value.clone(),
         base: i.base,
         suffix: i.suffix,
       },
-      expressions::Literal::Float(f) => Literal::Float {
+      AstLiteral::Float(f) => Literal::Float {
         value: f.value.clone(),
         suffix: f.suffix,
       },
-      expressions::Literal::Bool(b) => Literal::Bool(b.value),
-      expressions::Literal::Char(c) => Literal::Char(c.value),
-      expressions::Literal::Byte(b) => Literal::Byte(b.value),
-      expressions::Literal::String(s) => Literal::String(s.value.clone()),
-      expressions::Literal::Unit(_) => Literal::Unit,
+      AstLiteral::Bool(b) => Literal::Bool(b.value),
+      AstLiteral::Char(c) => Literal::Char(c.value),
+      AstLiteral::String(s) => Literal::String(s.value.clone()),
+      AstLiteral::Unit(_) => Literal::Unit,
+      _ => unreachable!(),
     }
   }
 
-  pub(crate) fn get_literal_span(&self, lit: &expressions::Literal) -> Span {
+  pub fn get_literal_span(&self, lit: &AstLiteral) -> Span {
     match lit {
-      expressions::Literal::Int(i) => i.span,
-      expressions::Literal::Float(f) => f.span,
-      expressions::Literal::Bool(b) => b.span,
-      expressions::Literal::Char(c) => c.span,
-      expressions::Literal::Byte(b) => b.span,
-      expressions::Literal::String(s) => s.span,
-      expressions::Literal::Unit(u) => u.span,
+      AstLiteral::Int(i) => i.span,
+      AstLiteral::Float(f) => f.span,
+      AstLiteral::Bool(b) => b.span,
+      AstLiteral::Char(c) => c.span,
+      AstLiteral::Byte(b) => b.span,
+      AstLiteral::ByteString(b) => b.span,
+      AstLiteral::String(s) => s.span,
+      AstLiteral::Unit(u) => u.span,
     }
   }
 }

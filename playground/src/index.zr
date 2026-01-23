@@ -2,13 +2,14 @@ func identity<T>(value: T) -> T {
     value
 }
 
-pub func add(a: i32, b: i32) -> i32 {
-    return a + b;
-}
+//comptime func square(a: i32) -> i32 {
+//    return a * a;
+//}
+
+//func x(t: [i32; 10 + 10]) {}
+
+const ARRAY_LEN: i32 = 10;
 
 pub func test() {
-    var a = identity(10);
-    var b = add(10, "w");
-
-    var y = &b;
+    var value = identity(10) + "dwas";
 }

@@ -1,6 +1,6 @@
+use crate::Path;
 use crate::ast::NodeId;
 use zirael_utils::prelude::{Identifier, Span};
-use crate::Path;
 
 #[derive(Debug, Clone)]
 pub struct GenericParams {
