@@ -19,12 +19,10 @@ impl TyChecker<'_> {
         let k2 = self.infcx.var_kind(*v2);
 
         match (k1, k2) {
-          (TyVarKind::General, TyVarKind::Integer)
-          | (TyVarKind::General, TyVarKind::Float) => {
+          (TyVarKind::General, TyVarKind::Integer | TyVarKind::Float) => {
             self.infcx.unify_var(*v1, b.clone());
           }
-          (TyVarKind::Integer, TyVarKind::General)
-          | (TyVarKind::Float, TyVarKind::General) => {
+          (TyVarKind::Integer | TyVarKind::Float, TyVarKind::General) => {
             self.infcx.unify_var(*v2, a.clone());
           }
           (TyVarKind::Integer, TyVarKind::Float)

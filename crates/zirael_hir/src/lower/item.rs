@@ -4,7 +4,6 @@ use crate::item::{
   Variant, VariantField, VariantKind,
 };
 use crate::lower::context::LoweringContext;
-use crate::ty::PathSegment;
 use zirael_parser::ast::ProgramNode;
 use zirael_parser::ast::items::{
   ConstItem, EnumItem, FunctionItem, Item as AstItem, ItemKind, MethodItem,
@@ -17,8 +16,6 @@ use zirael_parser::ast::{
   TypeBound as AstTypeBound, VariantField as AstVariantField,
 };
 use zirael_resolver::DefId;
-use zirael_source::span::Span;
-use zirael_utils::prelude::Identifier;
 
 impl LoweringContext<'_> {
   pub fn lower_module(&mut self, node: &ProgramNode) {

@@ -86,7 +86,7 @@ impl<'dcx> Parser<'dcx> {
 
   #[inline]
   pub fn check(&self, token_type: TokenType) -> bool {
-    &self.peek().kind == &token_type
+    self.peek().kind == token_type
   }
 
   #[inline]

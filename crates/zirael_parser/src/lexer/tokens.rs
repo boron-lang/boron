@@ -143,10 +143,10 @@ pub enum IntBase {
 impl IntBase {
   pub fn radix(&self) -> u32 {
     match self {
-      IntBase::Binary => 2,
-      IntBase::Octal => 8,
-      IntBase::Decimal => 10,
-      IntBase::Hexadecimal => 16,
+      Self::Binary => 2,
+      Self::Octal => 8,
+      Self::Decimal => 10,
+      Self::Hexadecimal => 16,
     }
   }
 }
@@ -177,7 +177,7 @@ impl fmt::Display for TokenType {
       Self::ByteStringLiteral(bytes) => write!(
         f,
         "byte string literal b\"{}\"",
-        String::from_utf8(bytes.clone()).unwrap_or("error".to_string())
+        String::from_utf8(bytes.clone()).unwrap_or("error".to_owned())
       ),
       Self::CharLiteral(c) => write!(f, "character literal '{c}'"),
       Self::IntegerLiteral(..) => write!(f, "integer literal"),

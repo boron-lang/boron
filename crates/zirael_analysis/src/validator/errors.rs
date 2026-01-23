@@ -1,5 +1,3 @@
-use std::fmt;
-use std::fmt::{Display, Formatter};
 use zirael_diagnostic_macro::Diagnostic;
 use zirael_utils::prelude::Span;
 

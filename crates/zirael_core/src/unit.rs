@@ -1,5 +1,4 @@
 use crate::prelude::*;
-use std::any::type_name;
 use std::process::exit;
 use zirael_analysis::validator::validate_comptime;
 use zirael_analysis::{TypeTable, typeck_hir};

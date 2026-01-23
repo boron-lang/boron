@@ -24,8 +24,8 @@ impl Parser<'_> {
       if let Some(generics) = generics {
         self.emit(GenericsFirstSegment {
           span: generics.span,
-        })
-      };
+        });
+      }
       segments.push(PathSegment {
         identifier,
         args: vec![],

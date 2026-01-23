@@ -3,7 +3,6 @@ use crate::builtin_kind::BuiltInKind;
 use crate::def::{DefKind, Definition};
 use crate::errors::{
   DuplicateDefinition, InvalidPathRoot, UndefinedName, UndefinedNameInModule,
-  UndefinedType,
 };
 use crate::module_resolver::ModuleResolver;
 use crate::resolver::Resolver;
@@ -124,7 +123,7 @@ impl<'a> ResolveVisitor<'a> {
       ImportKind::Wildcard => self.resolve_wildcard_import(target_file),
       ImportKind::Items(items) => self.resolve_items_import(target_file, items),
       ImportKind::Binding(name) => {
-        self.resolve_binding_import(target_file, *name, import)
+        self.resolve_binding_import(target_file, *name, import);
       }
     }
   }
@@ -204,7 +203,7 @@ impl<'a> ResolveVisitor<'a> {
       .get(&target_file)
       .map(|v| v.clone())
     {
-      for entry in exports.iter() {
+      for entry in &exports {
         let name = entry.key().clone();
         let def_id = *entry.value();
         self.module_resolver.define_value(name, def_id);
@@ -217,7 +216,7 @@ impl<'a> ResolveVisitor<'a> {
       .get(&target_file)
       .map(|v| v.clone())
     {
-      for entry in exports.iter() {
+      for entry in &exports {
         let name = entry.key().clone();
         let def_id = *entry.value();
         self.module_resolver.define_type(name, def_id);
@@ -505,7 +504,7 @@ impl<'a> ResolveVisitor<'a> {
     }
 
     for import in &node.imports {
-      self.resolve_import(&import);
+      self.resolve_import(import);
     }
 
     for item in &node.items {
@@ -1007,7 +1006,7 @@ impl<'a> ResolveVisitor<'a> {
         }
 
         if let Some(repeat) = repeat {
-          self.resolve_expr(repeat)
+          self.resolve_expr(repeat);
         }
       }
 

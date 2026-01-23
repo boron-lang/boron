@@ -3,10 +3,10 @@ use crate::ast::types::Mutability;
 use crate::lexer::IntBase as LexIntBase;
 use crate::parser::Parser;
 use crate::parser::errors::{
-  DuplicateNamedArg, EmptyMatch, ExpectedBuiltinName, ExpectedExpressionFound,
-  ExpectedFatArrow, ExpectedFieldName, ExpectedPattern, InvalidAssignTarget,
-  InvalidRepeatSyntax, MissingColonInTernary, MissingInKeyword,
-  RepeatSyntaxOnlyAtStart, RepeatSyntaxRequiredValue,
+  DuplicateNamedArg, EmptyMatch, ExpectedExpressionFound, ExpectedFatArrow,
+  ExpectedFieldName, ExpectedPattern, InvalidAssignTarget, InvalidRepeatSyntax,
+  MissingColonInTernary, MissingInKeyword, RepeatSyntaxOnlyAtStart,
+  RepeatSyntaxRequiredValue,
 };
 use crate::{IntBase, NodeId, Path, PathSegment, TokenType};
 use std::collections::HashMap;
@@ -215,7 +215,7 @@ impl Parser<'_> {
           &self.peek().kind
         {
           // tuple field access
-          let value = if let LexIntBase::Decimal = base {
+          let value = if matches!(base, LexIntBase::Decimal) {
             digits.clone()
           } else {
             self.emit(ExpectedFieldName {

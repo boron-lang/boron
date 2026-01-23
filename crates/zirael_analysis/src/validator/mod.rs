@@ -15,21 +15,19 @@ pub struct ComptimeValidator<'a> {
 pub fn validate_comptime(hir: &Hir, dcx: &DiagnosticCtx, resolver: &Resolver) {
   let validator = ComptimeValidator { hir, dcx, resolver };
 
-  for entry in hir.functions.iter() {
+  for entry in &hir.functions {
     let def_id = *entry.key();
     let func = entry.value();
-    validator.validate_function(def_id, &func);
+    validator.validate_function(def_id, func);
   }
 }
 
 impl ComptimeValidator<'_> {
   fn validate_function(&self, _def_id: DefId, func: &Function) {
-    if func.is_comptime {
-      if !func.generics.params.is_empty() {
-        self.dcx.emit(ComptimeNoGenerics {
-          span: func.generics.span,
-        });
-      }
+    if func.is_comptime && !func.generics.params.is_empty() {
+      self.dcx.emit(ComptimeNoGenerics {
+        span: func.generics.span,
+      });
     }
 
     if let Some(body) = &func.body {
@@ -102,18 +100,16 @@ impl ComptimeValidator<'_> {
         }
       }
 
-      ExprKind::Continue { .. }
-      | ExprKind::Path(..)
-      | ExprKind::Literal(..) => {}
+      ExprKind::Continue | ExprKind::Path(..) | ExprKind::Literal(..) => {}
 
       ExprKind::Comptime { callee, args } => {
-        println!("{:?}", callee);
+        println!("{callee:?}");
       }
 
       _ => {
         todo!("unhandled")
       }
-    };
+    }
   }
 
   fn validate_block(&self, block: &Block) {

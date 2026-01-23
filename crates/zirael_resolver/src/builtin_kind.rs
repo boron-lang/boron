@@ -8,13 +8,13 @@ pub enum BuiltInKind {
 }
 
 impl BuiltInKind {
-  pub fn try_constructing(name: &str) -> Option<BuiltInKind> {
+  pub fn try_constructing(name: &str) -> Option<Self> {
     match name {
-      "sizeOf" => Some(BuiltInKind::SizeOf),
-      "alignOf" => Some(BuiltInKind::AlignOf),
-      "typeOf" => Some(BuiltInKind::TypeOf),
-      "compileError" => Some(BuiltInKind::CompileError),
-      "unreachable" => Some(BuiltInKind::Unreachable),
+      "sizeOf" => Some(Self::SizeOf),
+      "alignOf" => Some(Self::AlignOf),
+      "typeOf" => Some(Self::TypeOf),
+      "compileError" => Some(Self::CompileError),
+      "unreachable" => Some(Self::Unreachable),
 
       _ => None,
     }

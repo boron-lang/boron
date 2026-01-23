@@ -1,7 +1,7 @@
 use std::num::ParseIntError;
 use zirael_diagnostic_macro::Diagnostic;
 use zirael_diagnostics::DiagnosticCtx;
-use zirael_parser::{IntBase, IntSuffix};
+use zirael_parser::IntBase;
 
 pub fn construct_i128(
   dcx: &DiagnosticCtx,

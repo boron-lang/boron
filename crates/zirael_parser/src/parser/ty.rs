@@ -1,4 +1,3 @@
-use crate::expressions::Expr;
 use crate::parser::Parser;
 use crate::parser::errors::{
   ConstAloneInType, ExpectedIdentifierInGeneric, ExpectedType,
@@ -6,7 +5,7 @@ use crate::parser::errors::{
 };
 use crate::{
   ArrayType, FunctionType, GenericParam, GenericParams, Mutability, NodeId,
-  OptionalType, Path, PointerType, PrimitiveKind, PrimitiveType, TokenType,
+  OptionalType, PointerType, PrimitiveKind, PrimitiveType, TokenType,
   TupleType, Type, TypeBound, UnitType,
 };
 use zirael_source::span::Span;
@@ -285,7 +284,7 @@ impl Parser<'_> {
 
       let ty = self.parse_type();
 
-      if let Type::Invalid = ty {
+      if matches!(ty, Type::Invalid) {
         self.advance_until_one_of(&[TokenType::Comma, TokenType::Gt]);
         if self.check(TokenType::Gt) {
           break;

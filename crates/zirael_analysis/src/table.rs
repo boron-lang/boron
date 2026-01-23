@@ -64,7 +64,7 @@ impl TypeTable {
   ) -> Option<InferTy> {
     self
       .field_types
-      .get(&(struct_id, field_name.to_string()))
+      .get(&(struct_id, field_name.to_owned()))
       .map(|t| t.clone())
   }
 
@@ -84,7 +84,7 @@ impl TypeTable {
   ) -> Option<TypeScheme> {
     self
       .method_types
-      .get(&(struct_id, method_name.to_string()))
+      .get(&(struct_id, method_name.to_owned()))
       .map(|s| s.clone())
   }
 }
@@ -102,7 +102,7 @@ pub struct InferCtx {
   pub(crate) var_kinds: DashMap<TyVar, TyVarKind>,
   /// maps type variables to their resolved types
   pub(crate) substitution: DashMap<TyVar, InferTy>,
-  /// Maps type parameter DefIds to their type variables
+  /// Maps type parameter `DefIds` to their type variables
   type_params: RwLock<HashMap<DefId, TyVar>>,
   /// Constraint set for delayed unification
   constraints: RwLock<Vec<Constraint>>,

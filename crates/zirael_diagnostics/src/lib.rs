@@ -17,8 +17,8 @@ pub use diagnostics::*;
 pub mod prelude {
   pub use crate::code::*;
   pub use crate::codes::*;
+  pub use crate::ctx::*;
   pub use crate::diagnostics::*;
   pub use crate::output_type::*;
   pub use anyhow::Result;
-  pub use crate::ctx::*;
 }

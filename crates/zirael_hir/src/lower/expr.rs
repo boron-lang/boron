@@ -5,12 +5,12 @@ use crate::expr::{
 use crate::lower::context::LoweringContext;
 use crate::pat::{Pat, PatKind};
 use expressions::Literal as AstLiteral;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use zirael_parser::ast::expressions::{
   self, ComptimeArg as AstComptimeArg, ExprKind as AstExprKind,
 };
 use zirael_parser::ast::statements;
-use zirael_parser::{IntBase, IntLit, IntSuffix};
+use zirael_parser::{IntBase, IntSuffix};
 use zirael_source::prelude::Span;
 use zirael_utils::prelude::Identifier;
 
@@ -39,7 +39,7 @@ impl LoweringContext<'_> {
 
           ExprKind::Array(values, None)
         } else if let AstLiteral::Byte(byte) = lit {
-          println!("{:#?}", byte);
+          println!("{byte:#?}");
           ExprKind::Literal(byte_literal(byte.value))
         } else {
           ExprKind::Literal(self.lower_literal(lit))

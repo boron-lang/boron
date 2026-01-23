@@ -1,4 +1,3 @@
-use num_bigint::BigInt;
 use std::fmt;
 use zirael_hir::SemanticTy;
 
@@ -22,40 +21,40 @@ pub enum ConstValue {
 impl fmt::Display for ConstValue {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
-      ConstValue::Int(i) => write!(f, "{}", i),
-      ConstValue::Bool(b) => write!(f, "{}", b),
-      ConstValue::Char(c) => write!(f, "'{}'", c),
-      ConstValue::String(s) => write!(f, "{}", s),
-      ConstValue::Array(arr) => {
+      Self::Int(i) => write!(f, "{i}"),
+      Self::Bool(b) => write!(f, "{b}"),
+      Self::Char(c) => write!(f, "'{c}'"),
+      Self::String(s) => write!(f, "{s}"),
+      Self::Array(arr) => {
         write!(f, "[")?;
         for (i, val) in arr.iter().enumerate() {
           if i > 0 {
             write!(f, ", ")?;
           }
-          write!(f, "{}", val)?;
+          write!(f, "{val}")?;
         }
         write!(f, "]")
       }
-      ConstValue::Struct(fields) => {
+      Self::Struct(fields) => {
         write!(f, "{{")?;
         for (i, val) in fields.iter().enumerate() {
           if i > 0 {
             write!(f, ", ")?;
           }
-          write!(f, "{}", val)?;
+          write!(f, "{val}")?;
         }
         write!(f, "}}")
       }
-      ConstValue::Enum { tag, payload } => {
+      Self::Enum { tag, payload } => {
         if let Some(payload) = payload {
-          write!(f, "Enum(tag: {}, payload: {})", tag, payload)
+          write!(f, "Enum(tag: {tag}, payload: {payload})")
         } else {
-          write!(f, "Enum(tag: {})", tag)
+          write!(f, "Enum(tag: {tag})")
         }
       }
-      ConstValue::Type(ty) => write!(f, "Type({:?})", ty),
-      ConstValue::Unit => write!(f, "()"),
-      ConstValue::Poison => write!(f, "invalid value"),
+      Self::Type(ty) => write!(f, "Type({ty:?})"),
+      Self::Unit => write!(f, "()"),
+      Self::Poison => write!(f, "invalid value"),
     }
   }
 }

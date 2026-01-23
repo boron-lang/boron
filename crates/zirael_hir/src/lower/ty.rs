@@ -3,7 +3,7 @@ use crate::ty::{ArrayLen, PathSegment, Ty, TyKind};
 use zirael_parser::Path;
 use zirael_parser::ast::types::Type;
 use zirael_source::prelude::Span;
-use zirael_utils::prelude::{Identifier, get_or_intern};
+use zirael_utils::prelude::Identifier;
 
 impl LoweringContext<'_> {
   pub fn lower_path(&mut self, path: &Path) -> Vec<PathSegment> {
@@ -12,14 +12,14 @@ impl LoweringContext<'_> {
       segments.push(PathSegment {
         name: Identifier::new(&root.to_string(), Span::dummy()),
         args: vec![],
-      })
+      });
     }
 
     for seg in &path.segments {
       segments.push(PathSegment {
         name: seg.identifier,
         args: seg.args.iter().map(|s| self.lower_type(s)).collect(),
-      })
+      });
     }
 
     segments

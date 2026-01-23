@@ -3,7 +3,7 @@ use num_bigint::BigInt;
 use zirael_diagnostics::DiagnosticCtx;
 use zirael_parser::NodeId;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FullLiteral {
   Int(BigInt),
   Float(FloatLiteral),
@@ -14,7 +14,7 @@ pub enum FullLiteral {
   Unit,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FloatLiteral {
   pub significand: BigInt,
   pub exponent: i32,

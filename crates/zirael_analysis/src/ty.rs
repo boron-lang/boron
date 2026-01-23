@@ -60,66 +60,64 @@ impl Display for InferTy {
 impl InferTy {
   pub fn has_vars(&self) -> bool {
     match self {
-      InferTy::Var(_) => true,
-      InferTy::Primitive(_) => false,
-      InferTy::Adt { args, .. } => args.iter().any(|t| t.has_vars()),
-      InferTy::Ptr { ty, .. } => ty.has_vars(),
-      InferTy::Optional(ty) => ty.has_vars(),
-      InferTy::Array { ty, .. } => ty.has_vars(),
-      InferTy::Slice(ty) => ty.has_vars(),
-      InferTy::Tuple(tys) => tys.iter().any(|t| t.has_vars()),
-      InferTy::Fn { params, ret } => {
+      Self::Var(_) => true,
+      Self::Primitive(_) => false,
+      Self::Adt { args, .. } => args.iter().any(|t| t.has_vars()),
+      Self::Ptr { ty, .. } => ty.has_vars(),
+      Self::Optional(ty) => ty.has_vars(),
+      Self::Array { ty, .. } => ty.has_vars(),
+      Self::Slice(ty) => ty.has_vars(),
+      Self::Tuple(tys) => tys.iter().any(|t| t.has_vars()),
+      Self::Fn { params, ret } => {
         params.iter().any(|t| t.has_vars()) || ret.has_vars()
       }
-      InferTy::Unit | InferTy::Never | InferTy::Param { .. } | InferTy::Err => {
-        false
-      }
+      Self::Unit | Self::Never | Self::Param { .. } | Self::Err => false,
     }
   }
 
   pub fn is_err(&self) -> bool {
-    matches!(self, InferTy::Err)
+    matches!(self, Self::Err)
   }
 
   pub fn is_var(&self) -> bool {
-    matches!(self, InferTy::Var(_))
+    matches!(self, Self::Var(_))
   }
 
   pub fn is_numeric(&self) -> bool {
     match self {
-      InferTy::Primitive(p) => p.is_numeric(),
+      Self::Primitive(p) => p.is_numeric(),
       _ => false,
     }
   }
 
   pub fn is_integer(&self) -> bool {
     match self {
-      InferTy::Primitive(p) => p.is_integer(),
+      Self::Primitive(p) => p.is_integer(),
       _ => false,
     }
   }
 
   pub fn is_float(&self) -> bool {
     match self {
-      InferTy::Primitive(p) => p.is_float(),
+      Self::Primitive(p) => p.is_float(),
       _ => false,
     }
   }
 
   pub fn is_bool(&self) -> bool {
-    matches!(self, InferTy::Primitive(PrimitiveKind::Bool))
+    matches!(self, Self::Primitive(PrimitiveKind::Bool))
   }
 
   pub fn is_unit(&self) -> bool {
-    matches!(self, InferTy::Unit)
+    matches!(self, Self::Unit)
   }
 
   pub fn is_never(&self) -> bool {
-    matches!(self, InferTy::Never)
+    matches!(self, Self::Never)
   }
 
   pub fn bool() -> Self {
-    InferTy::Primitive(PrimitiveKind::Bool)
+    Self::Primitive(PrimitiveKind::Bool)
   }
 }
 
@@ -147,11 +145,11 @@ pub enum UnifyResult {
 
 impl UnifyResult {
   pub fn is_ok(&self) -> bool {
-    matches!(self, UnifyResult::Ok)
+    matches!(self, Self::Ok)
   }
 
   pub fn is_err(&self) -> bool {
-    matches!(self, UnifyResult::Err(_))
+    matches!(self, Self::Err(_))
   }
 }
 
@@ -197,25 +195,25 @@ pub enum Expectation {
 
 impl Expectation {
   pub fn none() -> Self {
-    Expectation::None
+    Self::None
   }
 
   pub fn has_type(ty: InferTy) -> Self {
-    Expectation::ExpectHasType(ty)
+    Self::ExpectHasType(ty)
   }
 
   pub fn coercion(ty: InferTy) -> Self {
-    Expectation::Coercion(ty)
+    Self::Coercion(ty)
   }
 
   pub fn to_option(&self) -> Option<&InferTy> {
     match self {
-      Expectation::None => None,
-      Expectation::ExpectHasType(ty) | Expectation::Coercion(ty) => Some(ty),
+      Self::None => None,
+      Self::ExpectHasType(ty) | Self::Coercion(ty) => Some(ty),
     }
   }
 
   pub fn is_none(&self) -> bool {
-    matches!(self, Expectation::None)
+    matches!(self, Self::None)
   }
 }

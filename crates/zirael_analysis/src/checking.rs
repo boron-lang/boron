@@ -28,16 +28,16 @@ pub fn typeck_hir(
 
   checker.collect_signatures();
 
-  for entry in hir.functions.iter() {
+  for entry in &hir.functions {
     let def_id = *entry.key();
     let func = entry.value();
-    checker.typeck_function(def_id, &func);
+    checker.typeck_function(def_id, func);
   }
 
-  for entry in hir.consts.iter() {
+  for entry in &hir.consts {
     let def_id = *entry.key();
     let konst = entry.value();
-    checker.typeck_const(def_id, &konst);
+    checker.typeck_const(def_id, konst);
   }
 
   checker.finalize_types();
@@ -78,14 +78,14 @@ impl<'a> TyChecker<'a> {
   }
 
   fn collect_signatures(&mut self) {
-    for entry in self.hir.functions.iter() {
+    for entry in &self.hir.functions {
       let def_id = *entry.key();
       let func = entry.value();
-      let scheme = self.function_signature(&func);
+      let scheme = self.function_signature(func);
       self.table.record_def_type(def_id, scheme);
     }
 
-    for entry in self.hir.structs.iter() {
+    for entry in &self.hir.structs {
       let def_id = *entry.key();
       let strukt = entry.value();
 
@@ -121,7 +121,7 @@ impl<'a> TyChecker<'a> {
       }
     }
 
-    for entry in self.hir.enums.iter() {
+    for entry in &self.hir.enums {
       let def_id = *entry.key();
       let eenum = entry.value();
 
@@ -142,7 +142,7 @@ impl<'a> TyChecker<'a> {
       // TODO: Record enum variant types
     }
 
-    for entry in self.hir.consts.iter() {
+    for entry in &self.hir.consts {
       let def_id = *entry.key();
       let konst = entry.value();
       self.infcx.clear_type_params();
@@ -218,7 +218,7 @@ impl<'a> TyChecker<'a> {
     }
   }
 
-  #[allow(dead_code)]
+  #[expect(dead_code)]
   fn method_signature(&self, method: &Method) -> TypeScheme {
     let params = self.param_types(&method.params);
 
@@ -440,9 +440,8 @@ impl<'a> TyChecker<'a> {
       }
 
       ExprKind::Unary { op: _, operand } => {
-        let operand_ty = self.check_expr(operand, env, &Expectation::none());
         // TODO: Implement unary operator type checking
-        operand_ty
+        self.check_expr(operand, env, &Expectation::none())
       }
 
       ExprKind::Call { callee, args } => {
@@ -552,7 +551,7 @@ impl<'a> TyChecker<'a> {
         InferTy::Never
       }
 
-      ExprKind::Continue { .. } => InferTy::Never,
+      ExprKind::Continue => InferTy::Never,
 
       _ => {
         // TODO: Handle remaining expression kinds
