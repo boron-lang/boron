@@ -5,6 +5,7 @@ pub mod interpreter;
 mod literals;
 mod table;
 mod ty;
+mod ty_formatter;
 mod unify;
 pub mod validator;
 

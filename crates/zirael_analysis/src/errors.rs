@@ -1,3 +1,4 @@
+use crate::{InferTy, TyVar};
 use zirael_diagnostic_macro::Diagnostic;
 use zirael_utils::prelude::Span;
 
@@ -65,4 +66,40 @@ pub struct UnsupportedConstExpr {
 pub struct PathNotConst {
   #[error("in here")]
   pub span: Span,
+}
+
+#[derive(Diagnostic)]
+#[error(
+  "attempted to initialize variable with `{found}`, but expected `{expected}`"
+)]
+#[code(TYPE_CHECKER_VAR_INIT_MISMATCH)]
+pub struct VarInitMismatch {
+  #[error("in this variable")]
+  pub span: Span,
+  pub expected: String,
+  pub found: String,
+}
+
+#[derive(Diagnostic)]
+#[error(
+  "occurs check failed: type variable `{var}` occurs in `{ty}`, causing infinite type"
+)]
+#[code(TYPE_CHECKER_OCCURS_CHECK)]
+pub struct OccursCheck {
+  #[error("at this type variable")]
+  pub var_span: Span,
+  pub var: TyVar,
+  #[error("within this type")]
+  pub ty_span: Span,
+  pub ty: String,
+}
+
+#[derive(Diagnostic)]
+#[error("array length mismatch: expected `{expected}`, found `{found}`")]
+#[code(TYPE_CHECKER_ARRAY_LEN_MISMATCH)]
+pub struct ArrayLenMismatch {
+  #[error("at this array")]
+  pub span: Span,
+  pub expected: usize,
+  pub found: usize,
 }

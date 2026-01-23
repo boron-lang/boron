@@ -2,6 +2,7 @@ use std::fmt::{Display, Formatter};
 use zirael_parser::ast::types::{Mutability, PrimitiveKind};
 use zirael_resolver::DefId;
 use zirael_utils::ident_table::Identifier;
+use zirael_utils::prelude::Span;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TyVar(pub u32);
@@ -9,6 +10,12 @@ pub struct TyVar(pub u32);
 impl TyVar {
   pub fn new(id: u32) -> Self {
     Self(id)
+  }
+}
+
+impl Display for TyVar {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "Type Variable {}", self.0)
   }
 }
 
@@ -21,103 +28,122 @@ pub enum TyVarKind {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum InferTy {
-  Var(TyVar),
-  Primitive(PrimitiveKind),
+  Var(TyVar, Span),
+  Primitive(PrimitiveKind, Span),
   Adt {
     def_id: DefId,
     args: Vec<InferTy>,
+    span: Span,
   },
   Ptr {
     mutability: Mutability,
     ty: Box<InferTy>,
+    span: Span,
   },
-  Optional(Box<InferTy>),
+  Optional(Box<InferTy>, Span),
   Array {
     ty: Box<InferTy>,
     len: usize,
+    span: Span,
   },
-  Slice(Box<InferTy>),
-  Tuple(Vec<InferTy>),
+  Slice(Box<InferTy>, Span),
+  Tuple(Vec<InferTy>, Span),
   Fn {
     params: Vec<InferTy>,
     ret: Box<InferTy>,
+    span: Span,
   },
-  Unit,
-  Never,
+  Unit(Span),
+  Never(Span),
   Param {
     def_id: DefId,
     name: Identifier,
+    span: Span,
   },
-  Err,
-}
-
-impl Display for InferTy {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    todo!()
-  }
+  Err(Span),
 }
 
 impl InferTy {
+  pub fn span(&self) -> Span {
+    match self {
+      Self::Var(_, span) => *span,
+      Self::Primitive(_, span) => *span,
+      Self::Adt { span, .. } => *span,
+      Self::Ptr { span, .. } => *span,
+      Self::Optional(_, span) => *span,
+      Self::Array { span, .. } => *span,
+      Self::Slice(_, span) => *span,
+      Self::Tuple(_, span) => *span,
+      Self::Fn { span, .. } => *span,
+      Self::Unit(span) => *span,
+      Self::Never(span) => *span,
+      Self::Param { span, .. } => *span,
+      Self::Err(span) => *span,
+    }
+  }
+
   pub fn has_vars(&self) -> bool {
     match self {
-      Self::Var(_) => true,
-      Self::Primitive(_) => false,
+      Self::Var(_, _) => true,
+      Self::Primitive(_, _) => false,
       Self::Adt { args, .. } => args.iter().any(|t| t.has_vars()),
       Self::Ptr { ty, .. } => ty.has_vars(),
-      Self::Optional(ty) => ty.has_vars(),
+      Self::Optional(ty, _) => ty.has_vars(),
       Self::Array { ty, .. } => ty.has_vars(),
-      Self::Slice(ty) => ty.has_vars(),
-      Self::Tuple(tys) => tys.iter().any(|t| t.has_vars()),
-      Self::Fn { params, ret } => {
+      Self::Slice(ty, _) => ty.has_vars(),
+      Self::Tuple(tys, _) => tys.iter().any(|t| t.has_vars()),
+      Self::Fn { params, ret, .. } => {
         params.iter().any(|t| t.has_vars()) || ret.has_vars()
       }
-      Self::Unit | Self::Never | Self::Param { .. } | Self::Err => false,
+      Self::Unit(_) | Self::Never(_) | Self::Param { .. } | Self::Err(_) => {
+        false
+      }
     }
   }
 
   pub fn is_err(&self) -> bool {
-    matches!(self, Self::Err)
+    matches!(self, Self::Err(_))
   }
 
   pub fn is_var(&self) -> bool {
-    matches!(self, Self::Var(_))
+    matches!(self, Self::Var(_, _))
   }
 
   pub fn is_numeric(&self) -> bool {
     match self {
-      Self::Primitive(p) => p.is_numeric(),
+      Self::Primitive(p, _) => p.is_numeric(),
       _ => false,
     }
   }
 
   pub fn is_integer(&self) -> bool {
     match self {
-      Self::Primitive(p) => p.is_integer(),
+      Self::Primitive(p, _) => p.is_integer(),
       _ => false,
     }
   }
 
   pub fn is_float(&self) -> bool {
     match self {
-      Self::Primitive(p) => p.is_float(),
+      Self::Primitive(p, _) => p.is_float(),
       _ => false,
     }
   }
 
   pub fn is_bool(&self) -> bool {
-    matches!(self, Self::Primitive(PrimitiveKind::Bool))
+    matches!(self, Self::Primitive(PrimitiveKind::Bool, _))
   }
 
   pub fn is_unit(&self) -> bool {
-    matches!(self, Self::Unit)
+    matches!(self, Self::Unit(_))
   }
 
   pub fn is_never(&self) -> bool {
-    matches!(self, Self::Never)
+    matches!(self, Self::Never(_))
   }
 
-  pub fn bool() -> Self {
-    Self::Primitive(PrimitiveKind::Bool)
+  pub fn bool(span: Span) -> Self {
+    Self::Primitive(PrimitiveKind::Bool, span)
   }
 }
 
