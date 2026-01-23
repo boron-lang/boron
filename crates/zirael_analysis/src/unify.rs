@@ -2,6 +2,7 @@ use crate::{InferTy, TyChecker, TyVarKind, UnifyError, UnifyResult};
 use zirael_utils::prelude::Span;
 
 impl TyChecker<'_> {
+  #[must_use = "the caller should handle the result"]
   pub fn unify(&self, a: &InferTy, b: &InferTy, span: Span) -> UnifyResult {
     let a = self.infcx.resolve(a);
     let b = self.infcx.resolve(b);

@@ -11,6 +11,6 @@
 const ARRAY_LEN: i32 = 10;
 
 pub func test() {
-    var array: [i32; ARRAY_LEN + 10 / 0] = [10, 20];
-    var a = 0.1;
+    var array = [10, 20];
+    var a: f64 = "w";
 }
