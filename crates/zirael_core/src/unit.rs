@@ -42,6 +42,8 @@ impl<'ctx> CompilationUnit<'ctx> {
     self.validate_comptime();
 
     self.typeck();
+
+    println!("{:#?}", self.hir);
   }
 
   fn validate_comptime(&mut self) {
