@@ -10,11 +10,12 @@ use crate::emitters::human_readable::label::{LabelInfo, LabelKind, LineLabel};
 use crate::emitters::human_readable::source_groups::SourceGroup;
 use crate::fmt::Fmt;
 use crate::show::Show;
-use std::io;
 use std::io::Write;
+use std::ops::Range;
 use std::sync::Arc;
 use unicode_width::UnicodeWidthChar;
 use yansi::Color;
+use zirael_source::line::Line;
 use zirael_source::prelude::{SourceFile, Sources, Span};
 
 pub const CONTEXT_LINES: usize = 0;
@@ -69,33 +70,32 @@ impl HumanReadableEmitter {
 
 impl Emitter for HumanReadableEmitter {
   fn emit_diagnostic(&self, diag: &Diag, w: &mut dyn Write) -> anyhow::Result<()> {
-    let draw = self.characters.clone();
+    self.write_header(diag, w)?;
+    let groups = self.get_source_groups(diag);
+    let line_no_width = self.calculate_line_number_width(&groups);
+    self.write_source_sections(diag, &groups, line_no_width, w)?;
+    Ok(())
+  }
 
-    // --- Header ---
+  fn sources(&self) -> &Arc<Sources> {
+    &self.sources
+  }
+}
+
+impl<'a> HumanReadableEmitter {
+  fn write_header(&self, diag: &Diag, w: &mut dyn Write) -> anyhow::Result<()> {
     let code = diag.code.as_ref().map(|c| format!("[{c}] "));
     let id = format!("{}{}:", Show(code), diag.level.name());
     let kind_color = diag.level.color();
     writeln!(w, "{} {}", id.fg(kind_color), diag.message)?;
+    Ok(())
+  }
 
-    let groups = self.get_source_groups(diag);
-
-    // Line number maximum width
-    let line_no_width = groups
+  fn calculate_line_number_width(&self, groups: &[SourceGroup]) -> usize {
+    groups
       .iter()
       .filter_map(|SourceGroup { char_span, src_id, .. }| {
-        let src_name = self
-          .sources
-          .display(*src_id)
-          .map(|d| d.to_string())
-          .unwrap_or_else(|| "<unknown>".to_owned());
-
-        let src = if let Some(src) = self.sources.get(*src_id) {
-          src
-        } else {
-          eprintln!("Unable to fetch source {src_name}");
-          return None;
-        };
-
+        let src = self.sources.get(*src_id)?;
         let line_range = src.get_line_range(char_span.clone());
         Some(
           (1..)
@@ -106,545 +106,796 @@ impl Emitter for HumanReadableEmitter {
         )
       })
       .max()
-      .unwrap_or(0);
+      .unwrap_or(0)
+  }
 
-    // --- Source sections ---
+  fn write_source_sections(
+    &self,
+    diag: &Diag,
+    groups: &[SourceGroup],
+    line_no_width: usize,
+    w: &mut dyn Write,
+  ) -> anyhow::Result<()> {
     let groups_len = groups.len();
-    for (group_idx, SourceGroup { src_id, char_span, labels, .. }) in
-      groups.into_iter().enumerate()
-    {
-      let src_name = self
-        .sources
-        .display(src_id)
-        .map(|d| d.to_string())
-        .unwrap_or_else(|| "<unknown>".to_owned());
+    for (group_idx, group) in groups.iter().enumerate() {
+      self.write_source_group(diag, group, group_idx, groups_len, line_no_width, w)?;
+    }
+    Ok(())
+  }
 
-      let src = if let Some(src) = self.sources.get(src_id) {
-        src
-      } else {
+  fn write_source_group(
+    &self,
+    diag: &Diag,
+    group: &SourceGroup,
+    group_idx: usize,
+    groups_len: usize,
+    line_no_width: usize,
+    w: &mut dyn Write,
+  ) -> anyhow::Result<()> {
+    let SourceGroup { src_id, char_span, labels, .. } = group;
+    let src_name = self
+      .sources
+      .display(*src_id)
+      .map(|d| d.to_string())
+      .unwrap_or_else(|| "<unknown>".to_owned());
+
+    let src = match self.sources.get(*src_id) {
+      Some(src) => src,
+      None => {
         eprintln!("Unable to fetch source {src_name}");
-        continue;
-      };
+        return Ok(());
+      }
+    };
 
-      let line_range = src.get_line_range(char_span);
+    self.write_file_reference(group_idx, labels, &src, &src_name, line_no_width, w)?;
 
-      // File name & reference
-      let location = labels[0].char_span.start;
-      let line_and_col = src.get_byte_line(location).map(|(line_obj, idx, col)| {
+    let (multi_labels, multi_labels_with_message) = self.collect_multi_labels(labels);
+    let line_range = src.get_line_range(char_span.clone());
+
+    self.write_lines(
+      &line_range,
+      labels,
+      &multi_labels,
+      &multi_labels_with_message,
+      &src,
+      line_no_width,
+      w,
+    )?;
+
+    let is_final_group = group_idx + 1 == groups_len;
+    if is_final_group {
+      self.write_help_and_notes(
+        diag,
+        &multi_labels_with_message,
+        &src,
+        line_no_width,
+        w,
+      )?;
+    }
+
+    self.write_group_footer(is_final_group, line_no_width, w)?;
+    Ok(())
+  }
+
+  fn write_file_reference(
+    &self,
+    group_idx: usize,
+    labels: &[LabelInfo<'a>],
+    src: &SourceFile,
+    src_name: &str,
+    line_no_width: usize,
+    w: &mut dyn Write,
+  ) -> anyhow::Result<()> {
+    let draw = &self.characters;
+    let location = labels[0].char_span.start;
+    let (line_no, col_no) = self.get_line_col_display(src, location);
+    let line_ref = format!("{src_name}:{line_no}:{col_no}");
+
+    writeln!(
+      w,
+      "{}{}{}{} {} {}",
+      Show((' ', line_no_width + 2)),
+      if group_idx == 0 { draw.ltop } else { draw.lcross }.fg(self.margin_color()),
+      draw.hbar.fg(self.margin_color()),
+      draw.lbox.fg(self.margin_color()),
+      line_ref,
+      draw.rbox.fg(self.margin_color()),
+    )?;
+
+    writeln!(
+      w,
+      "{}{}",
+      Show((' ', line_no_width + 2)),
+      draw.vbar.fg(self.margin_color())
+    )?;
+    Ok(())
+  }
+
+  fn get_line_col_display(&self, src: &SourceFile, location: usize) -> (String, String) {
+    src
+      .get_byte_line(location)
+      .map(|(line_obj, idx, col)| {
         let line_text = src.get_line_text(line_obj).unwrap();
-
         let col_chars =
           line_text.char_indices().take_while(|(byte_idx, _)| *byte_idx < col).count();
-        (line_obj, idx, col_chars)
-      });
+        (format!("{}", idx + 1 + src.display_line_offset()), format!("{}", col_chars + 1))
+      })
+      .unwrap_or_else(|| ('?'.to_string(), '?'.to_string()))
+  }
 
-      let (line_no, col_no) = line_and_col
-        .map(|(_, idx, col)| {
-          (format!("{}", idx + 1 + src.display_line_offset()), format!("{}", col + 1))
-        })
-        .unwrap_or_else(|| ('?'.to_string(), '?'.to_string()));
-      let line_ref = format!("{src_name}:{line_no}:{col_no}");
+  fn collect_multi_labels(
+    &self,
+    labels: &'a [LabelInfo<'a>],
+  ) -> (Vec<&'a LabelInfo<'a>>, Vec<&'a LabelInfo<'a>>) {
+    let mut multi_labels = Vec::new();
+    let mut multi_labels_with_message = Vec::new();
 
-      writeln!(
+    for label_info in labels {
+      if matches!(label_info.kind, LabelKind::Multiline) {
+        multi_labels.push(label_info);
+        if label_info.info.message.is_some() {
+          multi_labels_with_message.push(label_info);
+        }
+      }
+    }
+
+    multi_labels.sort_by_key(|m| {
+      -(Span::no_file(m.char_span.start, m.char_span.end).len() as isize)
+    });
+    multi_labels_with_message.sort_by_key(|m| {
+      -(Span::no_file(m.char_span.start, m.char_span.end).len() as isize)
+    });
+
+    (multi_labels, multi_labels_with_message)
+  }
+
+  fn write_lines(
+    &self,
+    line_range: &Range<usize>,
+    labels: &[LabelInfo<'a>],
+    multi_labels: &[&LabelInfo<'a>],
+    multi_labels_with_message: &[&LabelInfo<'a>],
+    src: &SourceFile,
+    line_no_width: usize,
+    w: &mut dyn Write,
+  ) -> anyhow::Result<()> {
+    let mut is_ellipsis = false;
+
+    for idx in line_range.clone() {
+      let line = match src.line(idx) {
+        Some(line) => line,
+        None => continue,
+      };
+
+      let margin_label = self.find_margin_label(&line, multi_labels_with_message);
+      let line_labels =
+        self.collect_line_labels(&line, labels, multi_labels_with_message, &margin_label);
+
+      if line_labels.is_empty() && margin_label.is_none() {
+        is_ellipsis = self.handle_empty_line(
+          idx,
+          &line,
+          multi_labels,
+          is_ellipsis,
+          line_no_width,
+          multi_labels_with_message,
+          src,
+          w,
+        )?;
+        continue;
+      }
+
+      is_ellipsis = false;
+      self.write_line_with_labels(
+        idx,
+        &line,
+        line_labels,
+        &margin_label,
+        is_ellipsis,
+        line_no_width,
+        multi_labels_with_message,
+        src,
         w,
-        "{}{}{}{} {} {}",
-        Show((' ', line_no_width + 2)),
-        if group_idx == 0 { draw.ltop } else { draw.lcross }.fg(self.margin_color()),
-        draw.hbar.fg(self.margin_color()),
-        draw.lbox.fg(self.margin_color()),
-        line_ref,
-        draw.rbox.fg(self.margin_color()),
+      )?;
+    }
+
+    Ok(())
+  }
+
+  fn find_margin_label(
+    &self,
+    line: &Line,
+    multi_labels_with_message: &[&'a LabelInfo<'a>],
+  ) -> Option<LineLabel<'a>> {
+    multi_labels_with_message
+      .iter()
+      .filter_map(|label| {
+        let is_start = line.span().contains(label.char_span.start);
+        let is_end = line.span().contains(label.last_offset());
+        if is_start {
+          Some(LineLabel {
+            col: label.char_span.start - line.offset(),
+            label,
+            multi: true,
+            draw_msg: false,
+          })
+        } else if is_end {
+          Some(LineLabel {
+            col: label.last_offset() - line.offset(),
+            label,
+            multi: true,
+            draw_msg: true,
+          })
+        } else {
+          None
+        }
+      })
+      .min_by_key(|ll| (ll.col, !ll.label.char_span.start))
+  }
+
+  fn collect_line_labels(
+    &self,
+    line: &Line,
+    labels: &'a [LabelInfo<'a>],
+    multi_labels_with_message: &[&'a LabelInfo<'a>],
+    margin_label: &Option<LineLabel<'a>>,
+  ) -> Vec<LineLabel<'a>> {
+    let mut line_labels = Vec::new();
+
+    // Collect multiline labels
+    for label in multi_labels_with_message {
+      let is_start = line.span().contains(label.char_span.start);
+      let is_end = line.span().contains(label.last_offset());
+
+      if is_start && margin_label.as_ref().is_none_or(|m| !std::ptr::eq(*label, m.label))
+      {
+        line_labels.push(LineLabel {
+          col: label.char_span.start - line.offset(),
+          label,
+          multi: true,
+          draw_msg: false,
+        });
+      } else if is_end {
+        line_labels.push(LineLabel {
+          col: label.last_offset() - line.offset(),
+          label,
+          multi: true,
+          draw_msg: true,
+        });
+      }
+    }
+
+    // Collect inline labels
+    for label_info in labels.iter().filter(|l| {
+      l.char_span.start >= line.span().start && l.char_span.end <= line.span().end
+    }) {
+      if matches!(label_info.kind, LabelKind::Inline) {
+        line_labels.push(LineLabel {
+          col: ((label_info.char_span.start + label_info.char_span.end) / 2)
+            .max(label_info.char_span.start)
+            - line.offset(),
+          label: label_info,
+          multi: false,
+          draw_msg: true,
+        });
+      }
+    }
+
+    line_labels
+      .sort_by_key(|ll| (ll.label.info.order, ll.col, !ll.label.char_span.start));
+    line_labels
+  }
+
+  fn handle_empty_line(
+    &self,
+    idx: usize,
+    line: &Line,
+    multi_labels: &[&LabelInfo<'a>],
+    is_ellipsis: bool,
+    line_no_width: usize,
+    multi_labels_with_message: &[&LabelInfo<'a>],
+    src: &SourceFile,
+    w: &mut dyn Write,
+  ) -> anyhow::Result<bool> {
+    let within_label =
+      multi_labels.iter().any(|label| label.char_span.contains(&line.span().start()));
+
+    if !is_ellipsis && within_label {
+      Ok(true)
+    } else {
+      if !is_ellipsis {
+        self.write_margin(
+          w,
+          idx,
+          false,
+          is_ellipsis,
+          false,
+          None,
+          &[],
+          &None,
+          line_no_width,
+          multi_labels_with_message,
+          src,
+        )?;
+        writeln!(w)?;
+      }
+      Ok(true)
+    }
+  }
+
+  fn write_line_with_labels(
+    &self,
+    idx: usize,
+    line: &Line,
+    mut line_labels: Vec<LineLabel>,
+    margin_label: &Option<LineLabel>,
+    is_ellipsis: bool,
+    line_no_width: usize,
+    multi_labels_with_message: &[&LabelInfo<'a>],
+    src: &SourceFile,
+    w: &mut dyn Write,
+  ) -> anyhow::Result<()> {
+    // Write margin and source line
+    self.write_margin(
+      w,
+      idx,
+      true,
+      is_ellipsis,
+      true,
+      None,
+      &line_labels,
+      margin_label,
+      line_no_width,
+      multi_labels_with_message,
+      src,
+    )?;
+
+    if !is_ellipsis {
+      for (col, c) in src.get_line_text(*line).unwrap().trim_end().chars().enumerate() {
+        let (c, width) = self.char_width(c, col);
+        if c.is_whitespace() {
+          for _ in 0..width {
+            write!(w, "{c}")?;
+          }
+        } else {
+          write!(w, "{c}")?;
+        }
+      }
+    }
+    writeln!(w)?;
+
+    // Write arrows for labels
+    self.write_label_arrows(
+      idx,
+      line,
+      &line_labels,
+      margin_label,
+      is_ellipsis,
+      line_no_width,
+      multi_labels_with_message,
+      src,
+      w,
+    )?;
+
+    Ok(())
+  }
+
+  fn write_label_arrows(
+    &self,
+    idx: usize,
+    line: &Line,
+    line_labels: &[LineLabel],
+    margin_label: &Option<LineLabel>,
+    is_ellipsis: bool,
+    line_no_width: usize,
+    multi_labels_with_message: &[&LabelInfo<'a>],
+    src: &SourceFile,
+    w: &mut dyn Write,
+  ) -> anyhow::Result<()> {
+    let draw = &self.characters;
+    let arrow_end_space = 2;
+    let arrow_len = line_labels.iter().fold(0, |l, ll| {
+      if ll.multi {
+        line.len()
+      } else {
+        l.max(ll.label.char_span.end.saturating_sub(line.offset()))
+      }
+    }) + arrow_end_space;
+
+    for row in 0..line_labels.len() {
+      let line_label = &line_labels[row];
+      if line_label.label.info.message.is_none() {
+        continue;
+      }
+
+      // First arrow line (underlines)
+      self.write_arrow_underline_row(
+        idx,
+        line,
+        line_labels,
+        row,
+        arrow_len,
+        margin_label,
+        is_ellipsis,
+        line_no_width,
+        multi_labels_with_message,
+        src,
+        w,
       )?;
 
+      // Second arrow line (horizontal bars and message)
+      self.write_arrow_message_row(
+        idx,
+        line,
+        line_label,
+        line_labels,
+        row,
+        arrow_len,
+        margin_label,
+        is_ellipsis,
+        line_no_width,
+        multi_labels_with_message,
+        src,
+        w,
+      )?;
+    }
+
+    Ok(())
+  }
+
+  fn write_arrow_underline_row(
+    &self,
+    idx: usize,
+    line: &Line,
+    line_labels: &[LineLabel],
+    row: usize,
+    arrow_len: usize,
+    margin_label: &Option<LineLabel>,
+    is_ellipsis: bool,
+    line_no_width: usize,
+    multi_labels_with_message: &[&LabelInfo<'a>],
+    src: &SourceFile,
+    w: &mut dyn Write,
+  ) -> anyhow::Result<()> {
+    let draw = &self.characters;
+
+    self.write_margin(
+      w,
+      idx,
+      false,
+      is_ellipsis,
+      true,
+      Some((row, false)),
+      line_labels,
+      margin_label,
+      line_no_width,
+      multi_labels_with_message,
+      src,
+    )?;
+
+    let mut chars = src.get_line_text(*line).unwrap().trim_end().chars();
+    for col in 0..arrow_len {
+      let width = chars.next().map_or(1, |c| self.char_width(c, col).1);
+      let vbar = self.get_vbar(col, row, line_labels, margin_label);
+      let underline = self.get_underline(col, line, line_labels).filter(|_| row == 0);
+
+      let [c, tail] = if let Some(vbar_ll) = vbar {
+        let [c, tail] = if underline.is_some() {
+          #[expect(clippy::overly_complex_bool_expr)]
+          if ExactSizeIterator::len(&vbar_ll.label.char_span) <= 1 || true {
+            [draw.underbar, draw.underline]
+          } else if line.offset() + col == vbar_ll.label.char_span.start {
+            [draw.ltop, draw.underbar]
+          } else if line.offset() + col == vbar_ll.label.last_offset() {
+            [draw.rtop, draw.underbar]
+          } else {
+            [draw.underbar, draw.underline]
+          }
+        } else if vbar_ll.multi && row == 0 && MULTILINE_ARROWS {
+          [draw.uarrow, ' ']
+        } else {
+          [draw.vbar, ' ']
+        };
+        [c.fg(vbar_ll.label.info.color()), tail.fg(vbar_ll.label.info.color())]
+      } else if let Some(underline_ll) = underline {
+        [draw.underline.fg(underline_ll.label.info.color()); 2]
+      } else {
+        [' '.fg(None); 2]
+      };
+
+      for i in 0..width {
+        write!(w, "{}", if i == 0 { c } else { tail })?;
+      }
+    }
+    writeln!(w)?;
+    Ok(())
+  }
+
+  fn write_arrow_message_row(
+    &self,
+    idx: usize,
+    line: &Line,
+    line_label: &LineLabel,
+    line_labels: &[LineLabel],
+    row: usize,
+    arrow_len: usize,
+    margin_label: &Option<LineLabel>,
+    is_ellipsis: bool,
+    line_no_width: usize,
+    multi_labels_with_message: &[&LabelInfo<'a>],
+    src: &SourceFile,
+    w: &mut dyn Write,
+  ) -> anyhow::Result<()> {
+    let draw = &self.characters;
+
+    self.write_margin(
+      w,
+      idx,
+      false,
+      is_ellipsis,
+      true,
+      Some((row, true)),
+      line_labels,
+      margin_label,
+      line_no_width,
+      multi_labels_with_message,
+      src,
+    )?;
+
+    let mut chars = src.get_line_text(*line).unwrap().trim_end().chars();
+    for col in 0..arrow_len {
+      let width = chars.next().map_or(1, |c| self.char_width(c, col).1);
+
+      let is_hbar = (((col > line_label.col) ^ line_label.multi)
+        || (line_label.label.info.message.is_some()
+          && line_label.draw_msg
+          && col > line_label.col))
+        && line_label.label.info.message.is_some();
+
+      let [c, tail] = if col == line_label.col
+        && line_label.label.info.message.is_some()
+        && margin_label.as_ref().is_none_or(|m| !std::ptr::eq(line_label.label, m.label))
+      {
+        [
+          if line_label.multi {
+            if line_label.draw_msg { draw.mbot } else { draw.rbot }
+          } else {
+            draw.lbot
+          }
+          .fg(line_label.label.info.color()),
+          draw.hbar.fg(line_label.label.info.color()),
+        ]
+      } else if let Some(vbar_ll) = self
+        .get_vbar(col, row, line_labels, margin_label)
+        .filter(|_| col != line_label.col || line_label.label.info.message.is_some())
+      {
+        if !CROSS_GAPS && is_hbar {
+          [
+            draw.xbar.fg(line_label.label.info.color()),
+            ' '.fg(line_label.label.info.color()),
+          ]
+        } else if is_hbar {
+          [draw.hbar.fg(line_label.label.info.color()); 2]
+        } else {
+          [
+            if vbar_ll.multi && row == 0 { draw.uarrow } else { draw.vbar }
+              .fg(vbar_ll.label.info.color()),
+            ' '.fg(line_label.label.info.color()),
+          ]
+        }
+      } else if is_hbar {
+        [draw.hbar.fg(line_label.label.info.color()); 2]
+      } else {
+        [' '.fg(None); 2]
+      };
+
+      if width > 0 {
+        write!(w, "{c}")?;
+      }
+      for _ in 1..width {
+        write!(w, "{tail}")?;
+      }
+    }
+
+    if line_label.draw_msg {
+      write!(w, " {}", Show(line_label.label.info.message.as_ref()))?;
+    }
+    writeln!(w)?;
+    Ok(())
+  }
+
+  fn get_vbar(
+    &self,
+    col: usize,
+    row: usize,
+    line_labels: &'a [LineLabel<'a>],
+    margin_label: &Option<LineLabel<'a>>,
+  ) -> Option<&'a LineLabel<'a>> {
+    line_labels
+      .iter()
+      .enumerate()
+      .filter(|(_, ll)| {
+        ll.label.info.message.is_some()
+          && margin_label.as_ref().is_none_or(|m| !std::ptr::eq(ll.label, m.label))
+      })
+      .find(|(j, ll)| ll.col == col && row <= *j)
+      .map(|(_, ll)| ll)
+  }
+
+  fn get_underline(
+    &self,
+    col: usize,
+    line: &Line,
+    line_labels: &'a [LineLabel<'a>],
+  ) -> Option<&'a LineLabel<'a>> {
+    line_labels
+      .iter()
+      .filter(|ll| {
+        UNDERLINES && !ll.multi && ll.label.char_span.contains(&(line.offset() + col))
+      })
+      .min_by_key(|ll| {
+        (-ll.label.info.priority, ExactSizeIterator::len(&ll.label.char_span))
+      })
+  }
+
+  fn write_help_and_notes(
+    &self,
+    diag: &Diag,
+    multi_labels_with_message: &[&LabelInfo<'a>],
+    src: &SourceFile,
+    line_no_width: usize,
+    w: &mut dyn Write,
+  ) -> anyhow::Result<()> {
+    self.write_helps(diag, multi_labels_with_message, src, line_no_width, w)?;
+    self.write_notes(diag, multi_labels_with_message, src, line_no_width, w)?;
+    Ok(())
+  }
+
+  fn write_helps(
+    &self,
+    diag: &Diag,
+    multi_labels_with_message: &[&LabelInfo<'a>],
+    src: &SourceFile,
+    line_no_width: usize,
+    w: &mut dyn Write,
+  ) -> anyhow::Result<()> {
+    for (i, help) in diag.helps.iter().enumerate() {
+      self.write_margin(
+        w,
+        0,
+        false,
+        false,
+        true,
+        Some((0, false)),
+        &[],
+        &None,
+        line_no_width,
+        multi_labels_with_message,
+        src,
+      )?;
+      writeln!(w)?;
+
+      let help_prefix = format!("{} {}", "Help", i + 1);
+      let help_prefix_len = if diag.helps.len() > 1 { help_prefix.len() } else { 4 };
+
+      self.write_multiline_section(
+        help,
+        if diag.helps.len() > 1 { &help_prefix } else { "Help" },
+        help_prefix_len,
+        multi_labels_with_message,
+        src,
+        line_no_width,
+        w,
+      )?;
+    }
+    Ok(())
+  }
+
+  fn write_notes(
+    &self,
+    diag: &Diag,
+    multi_labels_with_message: &[&LabelInfo<'a>],
+    src: &SourceFile,
+    line_no_width: usize,
+    w: &mut dyn Write,
+  ) -> anyhow::Result<()> {
+    for (i, note) in diag.notes.iter().enumerate() {
+      self.write_margin(
+        w,
+        0,
+        false,
+        false,
+        true,
+        Some((0, false)),
+        &[],
+        &None,
+        line_no_width,
+        multi_labels_with_message,
+        src,
+      )?;
+      writeln!(w)?;
+
+      let note_prefix = format!("{} {}", "Note", i + 1);
+      let note_prefix_len = if diag.notes.len() > 1 { note_prefix.len() } else { 4 };
+
+      self.write_multiline_section(
+        note,
+        if diag.notes.len() > 1 { &note_prefix } else { "Note" },
+        note_prefix_len,
+        multi_labels_with_message,
+        src,
+        line_no_width,
+        w,
+      )?;
+    }
+    Ok(())
+  }
+
+  fn write_multiline_section(
+    &self,
+    text: &str,
+    prefix: &str,
+    prefix_len: usize,
+    multi_labels_with_message: &[&LabelInfo<'a>],
+    src: &SourceFile,
+    line_no_width: usize,
+    w: &mut dyn Write,
+  ) -> anyhow::Result<()> {
+    let mut lines = text.lines();
+    if let Some(line) = lines.next() {
+      self.write_margin(
+        w,
+        0,
+        false,
+        false,
+        true,
+        Some((0, false)),
+        &[],
+        &None,
+        line_no_width,
+        multi_labels_with_message,
+        src,
+      )?;
+      writeln!(w, "{}: {}", prefix.fg(self.note_color()), line)?;
+    }
+
+    for line in lines {
+      self.write_margin(
+        w,
+        0,
+        false,
+        false,
+        true,
+        Some((0, false)),
+        &[],
+        &None,
+        line_no_width,
+        multi_labels_with_message,
+        src,
+      )?;
+      writeln!(w, "{:>pad$}{}", "", line, pad = prefix_len + 2)?;
+    }
+    Ok(())
+  }
+
+  fn write_group_footer(
+    &self,
+    is_final_group: bool,
+    line_no_width: usize,
+    w: &mut dyn Write,
+  ) -> anyhow::Result<()> {
+    let draw = &self.characters;
+    if is_final_group {
+      let final_margin = format!("{}{}", Show((draw.hbar, line_no_width + 2)), draw.rbot);
+      writeln!(w, "{}", final_margin.fg(self.margin_color()))?;
+    } else {
       writeln!(
         w,
         "{}{}",
         Show((' ', line_no_width + 2)),
         draw.vbar.fg(self.margin_color())
       )?;
-
-      // Generate a list of multi-line labels
-      let mut multi_labels = Vec::new();
-      let mut multi_labels_with_message = Vec::new();
-      for label_info in &labels {
-        if matches!(label_info.kind, LabelKind::Multiline) {
-          multi_labels.push(label_info);
-          if label_info.info.message.is_some() {
-            multi_labels_with_message.push(label_info);
-          }
-        }
-      }
-
-      // Sort multiline labels by length
-      multi_labels.sort_by_key(|m| {
-        -(Span::no_file(m.char_span.start, m.char_span.end).len() as isize)
-      });
-      multi_labels_with_message.sort_by_key(|m| {
-        -(Span::no_file(m.char_span.start, m.char_span.end).len() as isize)
-      });
-
-      let mut is_ellipsis = false;
-      for idx in line_range {
-        let line = if let Some(line) = src.line(idx) {
-          line
-        } else {
-          continue;
-        };
-
-        let margin_label = multi_labels_with_message
-          .iter()
-          .filter_map(|label| {
-            let is_start = line.span().contains(label.char_span.start);
-            let is_end = line.span().contains(label.last_offset());
-            if is_start {
-              // TODO: Check to see whether multi is the first on the start line or first on the end line
-              Some(LineLabel {
-                col: label.char_span.start - line.offset(),
-                label,
-                multi: true,
-                draw_msg: false, // Multi-line spans don;t have their messages drawn at the start
-              })
-            } else if is_end {
-              Some(LineLabel {
-                col: label.last_offset() - line.offset(),
-                label,
-                multi: true,
-                draw_msg: true, // Multi-line spans have their messages drawn at the end
-              })
-            } else {
-              None
-            }
-          })
-          .min_by_key(|ll| (ll.col, !ll.label.char_span.start));
-
-        // Generate a list of labels for this line, along with their label columns
-        let mut line_labels = multi_labels_with_message
-          .iter()
-          .filter_map(|label| {
-            let is_start = line.span().contains(label.char_span.start);
-            let is_end = line.span().contains(label.last_offset());
-            if is_start
-              && margin_label.as_ref().is_none_or(|m| !std::ptr::eq(*label, m.label))
-            {
-              // TODO: Check to see whether multi is the first on the start line or first on the end line
-              Some(LineLabel {
-                col: label.char_span.start - line.offset(),
-                label,
-                multi: true,
-                draw_msg: false, // Multi-line spans don;t have their messages drawn at the start
-              })
-            } else if is_end {
-              Some(LineLabel {
-                col: label.last_offset() - line.offset(),
-                label,
-                multi: true,
-                draw_msg: true, // Multi-line spans have their messages drawn at the end
-              })
-            } else {
-              None
-            }
-          })
-          .collect::<Vec<_>>();
-
-        for label_info in labels.iter().filter(|l| {
-          l.char_span.start >= line.span().start && l.char_span.end <= line.span().end
-        }) {
-          if matches!(label_info.kind, LabelKind::Inline) {
-            line_labels.push(LineLabel {
-              col: ((label_info.char_span.start + label_info.char_span.end) / 2)
-                .max(label_info.char_span.start)
-                - line.offset(),
-              label: label_info,
-              multi: false,
-              draw_msg: true,
-            });
-          }
-        }
-
-        // Skip this line if we don't have labels for it
-        if line_labels.is_empty() && margin_label.is_none() {
-          let within_label = multi_labels
-            .iter()
-            .any(|label| label.char_span.contains(&line.span().start()));
-          if !is_ellipsis && within_label {
-            is_ellipsis = true;
-          } else {
-            if !is_ellipsis {
-              self.write_margin(
-                w,
-                idx,
-                false,
-                is_ellipsis,
-                false,
-                None,
-                &[],
-                &None,
-                line_no_width,
-                &multi_labels_with_message,
-                &src,
-              )?;
-              writeln!(w)?;
-            }
-            is_ellipsis = true;
-            continue;
-          }
-        } else {
-          is_ellipsis = false;
-        }
-
-        // Sort the labels by their columns
-        line_labels
-          .sort_by_key(|ll| (ll.label.info.order, ll.col, !ll.label.char_span.start));
-
-        // Determine label bounds so we know where to put error messages
-        let arrow_end_space = 2;
-        let arrow_len = line_labels.iter().fold(0, |l, ll| {
-          if ll.multi {
-            line.len()
-          } else {
-            l.max(ll.label.char_span.end.saturating_sub(line.offset()))
-          }
-        }) + arrow_end_space;
-
-        // Should we draw a vertical bar as part of a label arrow on this line?
-        let get_vbar = |col, row| {
-          line_labels
-            .iter()
-            // Only labels with notes get an arrow
-            .enumerate()
-            .filter(|(_, ll)| {
-              ll.label.info.message.is_some()
-                && margin_label.as_ref().is_none_or(|m| !std::ptr::eq(ll.label, m.label))
-            })
-            .find(|(j, ll)| ll.col == col && row <= *j)
-            .map(|(_, ll)| ll)
-        };
-
-        let get_underline = |col| {
-          line_labels
-            .iter()
-            .filter(|ll| {
-              UNDERLINES
-
-                    // Underlines only occur for inline spans (highlighting can occur for all spans)
-                    && !ll.multi
-                    && ll.label.char_span.contains(&(line.offset() + col))
-            })
-            // Prioritise displaying smaller spans
-            .min_by_key(|ll| {
-              (-ll.label.info.priority, ExactSizeIterator::len(&ll.label.char_span))
-            })
-        };
-
-        // Margin
-
-        self.write_margin(
-          w,
-          idx,
-          true,
-          is_ellipsis,
-          true,
-          None,
-          &line_labels,
-          &margin_label,
-          line_no_width,
-          &multi_labels_with_message,
-          &src,
-        )?;
-
-        // Line
-        if !is_ellipsis {
-          for (col, c) in src.get_line_text(line).unwrap().trim_end().chars().enumerate()
-          {
-            let (c, width) = self.char_width(c, col);
-            if c.is_whitespace() {
-              for _ in 0..width {
-                write!(w, "{c}")?;
-              }
-            } else {
-              write!(w, "{c}")?;
-            }
-          }
-        }
-        writeln!(w)?;
-
-        // Arrows
-        for row in 0..line_labels.len() {
-          let line_label = &line_labels[row];
-          //No message to draw thus no arrow to draw
-          if line_label.label.info.message.is_none() {
-            continue;
-          }
-          // Margin alternate
-          self.write_margin(
-            w,
-            idx,
-            false,
-            is_ellipsis,
-            true,
-            Some((row, false)),
-            &line_labels,
-            &margin_label,
-            line_no_width,
-            &multi_labels_with_message,
-            &src,
-          )?;
-
-          // Lines alternate
-          let mut chars = src.get_line_text(line).unwrap().trim_end().chars();
-          for col in 0..arrow_len {
-            let width = chars.next().map_or(1, |c| self.char_width(c, col).1);
-
-            let vbar = get_vbar(col, row);
-            let underline = get_underline(col).filter(|_| row == 0);
-            let [c, tail] = if let Some(vbar_ll) = vbar {
-              let [c, tail] = if underline.is_some() {
-                // TODO: Is this good?
-                // The `true` is used here because it's temporarily disabling a
-                // feature that might be reenabled later.
-                #[expect(clippy::overly_complex_bool_expr)]
-                if ExactSizeIterator::len(&vbar_ll.label.char_span) <= 1 || true {
-                  [draw.underbar, draw.underline]
-                } else if line.offset() + col == vbar_ll.label.char_span.start {
-                  [draw.ltop, draw.underbar]
-                } else if line.offset() + col == vbar_ll.label.last_offset() {
-                  [draw.rtop, draw.underbar]
-                } else {
-                  [draw.underbar, draw.underline]
-                }
-              } else if vbar_ll.multi && row == 0 && MULTILINE_ARROWS {
-                [draw.uarrow, ' ']
-              } else {
-                [draw.vbar, ' ']
-              };
-              [c.fg(vbar_ll.label.info.color()), tail.fg(vbar_ll.label.info.color())]
-            } else if let Some(underline_ll) = underline {
-              [draw.underline.fg(underline_ll.label.info.color()); 2]
-            } else {
-              [' '.fg(None); 2]
-            };
-
-            for i in 0..width {
-              write!(w, "{}", if i == 0 { c } else { tail })?;
-            }
-          }
-          writeln!(w)?;
-
-          // Margin
-          self.write_margin(
-            w,
-            idx,
-            false,
-            is_ellipsis,
-            true,
-            Some((row, true)),
-            &line_labels,
-            &margin_label,
-            line_no_width,
-            &multi_labels_with_message,
-            &src,
-          )?;
-          // Lines
-          let mut chars = src.get_line_text(line).unwrap().trim_end().chars();
-          for col in 0..arrow_len {
-            let width = chars.next().map_or(1, |c| self.char_width(c, col).1);
-
-            let is_hbar = (((col > line_label.col) ^ line_label.multi)
-              || (line_label.label.info.message.is_some()
-                && line_label.draw_msg
-                && col > line_label.col))
-              && line_label.label.info.message.is_some();
-            let [c, tail] = if col == line_label.col
-              && line_label.label.info.message.is_some()
-              && margin_label
-                .as_ref()
-                .is_none_or(|m| !std::ptr::eq(line_label.label, m.label))
-            {
-              [
-                if line_label.multi {
-                  if line_label.draw_msg { draw.mbot } else { draw.rbot }
-                } else {
-                  draw.lbot
-                }
-                .fg(line_label.label.info.color()),
-                draw.hbar.fg(line_label.label.info.color()),
-              ]
-            } else if let Some(vbar_ll) = get_vbar(col, row).filter(|_| {
-              col != line_label.col || line_label.label.info.message.is_some()
-            }) {
-              if !CROSS_GAPS && is_hbar {
-                [
-                  draw.xbar.fg(line_label.label.info.color()),
-                  ' '.fg(line_label.label.info.color()),
-                ]
-              } else if is_hbar {
-                [draw.hbar.fg(line_label.label.info.color()); 2]
-              } else {
-                [
-                  if vbar_ll.multi && row == 0 { draw.uarrow } else { draw.vbar }
-                    .fg(vbar_ll.label.info.color()),
-                  ' '.fg(line_label.label.info.color()),
-                ]
-              }
-            } else if is_hbar {
-              [draw.hbar.fg(line_label.label.info.color()); 2]
-            } else {
-              [' '.fg(None); 2]
-            };
-
-            if width > 0 {
-              write!(w, "{c}")?;
-            }
-            for _ in 1..width {
-              write!(w, "{tail}")?;
-            }
-          }
-          if line_label.draw_msg {
-            write!(w, " {}", Show(line_label.label.info.message.as_ref()))?;
-          }
-          writeln!(w)?;
-        }
-      }
-
-      let is_final_group = group_idx + 1 == groups_len;
-
-      // Help
-      if is_final_group {
-        for (i, help) in diag.helps.iter().enumerate() {
-          self.write_margin(
-            w,
-            0,
-            false,
-            false,
-            true,
-            Some((0, false)),
-            &[],
-            &None,
-            line_no_width,
-            &multi_labels_with_message,
-            &src,
-          )?;
-          writeln!(w)?;
-
-          let help_prefix = format!("{} {}", "Help", i + 1);
-          let help_prefix_len = if diag.helps.len() > 1 { help_prefix.len() } else { 4 };
-          let mut lines = help.lines();
-          if let Some(line) = lines.next() {
-            self.write_margin(
-              w,
-              0,
-              false,
-              false,
-              true,
-              Some((0, false)),
-              &[],
-              &None,
-              line_no_width,
-              &multi_labels_with_message,
-              &src,
-            )?;
-            if diag.helps.len() > 1 {
-              writeln!(w, "{}: {}", help_prefix.fg(self.note_color()), line)?;
-            } else {
-              writeln!(w, "{}: {}", "Help".fg(self.note_color()), line)?;
-            }
-          }
-          for line in lines {
-            self.write_margin(
-              w,
-              0,
-              false,
-              false,
-              true,
-              Some((0, false)),
-              &[],
-              &None,
-              line_no_width,
-              &multi_labels_with_message,
-              &src,
-            )?;
-            writeln!(w, "{:>pad$}{}", "", line, pad = help_prefix_len + 2)?;
-          }
-        }
-      }
-
-      // Note
-      if is_final_group {
-        for (i, note) in diag.notes.iter().enumerate() {
-          self.write_margin(
-            w,
-            0,
-            false,
-            false,
-            true,
-            Some((0, false)),
-            &[],
-            &None,
-            line_no_width,
-            &multi_labels_with_message,
-            &src,
-          )?;
-          writeln!(w)?;
-
-          let note_prefix = format!("{} {}", "Note", i + 1);
-          let note_prefix_len = if diag.notes.len() > 1 { note_prefix.len() } else { 4 };
-          let mut lines = note.lines();
-          if let Some(line) = lines.next() {
-            self.write_margin(
-              w,
-              0,
-              false,
-              false,
-              true,
-              Some((0, false)),
-              &[],
-              &None,
-              line_no_width,
-              &multi_labels_with_message,
-              &src,
-            )?;
-            if diag.notes.len() > 1 {
-              writeln!(w, "{}: {}", note_prefix.fg(self.note_color()), line)?;
-            } else {
-              writeln!(w, "{}: {}", "Note".fg(self.note_color()), line)?;
-            }
-          }
-          for line in lines {
-            self.write_margin(
-              w,
-              0,
-              false,
-              false,
-              true,
-              Some((0, false)),
-              &[],
-              &None,
-              line_no_width,
-              &multi_labels_with_message,
-              &src,
-            )?;
-            writeln!(w, "{:>pad$}{}", "", line, pad = note_prefix_len + 2)?;
-          }
-        }
-      }
-
-      if is_final_group {
-        let final_margin =
-          format!("{}{}", Show((draw.hbar, line_no_width + 2)), draw.rbot);
-        writeln!(w, "{}", final_margin.fg(self.margin_color()))?;
-      } else {
-        writeln!(
-          w,
-          "{}{}",
-          Show((' ', line_no_width + 2)),
-          draw.vbar.fg(self.margin_color())
-        )?;
-      }
     }
     Ok(())
-  }
-
-  fn sources(&self) -> &Arc<Sources> {
-    &self.sources
   }
 }

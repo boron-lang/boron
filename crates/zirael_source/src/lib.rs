@@ -1,5 +1,5 @@
 pub mod id;
-mod line;
+pub mod line;
 pub mod source_file;
 pub mod sources;
 pub mod span;
