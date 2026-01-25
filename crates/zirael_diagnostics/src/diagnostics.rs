@@ -116,8 +116,7 @@ impl Drop for Diagnostic {
   fn drop(&mut self) {
     assert!(
       !(!self.emitted && !self.cancelled),
-      "Diagnostic {:?} dropped but it wasn't emitted or cancelled",
-      self
+      "Diagnostic {self:?} dropped but it wasn't emitted or cancelled"
     );
   }
 }

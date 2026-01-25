@@ -1,9 +1,9 @@
 use crate::{InferTy, TyChecker, TyVarKind};
-use std::fmt::Write;
+use std::fmt::Write as _;
 
 impl TyChecker<'_> {
   pub fn format_type(&self, ty: &InferTy) -> String {
-    self._format(ty).unwrap_or_else(|_| "<couldn't format>".to_string())
+    self._format(ty).unwrap_or_else(|_| "<couldn't format>".to_owned())
   }
 
   fn _format(&self, ty: &InferTy) -> Result<String, std::fmt::Error> {
@@ -14,22 +14,22 @@ impl TyChecker<'_> {
           f,
           "{}",
           match kind.value() {
-            TyVarKind::Integer => "integer".to_string(),
-            TyVarKind::Float => "float".to_string(),
+            TyVarKind::Integer => "integer".to_owned(),
+            TyVarKind::Float => "float".to_owned(),
             TyVarKind::General => {
               let ty = self.infcx.substitution.get(var);
 
               if let Some(ty) = ty {
                 self.format_type(&ty).to_string()
               } else {
-                "type variable".to_string()
+                "type variable".to_owned()
               }
             }
           }
         )?,
-        None => write!(f, "{}", var)?,
+        None => write!(f, "{var}")?,
       },
-      InferTy::Primitive(kind, _) => write!(f, "{}", kind)?,
+      InferTy::Primitive(kind, _) => write!(f, "{kind}")?,
       InferTy::Adt { def_id, args, .. } => {
         let name = self.resolver.get_definition(*def_id);
 
@@ -82,7 +82,7 @@ impl TyChecker<'_> {
       }
       InferTy::Unit(_) => write!(f, "()")?,
       InferTy::Never(_) => write!(f, "!")?,
-      InferTy::Param { name, .. } => write!(f, "{}", name)?,
+      InferTy::Param { name, .. } => write!(f, "{name}")?,
       InferTy::Err(_) => write!(f, "{{error}}")?,
     }
 

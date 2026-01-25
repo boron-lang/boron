@@ -97,7 +97,7 @@ impl LoweringContext<'_> {
 
             if let Some(def_id) = self.resolver.symbols.get_resolution(m.id) {
               items.push(def_id);
-            };
+            }
           }
         }
       }

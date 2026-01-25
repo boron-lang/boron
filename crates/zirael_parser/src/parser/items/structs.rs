@@ -38,9 +38,7 @@ impl Parser<'_> {
           };
 
           let item = if is_item_start {
-            let item = self.parse_item();
-
-            item
+            self.parse_item()
           } else if self.check(TokenType::RightBrace) {
             break;
           } else {
@@ -61,7 +59,6 @@ impl Parser<'_> {
       }
 
       self.expect(TokenType::RightBrace, "to close struct declaration");
-    } else {
     }
 
     Some(StructItem {

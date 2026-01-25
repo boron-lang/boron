@@ -70,25 +70,25 @@ use std::fmt;
 impl fmt::Display for PrimitiveKind {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
-      PrimitiveKind::I8 => write!(f, "i8"),
-      PrimitiveKind::I16 => write!(f, "i16"),
-      PrimitiveKind::I32 => write!(f, "i32"),
-      PrimitiveKind::I64 => write!(f, "i64"),
-      PrimitiveKind::I128 => write!(f, "i128"),
-      PrimitiveKind::ISize => write!(f, "isize"),
+      Self::I8 => write!(f, "i8"),
+      Self::I16 => write!(f, "i16"),
+      Self::I32 => write!(f, "i32"),
+      Self::I64 => write!(f, "i64"),
+      Self::I128 => write!(f, "i128"),
+      Self::ISize => write!(f, "isize"),
 
-      PrimitiveKind::U8 => write!(f, "u8"),
-      PrimitiveKind::U16 => write!(f, "u16"),
-      PrimitiveKind::U32 => write!(f, "u32"),
-      PrimitiveKind::U64 => write!(f, "u64"),
-      PrimitiveKind::U128 => write!(f, "u128"),
-      PrimitiveKind::USize => write!(f, "usize"),
+      Self::U8 => write!(f, "u8"),
+      Self::U16 => write!(f, "u16"),
+      Self::U32 => write!(f, "u32"),
+      Self::U64 => write!(f, "u64"),
+      Self::U128 => write!(f, "u128"),
+      Self::USize => write!(f, "usize"),
 
-      PrimitiveKind::F32 => write!(f, "f32"),
-      PrimitiveKind::F64 => write!(f, "f64"),
+      Self::F32 => write!(f, "f32"),
+      Self::F64 => write!(f, "f64"),
 
-      PrimitiveKind::Bool => write!(f, "bool"),
-      PrimitiveKind::Char => write!(f, "char"),
+      Self::Bool => write!(f, "bool"),
+      Self::Char => write!(f, "char"),
     }
   }
 }
@@ -143,7 +143,7 @@ pub enum Mutability {
 
 impl Display for Mutability {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "{}", if matches!(self, Mutability::Const) { "const" } else { "mut" })
+    write!(f, "{}", if matches!(self, Self::Const) { "const" } else { "mut" })
   }
 }
 

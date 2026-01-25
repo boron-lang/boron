@@ -1,4 +1,4 @@
-use crate::{InferTy, TyVar};
+use crate::TyVar;
 use zirael_diagnostic_macro::Diagnostic;
 use zirael_utils::ident_table::Identifier;
 use zirael_utils::prelude::Span;

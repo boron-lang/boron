@@ -62,7 +62,7 @@ pub struct Struct {
 
 impl Struct {
   pub fn has_field(&self, field: Identifier) -> bool {
-    self.fields.iter().find(|f| f.name == field).is_some()
+    self.fields.iter().any(|f| f.name == field)
   }
 }
 

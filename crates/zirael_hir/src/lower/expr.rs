@@ -62,7 +62,7 @@ impl LoweringContext<'_> {
               .collect(),
           })
         } else {
-          debug!("failed to lower a path {:#?}", path);
+          debug!("failed to lower a path {path:#?}");
           ExprKind::Err
         }
       }
@@ -77,7 +77,7 @@ impl LoweringContext<'_> {
             }],
           })
         } else {
-          debug!("failed to lower self {:?}", expr);
+          debug!("failed to lower self {expr:?}");
           ExprKind::Err
         }
       }
@@ -139,7 +139,7 @@ impl LoweringContext<'_> {
               .collect(),
           }
         } else {
-          debug!("failed to lower struct {:?}", expr);
+          debug!("failed to lower struct {expr:?}");
           ExprKind::Err
         }
       }

@@ -1,9 +1,8 @@
 use crate::emitters::human_readable::label::{LabelInfo, LineLabel};
 use crate::emitters::human_readable::{CROSS_GAPS, HumanReadableEmitter};
-use crate::fmt::Fmt;
+use crate::fmt::Fmt as _;
 use std::io;
 use std::io::Write;
-use std::ops::Range;
 use zirael_source::prelude::SourceFile;
 use zirael_source::span::Span;
 
@@ -58,7 +57,7 @@ impl<'a> HumanReadableEmitter {
     } else {
       let padding = " ".repeat(line_no_width + 1);
       let vbar = if is_ellipsis { draw.vbar_gap } else { draw.vbar };
-      format!("{}{}", padding, vbar).fg(self.skipped_margin_color())
+      format!("{padding}{vbar}").fg(self.skipped_margin_color())
     };
 
     write!(w, " {line_no_margin} ")

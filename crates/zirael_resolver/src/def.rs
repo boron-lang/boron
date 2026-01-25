@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter};
 use zirael_parser::ast::NodeId;
 use zirael_source::new_id;
 use zirael_source::prelude::SourceFileId;
-use zirael_utils::prelude::{Identifier, Span};
+use zirael_utils::prelude::Span;
 
 new_id!(DefId);
 
@@ -57,17 +57,17 @@ impl Display for DefKind {
       f,
       "{}",
       match self {
-        DefKind::Module => "mod",
-        DefKind::Function => "function",
-        DefKind::Struct => "struct",
-        DefKind::Enum => "enum",
-        DefKind::Variant => "variant",
-        DefKind::Const => "const",
-        DefKind::Local => "local",
-        DefKind::Param => "param",
-        DefKind::Field => "field",
-        DefKind::Method => "method",
-        DefKind::TypeParam => "type parameter",
+        Self::Module => "mod",
+        Self::Function => "function",
+        Self::Struct => "struct",
+        Self::Enum => "enum",
+        Self::Variant => "variant",
+        Self::Const => "const",
+        Self::Local => "local",
+        Self::Param => "param",
+        Self::Field => "field",
+        Self::Method => "method",
+        Self::TypeParam => "type parameter",
       }
     )
   }

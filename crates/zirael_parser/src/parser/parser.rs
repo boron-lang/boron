@@ -197,7 +197,7 @@ impl<'dcx> Parser<'dcx> {
   }
 
   pub fn eat_commas(&mut self) {
-    self.eat_all(TokenType::Comma)
+    self.eat_all(TokenType::Comma);
   }
 
   pub fn is_identifier(&self) -> bool {

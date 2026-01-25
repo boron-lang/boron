@@ -9,7 +9,6 @@ use crate::{
   ConstItem, ItemKind, ModItem, NodeId, Path, TokenType, Type, Visibility,
   log_parse_failure,
 };
-use log::log;
 use zirael_source::prelude::Span;
 use zirael_utils::prelude::debug;
 

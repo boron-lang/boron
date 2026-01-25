@@ -7,20 +7,22 @@ _default:
     @just --list -u 
 
 fix:
-    cargo clippy --workspace --fix --allow-staged --no-deps --allow-dirty
-    just fmt
-    just check
-    just lint
-    git status
-
-check:
-    cargo check --workspace --all-features --all-targets
-
-lint:
-    cargo clippy --workspace --all-targets --all-features --fix --allow-dirty -- --deny warnings
-
-fmt:
+    cargo clippy \
+        --workspace \
+        --all-targets \
+        --all-features \
+        --fix \
+        --allow-dirty \
+        --allow-staged \
+        --no-deps
     cargo fmt --all
+    cargo check --workspace --all-features --all-targets
+    cargo clippy \
+        --workspace \
+        --all-targets \
+        --all-features \
+        -- --deny warnings
+    git status
 
 playground args='':
     cargo run -p zirael playground/test.zr {{ args }} --name playground -o playground/build --type binary

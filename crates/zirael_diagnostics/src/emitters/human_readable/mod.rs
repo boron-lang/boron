@@ -8,12 +8,12 @@ use crate::emitters::Emitter;
 use crate::emitters::human_readable::chars::{Characters, ascii};
 use crate::emitters::human_readable::label::{LabelInfo, LabelKind, LineLabel};
 use crate::emitters::human_readable::source_groups::SourceGroup;
-use crate::fmt::Fmt;
+use crate::fmt::Fmt as _;
 use crate::show::Show;
 use std::io::Write;
 use std::ops::Range;
 use std::sync::Arc;
-use unicode_width::UnicodeWidthChar;
+use unicode_width::UnicodeWidthChar as _;
 use yansi::Color;
 use zirael_source::line::Line;
 use zirael_source::prelude::{SourceFile, Sources, Span};
@@ -139,12 +139,11 @@ impl<'a> HumanReadableEmitter {
       .map(|d| d.to_string())
       .unwrap_or_else(|| "<unknown>".to_owned());
 
-    let src = match self.sources.get(*src_id) {
-      Some(src) => src,
-      None => {
-        eprintln!("Unable to fetch source {src_name}");
-        return Ok(());
-      }
+    let src = if let Some(src) = self.sources.get(*src_id) {
+      src
+    } else {
+      eprintln!("Unable to fetch source {src_name}");
+      return Ok(());
     };
 
     self.write_file_reference(group_idx, labels, &src, &src_name, line_no_width, w)?;
@@ -427,7 +426,7 @@ impl<'a> HumanReadableEmitter {
     &self,
     idx: usize,
     line: &Line,
-    mut line_labels: Vec<LineLabel>,
+    line_labels: Vec<LineLabel>,
     margin_label: &Option<LineLabel>,
     is_ellipsis: bool,
     line_no_width: usize,

@@ -1,20 +1,18 @@
 use crate::errors::{
-  ArrayLenNotANumber, FieldInitMismatch, InvalidStructInit, NoFieldOnType,
-  VarInitMismatch,
+  FieldInitMismatch, InvalidStructInit, NoFieldOnType, VarInitMismatch,
 };
 use crate::interpreter::{
-  Interpreter, InterpreterCache, InterpreterContext, InterpreterMode, values::ConstValue,
+  Interpreter, InterpreterCache, InterpreterContext, InterpreterMode,
 };
 use crate::table::{InferCtx, TypeEnv, TypeTable};
-use crate::ty::{Expectation, InferTy, TyVar, TyVarKind, TypeScheme};
+use crate::ty::{Expectation, InferTy, TyVar, TypeScheme};
 use crate::{UnifyError, UnifyResult};
 use std::collections::HashMap;
 use zirael_diagnostics::DiagnosticCtx;
 use zirael_hir::expr::{FieldInit, PathExpr};
-use zirael_hir::ty::ArrayLen;
 use zirael_hir::{
-  Block, Const, Expr, ExprKind, Function, GenericParamKind, Generics, Hir, Literal,
-  Param, ParamKind, Pat, PatKind, Stmt, StmtKind, Ty, TyKind,
+  Block, Const, Expr, ExprKind, Function, Hir, Literal, ParamKind, Pat, PatKind, Stmt,
+  StmtKind,
 };
 use zirael_parser::Mutability;
 use zirael_parser::ast::types::PrimitiveKind;
@@ -91,9 +89,7 @@ impl<'a> TyChecker<'a> {
   fn handle_unify_result(&self, result: UnifyResult) {
     match &result {
       UnifyResult::Ok => {}
-      UnifyResult::Err(err) => match err {
-        _ => warn!("{:#?}", result),
-      },
+      UnifyResult::Err(err) => warn!("{result:#?}"),
     }
   }
 
@@ -176,11 +172,11 @@ impl<'a> TyChecker<'a> {
                   expected: self.format_type(expected),
                   found: self.format_type(found),
                   span: local.span,
-                })
+                });
               }
               _ => self.handle_unify_result(result),
             }
-          };
+          }
         }
 
         self.check_pattern(&local.pat, &expected, env);
@@ -276,7 +272,7 @@ impl<'a> TyChecker<'a> {
         self.unify(&idx_ty, &InferTy::Primitive(PrimitiveKind::USize, index.span));
 
         match self.infcx.resolve(&obj_ty) {
-          InferTy::Array { ty, span, .. } => *ty,
+          InferTy::Array { ty, .. } => *ty,
           InferTy::Slice(ty, span) => *ty,
           _ => {
             // TODO: Report error - not indexable
@@ -319,7 +315,7 @@ impl<'a> TyChecker<'a> {
       }
 
       _ => {
-        warn!("not handled in type checker {:#?}", expr);
+        warn!("not handled in type checker {expr:#?}");
         // TODO: Handle remaining expression kinds
         self.infcx.fresh(expr.span)
       }
@@ -355,7 +351,7 @@ impl<'a> TyChecker<'a> {
             span: field.span,
             field: field.name,
             ty: self.format_type(&def_ty),
-          })
+          });
         } else {
           let field_ty = self.table.field_type(*def_id, &field.name.text()).unwrap();
           let arg_ty =
@@ -372,7 +368,7 @@ impl<'a> TyChecker<'a> {
               }),
               _ => self.handle_unify_result(result),
             }
-          };
+          }
         }
       }
     }

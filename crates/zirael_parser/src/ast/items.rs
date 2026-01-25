@@ -35,11 +35,11 @@ pub enum ItemKind {
 impl ItemKind {
   pub fn node_id(&self) -> NodeId {
     match self {
-      ItemKind::Const(c) => c.id,
-      ItemKind::Function(f) => f.id,
-      ItemKind::Struct(s) => s.id,
-      ItemKind::Enum(e) => e.id,
-      ItemKind::Mod(m) => m.id,
+      Self::Const(c) => c.id,
+      Self::Function(f) => f.id,
+      Self::Struct(s) => s.id,
+      Self::Enum(e) => e.id,
+      Self::Mod(m) => m.id,
     }
   }
 }

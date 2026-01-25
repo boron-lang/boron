@@ -9,7 +9,6 @@ use crate::module_resolver::ModuleResolver;
 use crate::resolver::Resolver;
 use crate::scope::ScopeKind;
 use crate::symbol::{Symbol, SymbolKind};
-use zirael_parser::Pattern::Ident;
 use zirael_parser::ast::ProgramNode;
 use zirael_parser::ast::expressions::{Expr, ExprKind};
 use zirael_parser::ast::items::{
@@ -108,7 +107,7 @@ impl<'a> ResolveVisitor<'a> {
       self
         .ctx
         .dcx()
-        .emit(UndefinedModule { name: import.path.to_string(), span: import.path.span })
+        .emit(UndefinedModule { name: import.path.to_string(), span: import.path.span });
     }
   }
 
@@ -116,7 +115,7 @@ impl<'a> ResolveVisitor<'a> {
     let target_file = self.resolver().lookup_file_for_path(&import.path);
 
     let Some(target_file) = target_file else {
-      debug!("skipping {:?} because path couldn't be resolved", import);
+      debug!("skipping {import:?} because path couldn't be resolved");
       return;
     };
 
