@@ -4,7 +4,7 @@ mod code;
 pub mod codes;
 mod ctx;
 mod diagnostics;
-mod emitter;
+mod emitters;
 mod fmt;
 mod output_type;
 mod show;

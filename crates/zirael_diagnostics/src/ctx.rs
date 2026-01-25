@@ -1,4 +1,5 @@
-use crate::emitter::{Emitter, HumanReadableEmitter};
+use crate::emitters::Emitter;
+use crate::emitters::human_readable::HumanReadableEmitter;
 use crate::output_type::DiagnosticOutputType;
 use crate::{Diag, Diagnostic, DiagnosticId, DiagnosticLevel};
 use dashmap::DashMap;

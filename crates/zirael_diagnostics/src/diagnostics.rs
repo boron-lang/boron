@@ -76,8 +76,8 @@ impl Label {
     self.file.unwrap_or(self.span.file_id)
   }
 
-  pub fn color(&self) -> Option<Color> {
-    Some(self.level.color())
+  pub fn color(&self) -> Color {
+    self.level.color()
   }
 }
 
