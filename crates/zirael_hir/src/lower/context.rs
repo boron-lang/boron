@@ -15,11 +15,7 @@ pub struct LoweringContext<'a> {
 }
 
 impl<'a> LoweringContext<'a> {
-  pub fn new(
-    resolver: &'a Resolver,
-    hir: &'a Hir,
-    source_file: SourceFileId,
-  ) -> Self {
+  pub fn new(resolver: &'a Resolver, hir: &'a Hir, source_file: SourceFileId) -> Self {
     Self {
       resolver,
       hir,
@@ -42,11 +38,7 @@ impl<'a> LoweringContext<'a> {
     HirId::make_owner(def_id)
   }
 
-  pub fn with_owner<T>(
-    &mut self,
-    owner: DefId,
-    f: impl FnOnce(&mut Self) -> T,
-  ) -> T {
+  pub fn with_owner<T>(&mut self, owner: DefId, f: impl FnOnce(&mut Self) -> T) -> T {
     let prev_owner = self.current_owner;
     let prev_local_id = self.next_local_id;
 
@@ -61,14 +53,12 @@ impl<'a> LoweringContext<'a> {
     result
   }
 
+  /// this function takes the path id not the expr id
   pub fn get_def_id(&self, node_id: NodeId) -> Option<DefId> {
     self.resolver.symbols.get_resolution(node_id)
   }
 
   pub fn finalize_module(&self) {
-    self
-      .hir
-      .modules
-      .insert(self.source_file, self.module_items.clone());
+    self.hir.modules.insert(self.source_file, self.module_items.clone());
   }
 }

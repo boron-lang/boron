@@ -23,20 +23,14 @@ impl<'a> ModuleResolver<'a> {
     }
   }
 
-  pub fn enter_scope(
-    &mut self,
-    kind: ScopeKind,
-    owner: Option<DefId>,
-  ) -> ScopeId {
+  pub fn enter_scope(&mut self, kind: ScopeKind, owner: Option<DefId>) -> ScopeId {
     let parent = self.current_scope;
 
     // Use special module scope creation for Module kind
     let scope_id = if kind == ScopeKind::Module && parent.is_none() {
       self.resolver.create_module_scope(self.current_file)
     } else {
-      self
-        .resolver
-        .create_scope(parent, kind, self.current_file, owner)
+      self.resolver.create_scope(parent, kind, self.current_file, owner)
     };
 
     self.current_scope = Some(scope_id);
@@ -99,30 +93,21 @@ impl<'a> ModuleResolver<'a> {
 
   pub fn is_at_module_scope(&self) -> bool {
     self.rib_stack.len() == 1
-      && self
-        .rib_stack
-        .first()
-        .is_some_and(|rib| rib.kind == RibKind::Module)
+      && self.rib_stack.first().is_some_and(|rib| rib.kind == RibKind::Module)
   }
 
   pub fn save_module_rib(&self) {
     if let Some(rib) = self.rib_stack.first() {
       if rib.kind == RibKind::Module {
         if let Some(scope_id) = self.current_scope {
-          self.resolver.save_module_rib(
-            self.current_file,
-            scope_id,
-            rib.clone(),
-          );
+          self.resolver.save_module_rib(self.current_file, scope_id, rib.clone());
         }
       }
     }
   }
 
   pub fn restore_module_rib(&mut self) -> bool {
-    if let Some((scope_id, rib)) =
-      self.resolver.get_module_rib(self.current_file)
-    {
+    if let Some((scope_id, rib)) = self.resolver.get_module_rib(self.current_file) {
       self.current_scope = Some(scope_id);
       self.rib_stack.push(rib);
       true

@@ -39,12 +39,7 @@ impl DiagnosticCtx {
       DiagnosticOutputType::JSON => unimplemented!(),
     };
 
-    Self {
-      diagnostics: Default::default(),
-      emitter,
-      stop_on_error: true,
-      writer,
-    }
+    Self { diagnostics: Default::default(), emitter, stop_on_error: true, writer }
   }
 
   pub fn sources(&self) -> &Arc<Sources> {
@@ -55,21 +50,13 @@ impl DiagnosticCtx {
     let id = DiagnosticId::new();
     self.diagnostics.insert(
       id,
-      Diagnostic {
-        id,
-        diag: Box::new(diag),
-        cancelled: false,
-        emitted: false,
-      },
+      Diagnostic { id, diag: Box::new(diag), cancelled: false, emitted: false },
     );
 
     id
   }
 
-  pub fn get(
-    &self,
-    id: DiagnosticId,
-  ) -> Option<Ref<'_, DiagnosticId, Diagnostic>> {
+  pub fn get(&self, id: DiagnosticId) -> Option<Ref<'_, DiagnosticId, Diagnostic>> {
     self.diagnostics.get(&id)
   }
 
@@ -123,10 +110,7 @@ impl DiagnosticCtx {
     };
 
     let mut writer = self.writer.lock();
-    self
-      .emitter
-      .emit_diagnostic(&diagnostic, &mut *writer)
-      .expect("TODO: panic message");
+    self.emitter.emit_diagnostic(&diagnostic, &mut *writer).expect("TODO: panic message");
 
     if let Some(mut diag) = self.get_mut(id) {
       if diag.diag.level == DiagnosticLevel::Error {
@@ -148,10 +132,7 @@ impl DiagnosticCtx {
   }
 
   pub fn has_errors(&self) -> bool {
-    self
-      .diagnostics
-      .iter()
-      .any(|diag| diag.diag.level == DiagnosticLevel::Error)
+    self.diagnostics.iter().any(|diag| diag.diag.level == DiagnosticLevel::Error)
   }
 
   pub fn flush_to_stderr(&self) {

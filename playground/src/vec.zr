@@ -1,0 +1,8 @@
+pub struct Vec2<T> {
+    x: T,
+    y: T,
+
+    func new(x: T, y: T) -> Vec2 {
+        Vec2 { .x, .y }
+    }
+}

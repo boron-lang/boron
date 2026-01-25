@@ -1,8 +1,7 @@
 use crate::parser::Parser;
 use crate::parser::errors::{ExpectedIdentOrDots, VariadicNoDefault};
 use crate::{
-  NodeId, Param, RegularParam, SelfKind, SelfParam, TokenType, Type,
-  VariadicParam,
+  NodeId, Param, RegularParam, SelfKind, SelfParam, TokenType, Type, VariadicParam,
 };
 
 impl Parser<'_> {
@@ -22,11 +21,7 @@ impl Parser<'_> {
             TokenType::Colon,
             "after the identifier (types are required for parameters)",
           );
-          let ty = if colon.is_some() {
-            self.parse_type()
-          } else {
-            Type::Invalid
-          };
+          let ty = if colon.is_some() { self.parse_type() } else { Type::Invalid };
 
           let default = if self.check(TokenType::Assign) {
             self.advance();
@@ -63,12 +58,8 @@ impl Parser<'_> {
               kind: SelfKind::Mut,
             }));
           } else {
-            self.expect(
-              TokenType::SelfValue,
-              "after mut in a function parameter",
-            );
-            self
-              .advance_until_one_of(&[TokenType::Comma, TokenType::RightParen]);
+            self.expect(TokenType::SelfValue, "after mut in a function parameter");
+            self.advance_until_one_of(&[TokenType::Comma, TokenType::RightParen]);
           }
         }
         TokenType::Star => {
@@ -112,9 +103,7 @@ impl Parser<'_> {
 
           if self.check(TokenType::Assign) {
             self.advance();
-            self.emit(VariadicNoDefault {
-              span: self.previous().span,
-            });
+            self.emit(VariadicNoDefault { span: self.previous().span });
 
             let _ = self.parse_expr();
           }

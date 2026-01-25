@@ -6,13 +6,10 @@ func identity<T>(value: T) -> T {
 //    return a * a;
 //}
 
-//func x(t: [i32; 10 + 10]) {}
+mod vec;
 
-struct Vec2<T> {
-    x: T,
-    y: T
-}
+import vec from vec;
 
-pub func test() {
-    var value = Vec2 { .x = 10.0, .y = 15.0 };
+func main() {
+    var value = vec::Vec2 { .x = 10.0, .y = "15.0" };
 }

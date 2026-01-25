@@ -30,10 +30,7 @@ pub struct LiteralTable<'a> {
 
 impl<'a> LiteralTable<'a> {
   pub fn new(dcx: &'a DiagnosticCtx) -> Self {
-    Self {
-      literals: DashMap::new(),
-      dcx,
-    }
+    Self { literals: DashMap::new(), dcx }
   }
 
   pub fn insert(&self, node: NodeId, lit: FullLiteral) {

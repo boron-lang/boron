@@ -2,19 +2,34 @@ use crate::expressions::Expr;
 use crate::items::Item;
 use crate::parser::Parser;
 use crate::parser::errors::{
-  ConstCannotBeUninitialized, ConstExpectedFuncOrIdent,
-  ConstItemsNeedTypeAnnotation, ModStringLit,
+  ConstCannotBeUninitialized, ConstExpectedFuncOrIdent, ConstItemsNeedTypeAnnotation,
+  ModStringLit,
 };
-use crate::parser::parser::ITEM_TOKENS;
 use crate::{
   ConstItem, ItemKind, ModItem, NodeId, Path, TokenType, Type, Visibility,
   log_parse_failure,
 };
+use log::log;
 use zirael_source::prelude::Span;
 use zirael_utils::prelude::debug;
 
 mod functions;
 mod import;
+mod structs;
+
+pub const ITEM_TOKENS: &[TokenType] = &[
+  TokenType::Pub,
+  TokenType::Mod,
+  TokenType::Const,
+  TokenType::Func,
+  TokenType::Import,
+  TokenType::Comptime,
+  TokenType::Struct,
+];
+
+// tokens allowed to start a new item inside a struct
+pub const STRUCT_ITEM_TOKENS: &[TokenType] =
+  &[TokenType::Pub, TokenType::Const, TokenType::Func, TokenType::Comptime];
 
 impl Parser<'_> {
   pub fn is_module_discovery_beginning(&self) -> bool {
@@ -30,9 +45,7 @@ impl Parser<'_> {
 
   fn parse_module_discovery(&mut self) -> Option<Path> {
     if let TokenType::StringLiteral(_) = &self.peek().kind {
-      self.emit(ModStringLit {
-        span: self.peek().span,
-      });
+      self.emit(ModStringLit { span: self.peek().span });
 
       return None;
     }
@@ -53,9 +66,7 @@ impl Parser<'_> {
     let token = self.expect_any(ITEM_TOKENS, "as an item beginning")?.kind;
     let kind = match token {
       TokenType::Mod => {
-        if self.is_identifier()
-          && self.peek_ahead(1)?.kind == TokenType::LeftBrace
-        {
+        if self.is_identifier() && self.peek_ahead(1)?.kind == TokenType::LeftBrace {
           let name = self.parse_identifier();
           self.expect(TokenType::LeftBrace, "to open a module declaration");
 
@@ -87,10 +98,7 @@ impl Parser<'_> {
             "module item"
           )?))
         } else {
-          self.expect(
-            TokenType::Func,
-            "after `comptime` only `func` is a valid keyword",
-          );
+          self.expect(TokenType::Func, "after `comptime` only `func` is a valid keyword");
           self.synchronize_to_next_item();
           None
         }
@@ -113,14 +121,20 @@ impl Parser<'_> {
 
         return None;
       }
+      TokenType::Struct => Some(ItemKind::Struct(log_parse_failure!(
+        self.parse_struct(span_start),
+        "struct item"
+      )?)),
       _ => unreachable!(),
     };
 
     self.eat_semis();
 
+    let kind = kind?;
+
     Some(Item {
-      id: NodeId::new(),
-      kind: kind?,
+      id: kind.node_id(),
+      kind,
       // TODO: attributes parsing
       attributes: vec![],
       span: self.span_from(span_start),
@@ -140,25 +154,19 @@ impl Parser<'_> {
 
       let colon = self.eat(TokenType::Colon);
       let ty = if !colon {
-        self.emit(ConstItemsNeedTypeAnnotation {
-          span: self.previous().span,
-        });
+        self.emit(ConstItemsNeedTypeAnnotation { span: self.previous().span });
         Type::Invalid
       } else {
         let ty = self.parse_type();
         if matches!(ty, Type::Invalid) {
-          self.emit(ConstItemsNeedTypeAnnotation {
-            span: self.previous().span,
-          });
+          self.emit(ConstItemsNeedTypeAnnotation { span: self.previous().span });
         }
 
         ty
       };
 
       let expr = if !self.eat(TokenType::Assign) {
-        self.emit(ConstCannotBeUninitialized {
-          span: self.peek().span,
-        });
+        self.emit(ConstCannotBeUninitialized { span: self.peek().span });
         Expr::dummy()
       } else {
         self.parse_expr()

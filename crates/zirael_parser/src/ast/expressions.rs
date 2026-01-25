@@ -24,64 +24,31 @@ pub enum ExprKind {
   SelfValue,
 
   // Binary operations
-  Binary {
-    op: BinaryOp,
-    left: Box<Expr>,
-    right: Box<Expr>,
-  },
+  Binary { op: BinaryOp, left: Box<Expr>, right: Box<Expr> },
 
   // Unary operations
-  Unary {
-    op: UnaryOp,
-    operand: Box<Expr>,
-  },
+  Unary { op: UnaryOp, operand: Box<Expr> },
 
   // Assignment
-  Assign {
-    op: AssignOp,
-    target: Box<Expr>,
-    value: Box<Expr>,
-  },
+  Assign { op: AssignOp, target: Box<Expr>, value: Box<Expr> },
 
   // Ternary conditional
-  Ternary {
-    condition: Box<Expr>,
-    then_expr: Box<Expr>,
-    else_expr: Box<Expr>,
-  },
+  Ternary { condition: Box<Expr>, then_expr: Box<Expr>, else_expr: Box<Expr> },
 
   // Type cast
-  Cast {
-    expr: Box<Expr>,
-    target_type: Box<Type>,
-  },
+  Cast { expr: Box<Expr>, target_type: Box<Type> },
 
   // Function call
-  Call {
-    callee: Box<Expr>,
-    args: Vec<Argument>,
-  },
+  Call { callee: Box<Expr>, args: Vec<Argument> },
 
   // Field access
-  Field {
-    object: Box<Expr>,
-    field: Identifier,
-  },
+  Field { object: Box<Expr>, field: Identifier },
 
-  Index {
-    object: Box<Expr>,
-    index: Box<Expr>,
-  },
+  Index { object: Box<Expr>, index: Box<Expr> },
 
-  AddrOf {
-    mutability: Mutability,
-    operand: Box<Expr>,
-  },
+  AddrOf { mutability: Mutability, operand: Box<Expr> },
 
-  Struct {
-    path: Path,
-    fields: Vec<StructFieldInit>,
-  },
+  Struct { path: Path, fields: Vec<StructFieldInit> },
 
   // Control flow
   If(IfExpr),
@@ -95,36 +62,20 @@ pub enum ExprKind {
   Return(ReturnExpr),
 
   Range(RangeExpr),
-  Comptime {
-    callee: Box<Expr>,
-    args: Vec<ComptimeArg>,
-  },
+  Comptime { callee: Box<Expr>, args: Vec<ComptimeArg> },
 
   // Composite literals
   Tuple(Vec<Expr>),
-  Array {
-    values: Vec<Expr>,
-    repeat: Option<Box<Expr>>,
-  },
+  Array { values: Vec<Expr>, repeat: Option<Box<Expr>> },
 }
 
 impl Expr {
   pub fn new(kind: ExprKind, span: Span) -> Self {
-    Self {
-      id: NodeId::new(),
-      kind,
-      span,
-      is_const: false,
-    }
+    Self { id: NodeId::new(), kind, span, is_const: false }
   }
 
   pub fn new_const(kind: ExprKind, span: Span) -> Self {
-    Self {
-      id: NodeId::new(),
-      kind,
-      span,
-      is_const: true,
-    }
+    Self { id: NodeId::new(), kind, span, is_const: true }
   }
 
   pub fn dummy() -> Self {

@@ -96,13 +96,9 @@ pub struct Compiler {
 impl Display for Compiler {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     match &self.version {
-      Some(version) => write!(
-        f,
-        "{} {} at {}",
-        self.kind.name(),
-        version,
-        self.path.display()
-      ),
+      Some(version) => {
+        write!(f, "{} {} at {}", self.kind.name(), version, self.path.display())
+      }
       None => write!(f, "{} at {}", self.kind.name(), self.path.display()),
     }
   }
@@ -114,11 +110,7 @@ impl Compiler {
       return Err(CompilerError::NotFound(path));
     }
 
-    let mut compiler = Self {
-      path,
-      kind,
-      version: None,
-    };
+    let mut compiler = Self { path, kind, version: None };
 
     if let Err(e) = compiler.detect_version() {
       warn!("Failed to detect compiler version: {e}");
@@ -178,8 +170,7 @@ impl Compiler {
         for line in output.lines() {
           if line.contains("clang version") {
             if let Some(version_part) = line.split("version ").nth(1) {
-              let version_only =
-                version_part.split_whitespace().next().unwrap_or("");
+              let version_only = version_part.split_whitespace().next().unwrap_or("");
               return self.parse_version_string(version_only, output);
             }
           }
@@ -205,12 +196,7 @@ impl Compiler {
       let minor = parts[1].parse().ok()?;
       let patch = parts.get(2).and_then(|p| p.parse().ok());
 
-      Some(CompilerVersion {
-        major,
-        minor,
-        patch,
-        raw: raw_output.to_owned(),
-      })
+      Some(CompilerVersion { major, minor, patch, raw: raw_output.to_owned() })
     } else {
       None
     }
@@ -248,16 +234,10 @@ impl Compiler {
         matches!(standard, "c89" | "c90" | "c11" | "c17")
       }
       CompilerKind::Gcc => {
-        matches!(
-          standard,
-          "c89" | "c90" | "c99" | "c11" | "c17" | "c18" | "c23"
-        )
+        matches!(standard, "c89" | "c90" | "c99" | "c11" | "c17" | "c18" | "c23")
       }
       CompilerKind::Clang => {
-        matches!(
-          standard,
-          "c89" | "c90" | "c99" | "c11" | "c17" | "c18" | "c23"
-        )
+        matches!(standard, "c89" | "c90" | "c99" | "c11" | "c17" | "c18" | "c23")
       }
     }
   }

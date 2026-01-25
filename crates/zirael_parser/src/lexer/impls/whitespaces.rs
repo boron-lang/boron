@@ -14,15 +14,11 @@ impl Lexer<'_> {
         }
         '\u{0000}' => {
           // NUL is disallowed - skip and continue
-          self.skip_with_error(LexErrorKind::DisallowedCodePoint {
-            code_point: ch,
-          });
+          self.skip_with_error(LexErrorKind::DisallowedCodePoint { code_point: ch });
         }
         ch if ch.is_whitespace() && !ch.is_ascii() => {
           // Non-ASCII whitespace is an error - skip and continue
-          self.skip_with_error(LexErrorKind::NonAsciiWhitespace {
-            code_point: ch,
-          });
+          self.skip_with_error(LexErrorKind::NonAsciiWhitespace { code_point: ch });
         }
         _ => break,
       }

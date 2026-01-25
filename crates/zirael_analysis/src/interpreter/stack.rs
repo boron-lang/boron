@@ -9,9 +9,7 @@ pub struct Frame {
 
 impl Frame {
   pub fn new() -> Self {
-    Self {
-      locals: DashMap::new(),
-    }
+    Self { locals: DashMap::new() }
   }
 
   pub fn insert_local(&self, id: LocalId, val: ConstValue) {

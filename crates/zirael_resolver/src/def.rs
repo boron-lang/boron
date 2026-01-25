@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter};
 use zirael_parser::ast::NodeId;
 use zirael_source::new_id;
 use zirael_source::prelude::SourceFileId;
@@ -26,14 +27,7 @@ impl Definition {
     kind: DefKind,
     span: Span,
   ) -> Self {
-    Self {
-      name,
-      id: DefId::new(),
-      node_id,
-      source_file,
-      kind,
-      span,
-    }
+    Self { name, id: DefId::new(), node_id, source_file, kind, span }
   }
 }
 
@@ -55,4 +49,26 @@ pub enum DefKind {
   Method,
   /// A type parameter (generic).
   TypeParam,
+}
+
+impl Display for DefKind {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(
+      f,
+      "{}",
+      match self {
+        DefKind::Module => "mod",
+        DefKind::Function => "function",
+        DefKind::Struct => "struct",
+        DefKind::Enum => "enum",
+        DefKind::Variant => "variant",
+        DefKind::Const => "const",
+        DefKind::Local => "local",
+        DefKind::Param => "param",
+        DefKind::Field => "field",
+        DefKind::Method => "method",
+        DefKind::TypeParam => "type parameter",
+      }
+    )
+  }
 }

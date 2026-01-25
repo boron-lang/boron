@@ -3,8 +3,8 @@ pub mod utils;
 pub mod values;
 
 use crate::errors::{
-  DivisionByZero, InvalidBinaryOp, InvalidUnaryOp, PathNotConst,
-  ShiftOutOfRange, UnsupportedConstExpr,
+  DivisionByZero, InvalidBinaryOp, InvalidUnaryOp, PathNotConst, ShiftOutOfRange,
+  UnsupportedConstExpr,
 };
 use crate::interpreter::stack::Stack;
 use crate::interpreter::utils::InterpreterLimits;
@@ -135,22 +135,14 @@ impl<'a> Interpreter<'a> {
       (ConstValue::String(l), ConstValue::String(r)) => l == r,
       (ConstValue::Unit, ConstValue::Unit) => true,
       (ConstValue::Array(l), ConstValue::Array(r)) => {
-        l.len() == r.len()
-          && l.iter().zip(r.iter()).all(|(a, b)| self.values_equal(a, b))
+        l.len() == r.len() && l.iter().zip(r.iter()).all(|(a, b)| self.values_equal(a, b))
       }
       (ConstValue::Struct(l), ConstValue::Struct(r)) => {
-        l.len() == r.len()
-          && l.iter().zip(r.iter()).all(|(a, b)| self.values_equal(a, b))
+        l.len() == r.len() && l.iter().zip(r.iter()).all(|(a, b)| self.values_equal(a, b))
       }
       (
-        ConstValue::Enum {
-          tag: t1,
-          payload: p1,
-        },
-        ConstValue::Enum {
-          tag: t2,
-          payload: p2,
-        },
+        ConstValue::Enum { tag: t1, payload: p1 },
+        ConstValue::Enum { tag: t2, payload: p2 },
       ) => {
         t1 == t2
           && match (p1, p2) {
@@ -170,9 +162,7 @@ impl<'a> Interpreter<'a> {
     lval: &ConstValue,
     rval: &ConstValue,
   ) {
-    if matches!(lval, &ConstValue::Poison)
-      || matches!(rval, &ConstValue::Poison)
-    {
+    if matches!(lval, &ConstValue::Poison) || matches!(rval, &ConstValue::Poison) {
       return;
     }
 
@@ -184,12 +174,7 @@ impl<'a> Interpreter<'a> {
     });
   }
 
-  fn eval_unary(
-    &self,
-    expr: &Expr,
-    op: &UnaryOp,
-    operand: &Expr,
-  ) -> ConstValue {
+  fn eval_unary(&self, expr: &Expr, op: &UnaryOp, operand: &Expr) -> ConstValue {
     let val = self.evaluate_expr(operand);
 
     match op {
@@ -248,9 +233,7 @@ impl<'a> Interpreter<'a> {
 
     match op {
       Add => match (lval, rval) {
-        (ConstValue::Int(l), ConstValue::Int(r)) => {
-          ConstValue::Int(l.wrapping_add(*r))
-        }
+        (ConstValue::Int(l), ConstValue::Int(r)) => ConstValue::Int(l.wrapping_add(*r)),
         (ConstValue::String(l), ConstValue::String(r)) => {
           ConstValue::String(format!("{l}{r}"))
         }
@@ -278,10 +261,7 @@ impl<'a> Interpreter<'a> {
       Div => {
         if let (ConstValue::Int(l), ConstValue::Int(r)) = (lval, rval) {
           if *r == 0 {
-            self.dcx.emit(DivisionByZero {
-              span: expr.span,
-              value: *l,
-            });
+            self.dcx.emit(DivisionByZero { span: expr.span, value: *l });
             ConstValue::Poison
           } else {
             ConstValue::Int(l.wrapping_div(*r))
@@ -294,10 +274,7 @@ impl<'a> Interpreter<'a> {
       Mod => {
         if let (ConstValue::Int(l), ConstValue::Int(r)) = (lval, rval) {
           if *r == 0 {
-            self.dcx.emit(DivisionByZero {
-              span: expr.span,
-              value: *l,
-            });
+            self.dcx.emit(DivisionByZero { span: expr.span, value: *l });
             ConstValue::Poison
           } else {
             ConstValue::Int(l.wrapping_rem(*r))
@@ -474,20 +451,14 @@ impl<'a> Interpreter<'a> {
     let rval = self.evaluate_expr(rhs);
 
     use BinaryOp::{
-      Add, And, BitAnd, BitOr, BitXor, Div, Eq, Ge, Gt, Le, Lt, Mod, Mul, Ne,
-      Or, Shl, Shr, Sub,
+      Add, And, BitAnd, BitOr, BitXor, Div, Eq, Ge, Gt, Le, Lt, Mod, Mul, Ne, Or, Shl,
+      Shr, Sub,
     };
     match op {
-      Add | Sub | Mul | Div | Mod => {
-        self.eval_arithmetic(expr, op, &lval, &rval)
-      }
-      Eq | Ne | Lt | Le | Gt | Ge => {
-        self.eval_comparison(expr, op, &lval, &rval)
-      }
+      Add | Sub | Mul | Div | Mod => self.eval_arithmetic(expr, op, &lval, &rval),
+      Eq | Ne | Lt | Le | Gt | Ge => self.eval_comparison(expr, op, &lval, &rval),
       And | Or => self.eval_logical(expr, op, &lval, &rval),
-      BitAnd | BitOr | BitXor | Shl | Shr => {
-        self.eval_bitwise(expr, op, &lval, &rval)
-      }
+      BitAnd | BitOr | BitXor | Shl | Shr => self.eval_bitwise(expr, op, &lval, &rval),
     }
   }
 

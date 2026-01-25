@@ -51,11 +51,7 @@ impl Parser<'_> {
           }
 
           left = Expr::new(
-            ExprKind::Assign {
-              op,
-              target: Box::new(left),
-              value: Box::new(value),
-            },
+            ExprKind::Assign { op, target: Box::new(left), value: Box::new(value) },
             self.span_from(start),
           );
           continue;
@@ -71,18 +67,11 @@ impl Parser<'_> {
         let precedence = op.precedence();
         if precedence >= min_precedence {
           self.advance();
-          let next_min = if op.is_left_associative() {
-            precedence + 1
-          } else {
-            precedence
-          };
+          let next_min =
+            if op.is_left_associative() { precedence + 1 } else { precedence };
           let right = self.parse_expr_with_precedence(next_min);
           left = Expr::new(
-            ExprKind::Binary {
-              op,
-              left: Box::new(left),
-              right: Box::new(right),
-            },
+            ExprKind::Binary { op, left: Box::new(left), right: Box::new(right) },
             self.span_from(start),
           );
           continue;
@@ -99,9 +88,7 @@ impl Parser<'_> {
     self.eat(TokenType::Question);
     let then_expr = self.parse_expr();
     if !self.eat(TokenType::Colon) {
-      self.emit(MissingColonInTernary {
-        span: self.peek().span,
-      });
+      self.emit(MissingColonInTernary { span: self.peek().span });
     }
     let else_expr = self.parse_expr_with_precedence(13);
     Expr::new(
@@ -128,10 +115,7 @@ impl Parser<'_> {
 
       let operand = self.parse_unary_expr();
       return Expr::new(
-        ExprKind::Unary {
-          op,
-          operand: Box::new(operand),
-        },
+        ExprKind::Unary { op, operand: Box::new(operand) },
         self.span_from(start),
       );
     }
@@ -146,10 +130,7 @@ impl Parser<'_> {
       };
       let operand = self.parse_unary_expr();
       return Expr::new(
-        ExprKind::AddrOf {
-          mutability,
-          operand: Box::new(operand),
-        },
+        ExprKind::AddrOf { mutability, operand: Box::new(operand) },
         self.span_from(start),
       );
     }
@@ -167,10 +148,7 @@ impl Parser<'_> {
         let args = self.parse_call_args();
         self.expect(TokenType::RightParen, "to close function call");
         expr = Expr::new(
-          ExprKind::Call {
-            callee: Box::new(expr),
-            args,
-          },
+          ExprKind::Call { callee: Box::new(expr), args },
           self.span_from(start),
         );
       } else if self.eat(TokenType::Not) {
@@ -194,10 +172,7 @@ impl Parser<'_> {
         self.expect(TokenType::RightParen, "to close builtin call");
 
         expr = Expr::new_const(
-          ExprKind::Comptime {
-            callee: Box::new(expr),
-            args,
-          },
+          ExprKind::Comptime { callee: Box::new(expr), args },
           self.span_from(start),
         );
       } else if self.eat(TokenType::Dot) {
@@ -205,15 +180,10 @@ impl Parser<'_> {
         if self.is_identifier() {
           let field = self.parse_identifier();
           expr = Expr::new(
-            ExprKind::Field {
-              object: Box::new(expr),
-              field,
-            },
+            ExprKind::Field { object: Box::new(expr), field },
             self.span_from(start),
           );
-        } else if let TokenType::IntegerLiteral(base, digits) =
-          &self.peek().kind
-        {
+        } else if let TokenType::IntegerLiteral(base, digits) = &self.peek().kind {
           // tuple field access
           let value = if matches!(base, LexIntBase::Decimal) {
             digits.clone()
@@ -243,19 +213,13 @@ impl Parser<'_> {
         let index = self.parse_expr();
         self.expect(TokenType::RightBracket, "to close index expression");
         expr = Expr::new(
-          ExprKind::Index {
-            object: Box::new(expr),
-            index: Box::new(index),
-          },
+          ExprKind::Index { object: Box::new(expr), index: Box::new(index) },
           self.span_from(start),
         );
       } else if self.eat(TokenType::As) {
         let target_type = self.parse_type();
         expr = Expr::new(
-          ExprKind::Cast {
-            expr: Box::new(expr),
-            target_type: Box::new(target_type),
-          },
+          ExprKind::Cast { expr: Box::new(expr), target_type: Box::new(target_type) },
           self.span_from(start),
         );
       } else {
@@ -305,10 +269,8 @@ impl Parser<'_> {
       }
 
       _ => {
-        self.emit(ExpectedExpressionFound {
-          found: token.kind.clone(),
-          span: token.span,
-        });
+        self
+          .emit(ExpectedExpressionFound { found: token.kind.clone(), span: token.span });
         Expr::dummy()
       }
     }
@@ -483,10 +445,7 @@ impl Parser<'_> {
 
     if self.eat(TokenType::RightBracket) {
       return Expr::new_const(
-        ExprKind::Array {
-          values: vec![],
-          repeat: None,
-        },
+        ExprKind::Array { values: vec![], repeat: None },
         self.span_from(start),
       );
     }
@@ -501,10 +460,7 @@ impl Parser<'_> {
       self.expect(TokenType::RightBracket, "to close array");
 
       return Expr::new(
-        ExprKind::Array {
-          values: vec![],
-          repeat: None,
-        },
+        ExprKind::Array { values: vec![], repeat: None },
         self.span_from(start),
       );
     }
@@ -517,9 +473,7 @@ impl Parser<'_> {
 
       if self.eat(TokenType::Comma) || self.check(TokenType::Semicolon) {
         let error_start = self.peek().span;
-        self.emit(InvalidRepeatSyntax {
-          span: self.span_from(error_start),
-        });
+        self.emit(InvalidRepeatSyntax { span: self.span_from(error_start) });
 
         while !self.check(TokenType::RightBracket) && !self.is_at_end() {
           self.advance();
@@ -557,13 +511,7 @@ impl Parser<'_> {
 
     self.expect(TokenType::RightBracket, "to close array");
 
-    Expr::new(
-      ExprKind::Array {
-        values: elements,
-        repeat: None,
-      },
-      self.span_from(start),
-    )
+    Expr::new(ExprKind::Array { values: elements, repeat: None }, self.span_from(start))
   }
 
   fn parse_path_or_struct_expr(&mut self) -> Expr {
@@ -571,18 +519,13 @@ impl Parser<'_> {
     let path = self.parse_path();
 
     if self.check(TokenType::LeftBrace)
-      && self
-        .peek_ahead(1)
-        .is_some_and(|t| matches!(t.kind, TokenType::Dot))
+      && self.peek_ahead(1).is_some_and(|t| matches!(t.kind, TokenType::Dot))
     {
       self.eat(TokenType::LeftBrace);
       let fields = self.parse_struct_field_inits();
       self.expect(TokenType::RightBrace, "to close struct literal");
 
-      return Expr::new(
-        ExprKind::Struct { path, fields },
-        self.span_from(start),
-      );
+      return Expr::new(ExprKind::Struct { path, fields }, self.span_from(start));
     }
 
     Expr::new(ExprKind::Path(path), self.span_from(start))
@@ -606,10 +549,7 @@ impl Parser<'_> {
           ExprKind::Path(Path {
             id: NodeId::new(),
             root: None,
-            segments: vec![PathSegment {
-              identifier: name,
-              args: vec![],
-            }],
+            segments: vec![PathSegment { identifier: name, args: vec![] }],
             span: *name.span(),
           }),
           *name.span(),
@@ -704,9 +644,7 @@ impl Parser<'_> {
     self.expect(TokenType::RightBrace, "to close match");
 
     if arms.is_empty() {
-      self.emit(EmptyMatch {
-        span: self.span_from(brace_span),
-      });
+      self.emit(EmptyMatch { span: self.span_from(brace_span) });
     }
 
     Expr::new(
@@ -727,10 +665,7 @@ impl Parser<'_> {
     match &token.kind {
       TokenType::Underscore => {
         self.advance();
-        Pattern::Wildcard(WildcardPat {
-          id: NodeId::new(),
-          span: token.span,
-        })
+        Pattern::Wildcard(WildcardPat { id: NodeId::new(), span: token.span })
       }
       TokenType::True | TokenType::False => {
         let value = matches!(token.kind, TokenType::True);
@@ -746,10 +681,7 @@ impl Parser<'_> {
         if let ExprKind::Literal(lit) = expr.kind {
           Pattern::Literal(lit)
         } else {
-          Pattern::Wildcard(WildcardPat {
-            id: NodeId::new(),
-            span: token.span,
-          })
+          Pattern::Wildcard(WildcardPat { id: NodeId::new(), span: token.span })
         }
       }
       TokenType::StringLiteral(_) => {
@@ -757,10 +689,7 @@ impl Parser<'_> {
         if let ExprKind::Literal(lit) = expr.kind {
           Pattern::Literal(lit)
         } else {
-          Pattern::Wildcard(WildcardPat {
-            id: NodeId::new(),
-            span: token.span,
-          })
+          Pattern::Wildcard(WildcardPat { id: NodeId::new(), span: token.span })
         }
       }
       TokenType::CharLiteral(_) => {
@@ -768,10 +697,7 @@ impl Parser<'_> {
         if let ExprKind::Literal(lit) = expr.kind {
           Pattern::Literal(lit)
         } else {
-          Pattern::Wildcard(WildcardPat {
-            id: NodeId::new(),
-            span: token.span,
-          })
+          Pattern::Wildcard(WildcardPat { id: NodeId::new(), span: token.span })
         }
       }
       TokenType::LeftParen => {
@@ -858,14 +784,8 @@ impl Parser<'_> {
         }
       }
       _ => {
-        self.emit(ExpectedPattern {
-          found: token.kind.clone(),
-          span: token.span,
-        });
-        Pattern::Wildcard(WildcardPat {
-          id: NodeId::new(),
-          span: token.span,
-        })
+        self.emit(ExpectedPattern { found: token.kind.clone(), span: token.span });
+        Pattern::Wildcard(WildcardPat { id: NodeId::new(), span: token.span })
       }
     }
   }
@@ -877,11 +797,7 @@ impl Parser<'_> {
     let body = self.parse_block();
 
     Expr::new(
-      ExprKind::Loop(LoopExpr {
-        id: NodeId::new(),
-        body,
-        span: self.span_from(start),
-      }),
+      ExprKind::Loop(LoopExpr { id: NodeId::new(), body, span: self.span_from(start) }),
       self.span_from(start),
     )
   }
@@ -934,11 +850,8 @@ impl Parser<'_> {
     let start = self.current_span();
     self.eat(TokenType::Break);
 
-    let value = if !self.at_expr_terminator() {
-      Some(Box::new(self.parse_expr()))
-    } else {
-      None
-    };
+    let value =
+      if !self.at_expr_terminator() { Some(Box::new(self.parse_expr())) } else { None };
 
     Expr::new(
       ExprKind::Break(BreakExpr {
@@ -955,10 +868,7 @@ impl Parser<'_> {
     self.eat(TokenType::Continue);
 
     Expr::new(
-      ExprKind::Continue(ContinueExpr {
-        id: NodeId::new(),
-        span: self.span_from(start),
-      }),
+      ExprKind::Continue(ContinueExpr { id: NodeId::new(), span: self.span_from(start) }),
       self.span_from(start),
     )
   }
@@ -967,11 +877,8 @@ impl Parser<'_> {
     let start = self.current_span();
     self.eat(TokenType::Return);
 
-    let value = if !self.at_expr_terminator() {
-      Some(Box::new(self.parse_expr()))
-    } else {
-      None
-    };
+    let value =
+      if !self.at_expr_terminator() { Some(Box::new(self.parse_expr())) } else { None };
 
     Expr::new(
       ExprKind::Return(ReturnExpr {
@@ -983,11 +890,7 @@ impl Parser<'_> {
     )
   }
 
-  fn parse_range_expr(
-    &mut self,
-    start_expr: Option<Expr>,
-    start: Span,
-  ) -> Expr {
+  fn parse_range_expr(&mut self, start_expr: Option<Expr>, start: Span) -> Expr {
     let inclusive = self.eat(TokenType::DotDotEq);
     if !inclusive {
       self.eat(TokenType::DotDot);
@@ -1061,10 +964,7 @@ impl Parser<'_> {
       let arg_start = self.current_span();
 
       let (name, value) = if self.is_identifier() {
-        if self
-          .peek_ahead(1)
-          .is_some_and(|t| t.kind == TokenType::Assign)
-        {
+        if self.peek_ahead(1).is_some_and(|t| t.kind == TokenType::Assign) {
           let name = self.parse_identifier();
           self.advance(); // consume =
           let value = self.parse_expr();
@@ -1163,10 +1063,7 @@ impl Parser<'_> {
       ExprKind::Path(_)
         | ExprKind::Field { .. }
         | ExprKind::Index { .. }
-        | ExprKind::Unary {
-          op: UnaryOp::Deref,
-          ..
-        }
+        | ExprKind::Unary { op: UnaryOp::Deref, .. }
         | ExprKind::SelfValue
     )
   }

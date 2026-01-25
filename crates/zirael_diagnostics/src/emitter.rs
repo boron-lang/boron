@@ -11,11 +11,7 @@ use zirael_source::source_file::SourceFileId;
 use zirael_source::span::Span;
 
 pub trait Emitter: std::fmt::Debug {
-  fn emit_diagnostic(
-    &self,
-    diag: &Diag,
-    w: &mut dyn Write,
-  ) -> anyhow::Result<()>;
+  fn emit_diagnostic(&self, diag: &Diag, w: &mut dyn Write) -> anyhow::Result<()>;
 
   fn sources(&self) -> &Arc<Sources>;
 }
@@ -81,11 +77,7 @@ pub struct HumanReadableEmitter {
 
 impl HumanReadableEmitter {
   pub fn new(sources: Arc<Sources>, color: bool) -> Self {
-    Self {
-      characters: ascii(),
-      color,
-      sources,
-    }
+    Self { characters: ascii(), color, sources }
   }
 
   fn warning_color(&self) -> Option<Color> {
@@ -145,27 +137,22 @@ impl HumanReadableEmitter {
         };
         let line_text = src.get_line_text(start_line_obj).unwrap();
 
-        let num_chars_before_start = line_text
-          [..start_byte_col.min(line_text.len())]
-          .chars()
-          .count();
-        let start_char_offset =
-          start_line_obj.offset() + num_chars_before_start;
+        let num_chars_before_start =
+          line_text[..start_byte_col.min(line_text.len())].chars().count();
+        let start_char_offset = start_line_obj.offset() + num_chars_before_start;
 
         if given_label_span.start >= given_label_span.end {
           (start_char_offset..start_char_offset, start_line, start_line)
         } else {
           // We can subtract 1 from end, because get_byte_line doesn't actually index into the text.
           let end_pos = given_label_span.end - 1;
-          let Some((end_line_obj, end_line, end_byte_col)) =
-            src.get_byte_line(end_pos)
+          let Some((end_line_obj, end_line, end_byte_col)) = src.get_byte_line(end_pos)
           else {
             continue;
           };
           let end_line_text = src.get_line_text(end_line_obj).unwrap();
           // Have to add 1 back now, so we don't cut a char in two.
-          let num_chars_before_end =
-            end_line_text[..end_byte_col + 1].chars().count();
+          let num_chars_before_end = end_line_text[..end_byte_col + 1].chars().count();
           let end_char_offset = end_line_obj.offset() + num_chars_before_end;
 
           (start_char_offset..end_char_offset, start_line, end_line)
@@ -192,19 +179,13 @@ impl HumanReadableEmitter {
       match groups.last_mut() {
         Some(group)
           if group.src_id == src_id
-            && group
-              .labels
-              .last()
-              .is_none_or(|last| last.end_line <= label.end_line) =>
+            && group.labels.last().is_none_or(|last| last.end_line <= label.end_line) =>
         {
-          group.char_span.start =
-            group.char_span.start.min(label.char_span.start);
+          group.char_span.start = group.char_span.start.min(label.char_span.start);
           group.char_span.end = group.char_span.end.max(label.char_span.end);
           let display_range = label.display_range();
-          group.display_range.start =
-            group.display_range.start.min(display_range.start);
-          group.display_range.end =
-            group.display_range.end.max(display_range.end);
+          group.display_range.start = group.display_range.start.min(display_range.start);
+          group.display_range.end = group.display_range.end.max(display_range.end);
           group.labels.push(label);
         }
         _ => {
@@ -236,16 +217,11 @@ struct LabelInfo<'a> {
 
 impl LabelInfo<'_> {
   fn last_offset(&self) -> usize {
-    self
-      .char_span
-      .end
-      .saturating_sub(1)
-      .max(self.char_span.start)
+    self.char_span.end.saturating_sub(1).max(self.char_span.start)
   }
 
   fn display_range(&self) -> Range<usize> {
-    self.start_line.saturating_sub(CONTEXT_LINES)
-      ..self.end_line + CONTEXT_LINES + 1
+    self.start_line.saturating_sub(CONTEXT_LINES)..self.end_line + CONTEXT_LINES + 1
   }
 }
 
@@ -267,11 +243,7 @@ impl Emitter for HumanReadableEmitter {
     &self.sources
   }
 
-  fn emit_diagnostic(
-    &self,
-    diag: &Diag,
-    w: &mut dyn Write,
-  ) -> anyhow::Result<()> {
+  fn emit_diagnostic(&self, diag: &Diag, w: &mut dyn Write) -> anyhow::Result<()> {
     let draw = self.characters.clone();
 
     // --- Header ---
@@ -285,47 +257,36 @@ impl Emitter for HumanReadableEmitter {
     // Line number maximum width
     let line_no_width = groups
       .iter()
-      .filter_map(
-        |SourceGroup {
-           char_span, src_id, ..
-         }| {
-          let src_name = self
-            .sources
-            .display(*src_id)
-            .map(|d| d.to_string())
-            .unwrap_or_else(|| "<unknown>".to_owned());
+      .filter_map(|SourceGroup { char_span, src_id, .. }| {
+        let src_name = self
+          .sources
+          .display(*src_id)
+          .map(|d| d.to_string())
+          .unwrap_or_else(|| "<unknown>".to_owned());
 
-          let src = if let Some(src) = self.sources.get(*src_id) {
-            src
-          } else {
-            eprintln!("Unable to fetch source {src_name}");
-            return None;
-          };
+        let src = if let Some(src) = self.sources.get(*src_id) {
+          src
+        } else {
+          eprintln!("Unable to fetch source {src_name}");
+          return None;
+        };
 
-          let line_range = src.get_line_range(char_span.clone());
-          Some(
-            (1..)
-              .map(|x| 10u32.pow(x))
-              .take_while(|x| line_range.end as u32 / x != 0)
-              .count()
-              + 1,
-          )
-        },
-      )
+        let line_range = src.get_line_range(char_span.clone());
+        Some(
+          (1..)
+            .map(|x| 10u32.pow(x))
+            .take_while(|x| line_range.end as u32 / x != 0)
+            .count()
+            + 1,
+        )
+      })
       .max()
       .unwrap_or(0);
 
     // --- Source sections ---
     let groups_len = groups.len();
-    for (
-      group_idx,
-      SourceGroup {
-        src_id,
-        char_span,
-        labels,
-        ..
-      },
-    ) in groups.into_iter().enumerate()
+    for (group_idx, SourceGroup { src_id, char_span, labels, .. }) in
+      groups.into_iter().enumerate()
     {
       let src_name = self
         .sources
@@ -344,23 +305,17 @@ impl Emitter for HumanReadableEmitter {
 
       // File name & reference
       let location = labels[0].char_span.start;
-      let line_and_col =
-        src.get_byte_line(location).map(|(line_obj, idx, col)| {
-          let line_text = src.get_line_text(line_obj).unwrap();
+      let line_and_col = src.get_byte_line(location).map(|(line_obj, idx, col)| {
+        let line_text = src.get_line_text(line_obj).unwrap();
 
-          let col_chars = line_text
-            .char_indices()
-            .take_while(|(byte_idx, _)| *byte_idx < col)
-            .count();
-          (line_obj, idx, col_chars)
-        });
+        let col_chars =
+          line_text.char_indices().take_while(|(byte_idx, _)| *byte_idx < col).count();
+        (line_obj, idx, col_chars)
+      });
 
       let (line_no, col_no) = line_and_col
         .map(|(_, idx, col)| {
-          (
-            format!("{}", idx + 1 + src.display_line_offset()),
-            format!("{}", col + 1),
-          )
+          (format!("{}", idx + 1 + src.display_line_offset()), format!("{}", col + 1))
         })
         .unwrap_or_else(|| ('?'.to_string(), '?'.to_string()));
       let line_ref = format!("{src_name}:{line_no}:{col_no}");
@@ -369,12 +324,7 @@ impl Emitter for HumanReadableEmitter {
         w,
         "{}{}{}{} {} {}",
         Show((' ', line_no_width + 2)),
-        if group_idx == 0 {
-          draw.ltop
-        } else {
-          draw.lcross
-        }
-        .fg(self.margin_color()),
+        if group_idx == 0 { draw.ltop } else { draw.lcross }.fg(self.margin_color()),
         draw.hbar.fg(self.margin_color()),
         draw.lbox.fg(self.margin_color()),
         line_ref,
@@ -437,11 +387,7 @@ impl Emitter for HumanReadableEmitter {
           format!(
             "{}{}",
             Show((' ', line_no_width + 1)),
-            if is_ellipsis {
-              draw.vbar_gap
-            } else {
-              draw.vbar
-            }
+            if is_ellipsis { draw.vbar_gap } else { draw.vbar }
           )
           .fg(self.skipped_margin_color())
         };
@@ -466,9 +412,8 @@ impl Emitter for HumanReadableEmitter {
               .iter()
               .enumerate()
             {
-              let margin = margin_label
-                .as_ref()
-                .filter(|m| std::ptr::eq(*label, m.label));
+              let margin =
+                margin_label.as_ref().filter(|m| std::ptr::eq(*label, m.label));
 
               if label.char_span.start <= line_span.end
                 && label.char_span.end > line_span.start
@@ -504,17 +449,17 @@ impl Emitter for HumanReadableEmitter {
                       vbar = vbar.or(Some(*label).filter(|_| !is_parent));
                     }
                   } else {
-                    vbar = vbar.or(Some(*label).filter(|_| {
-                      !is_parent && (is_start ^ (report_row < label_row))
-                    }));
+                    vbar = vbar.or(
+                      Some(*label)
+                        .filter(|_| !is_parent && (is_start ^ (report_row < label_row))),
+                    );
                   }
                 }
               }
             }
 
             if let (Some((margin, _is_start)), true) = (margin_ptr, is_line) {
-              let is_col =
-                multi_label.is_some_and(|ml| std::ptr::eq(*ml, margin.label));
+              let is_col = multi_label.is_some_and(|ml| std::ptr::eq(*ml, margin.label));
               let is_limit = col + 1 == multi_labels_with_message.len();
               if !is_col && !is_limit {
                 hbar = hbar.or(Some(margin.label));
@@ -522,45 +467,27 @@ impl Emitter for HumanReadableEmitter {
             }
 
             hbar = hbar.filter(|l| {
-              margin_label
-                .as_ref()
-                .is_none_or(|margin| !std::ptr::eq(margin.label, *l))
+              margin_label.as_ref().is_none_or(|margin| !std::ptr::eq(margin.label, *l))
                 || !is_line
             });
 
             let (a, b) = if let Some((label, is_start)) = corner {
               (
-                if is_start { draw.ltop } else { draw.lbot }
-                  .fg(label.info.color()),
+                if is_start { draw.ltop } else { draw.lbot }.fg(label.info.color()),
                 draw.hbar.fg(label.info.color()),
               )
-            } else if let Some(label) =
-              hbar.filter(|_| vbar.is_some() && !CROSS_GAPS)
-            {
-              (
-                draw.xbar.fg(label.info.color()),
-                draw.hbar.fg(label.info.color()),
-              )
+            } else if let Some(label) = hbar.filter(|_| vbar.is_some() && !CROSS_GAPS) {
+              (draw.xbar.fg(label.info.color()), draw.hbar.fg(label.info.color()))
             } else if let Some(label) = hbar {
-              (
-                draw.hbar.fg(label.info.color()),
-                draw.hbar.fg(label.info.color()),
-              )
+              (draw.hbar.fg(label.info.color()), draw.hbar.fg(label.info.color()))
             } else if let Some(label) = vbar {
               (
-                if is_ellipsis {
-                  draw.vbar_gap
-                } else {
-                  draw.vbar
-                }
-                .fg(label.info.color()),
+                if is_ellipsis { draw.vbar_gap } else { draw.vbar }
+                  .fg(label.info.color()),
                 ' '.fg(None),
               )
-            } else if let (Some((margin, is_start)), true) =
-              (margin_ptr, is_line)
-            {
-              let is_col =
-                multi_label.is_some_and(|ml| std::ptr::eq(*ml, margin.label));
+            } else if let (Some((margin, is_start)), true) = (margin_ptr, is_line) {
+              let is_col = multi_label.is_some_and(|ml| std::ptr::eq(*ml, margin.label));
               let is_limit = col == multi_labels_with_message.len();
               (
                 if is_limit {
@@ -571,8 +498,7 @@ impl Emitter for HumanReadableEmitter {
                   draw.hbar
                 }
                 .fg(margin.label.info.color()),
-                if !is_limit { draw.hbar } else { ' ' }
-                  .fg(margin.label.info.color()),
+                if !is_limit { draw.hbar } else { ' ' }.fg(margin.label.info.color()),
               )
             } else {
               (' '.fg(None), ' '.fg(None))
@@ -626,9 +552,7 @@ impl Emitter for HumanReadableEmitter {
             let is_start = line.span().contains(label.char_span.start);
             let is_end = line.span().contains(label.last_offset());
             if is_start
-              && margin_label
-                .as_ref()
-                .is_none_or(|m| !std::ptr::eq(*label, m.label))
+              && margin_label.as_ref().is_none_or(|m| !std::ptr::eq(*label, m.label))
             {
               // TODO: Check to see whether multi is the first on the start line or first on the end line
               Some(LineLabel {
@@ -651,13 +575,11 @@ impl Emitter for HumanReadableEmitter {
           .collect::<Vec<_>>();
 
         for label_info in labels.iter().filter(|l| {
-          l.char_span.start >= line.span().start
-            && l.char_span.end <= line.span().end
+          l.char_span.start >= line.span().start && l.char_span.end <= line.span().end
         }) {
           if matches!(label_info.kind, LabelKind::Inline) {
             line_labels.push(LineLabel {
-              col: ((label_info.char_span.start + label_info.char_span.end)
-                / 2)
+              col: ((label_info.char_span.start + label_info.char_span.end) / 2)
                 .max(label_info.char_span.start)
                 - line.offset(),
               label: label_info,
@@ -676,16 +598,7 @@ impl Emitter for HumanReadableEmitter {
             is_ellipsis = true;
           } else {
             if !is_ellipsis {
-              write_margin(
-                w,
-                idx,
-                false,
-                is_ellipsis,
-                false,
-                None,
-                &[],
-                &None,
-              )?;
+              write_margin(w, idx, false, is_ellipsis, false, None, &[], &None)?;
               writeln!(w)?;
             }
             is_ellipsis = true;
@@ -696,9 +609,8 @@ impl Emitter for HumanReadableEmitter {
         }
 
         // Sort the labels by their columns
-        line_labels.sort_by_key(|ll| {
-          (ll.label.info.order, ll.col, !ll.label.char_span.start)
-        });
+        line_labels
+          .sort_by_key(|ll| (ll.label.info.order, ll.col, !ll.label.char_span.start));
 
         // Determine label bounds so we know where to put error messages
         let arrow_end_space = 2;
@@ -718,9 +630,7 @@ impl Emitter for HumanReadableEmitter {
             .enumerate()
             .filter(|(_, ll)| {
               ll.label.info.message.is_some()
-                && margin_label
-                  .as_ref()
-                  .is_none_or(|m| !std::ptr::eq(ll.label, m.label))
+                && margin_label.as_ref().is_none_or(|m| !std::ptr::eq(ll.label, m.label))
             })
             .find(|(j, ll)| ll.col == col && row <= *j)
             .map(|(_, ll)| ll)
@@ -738,34 +648,17 @@ impl Emitter for HumanReadableEmitter {
             })
             // Prioritise displaying smaller spans
             .min_by_key(|ll| {
-              (
-                -ll.label.info.priority,
-                ExactSizeIterator::len(&ll.label.char_span),
-              )
+              (-ll.label.info.priority, ExactSizeIterator::len(&ll.label.char_span))
             })
         };
 
         // Margin
 
-        write_margin(
-          w,
-          idx,
-          true,
-          is_ellipsis,
-          true,
-          None,
-          &line_labels,
-          &margin_label,
-        )?;
+        write_margin(w, idx, true, is_ellipsis, true, None, &line_labels, &margin_label)?;
 
         // Line
         if !is_ellipsis {
-          for (col, c) in src
-            .get_line_text(line)
-            .unwrap()
-            .trim_end()
-            .chars()
-            .enumerate()
+          for (col, c) in src.get_line_text(line).unwrap().trim_end().chars().enumerate()
           {
             let (c, width) = self.char_width(c, col);
             if c.is_whitespace() {
@@ -810,8 +703,7 @@ impl Emitter for HumanReadableEmitter {
                 // The `true` is used here because it's temporarily disabling a
                 // feature that might be reenabled later.
                 #[expect(clippy::overly_complex_bool_expr)]
-                if ExactSizeIterator::len(&vbar_ll.label.char_span) <= 1 || true
-                {
+                if ExactSizeIterator::len(&vbar_ll.label.char_span) <= 1 || true {
                   [draw.underbar, draw.underline]
                 } else if line.offset() + col == vbar_ll.label.char_span.start {
                   [draw.ltop, draw.underbar]
@@ -825,10 +717,7 @@ impl Emitter for HumanReadableEmitter {
               } else {
                 [draw.vbar, ' ']
               };
-              [
-                c.fg(vbar_ll.label.info.color()),
-                tail.fg(vbar_ll.label.info.color()),
-              ]
+              [c.fg(vbar_ll.label.info.color()), tail.fg(vbar_ll.label.info.color())]
             } else if let Some(underline_ll) = underline {
               [draw.underline.fg(underline_ll.label.info.color()); 2]
             } else {
@@ -870,11 +759,7 @@ impl Emitter for HumanReadableEmitter {
             {
               [
                 if line_label.multi {
-                  if line_label.draw_msg {
-                    draw.mbot
-                  } else {
-                    draw.rbot
-                  }
+                  if line_label.draw_msg { draw.mbot } else { draw.rbot }
                 } else {
                   draw.lbot
                 }
@@ -893,12 +778,8 @@ impl Emitter for HumanReadableEmitter {
                 [draw.hbar.fg(line_label.label.info.color()); 2]
               } else {
                 [
-                  if vbar_ll.multi && row == 0 {
-                    draw.uarrow
-                  } else {
-                    draw.vbar
-                  }
-                  .fg(vbar_ll.label.info.color()),
+                  if vbar_ll.multi && row == 0 { draw.uarrow } else { draw.vbar }
+                    .fg(vbar_ll.label.info.color()),
                   ' '.fg(line_label.label.info.color()),
                 ]
               }
@@ -931,23 +812,10 @@ impl Emitter for HumanReadableEmitter {
           writeln!(w)?;
 
           let help_prefix = format!("{} {}", "Help", i + 1);
-          let help_prefix_len = if diag.helps.len() > 1 {
-            help_prefix.len()
-          } else {
-            4
-          };
+          let help_prefix_len = if diag.helps.len() > 1 { help_prefix.len() } else { 4 };
           let mut lines = help.lines();
           if let Some(line) = lines.next() {
-            write_margin(
-              w,
-              0,
-              false,
-              false,
-              true,
-              Some((0, false)),
-              &[],
-              &None,
-            )?;
+            write_margin(w, 0, false, false, true, Some((0, false)), &[], &None)?;
             if diag.helps.len() > 1 {
               writeln!(w, "{}: {}", help_prefix.fg(self.note_color()), line)?;
             } else {
@@ -955,16 +823,7 @@ impl Emitter for HumanReadableEmitter {
             }
           }
           for line in lines {
-            write_margin(
-              w,
-              0,
-              false,
-              false,
-              true,
-              Some((0, false)),
-              &[],
-              &None,
-            )?;
+            write_margin(w, 0, false, false, true, Some((0, false)), &[], &None)?;
             writeln!(w, "{:>pad$}{}", "", line, pad = help_prefix_len + 2)?;
           }
         }
@@ -977,23 +836,10 @@ impl Emitter for HumanReadableEmitter {
           writeln!(w)?;
 
           let note_prefix = format!("{} {}", "Note", i + 1);
-          let note_prefix_len = if diag.notes.len() > 1 {
-            note_prefix.len()
-          } else {
-            4
-          };
+          let note_prefix_len = if diag.notes.len() > 1 { note_prefix.len() } else { 4 };
           let mut lines = note.lines();
           if let Some(line) = lines.next() {
-            write_margin(
-              w,
-              0,
-              false,
-              false,
-              true,
-              Some((0, false)),
-              &[],
-              &None,
-            )?;
+            write_margin(w, 0, false, false, true, Some((0, false)), &[], &None)?;
             if diag.notes.len() > 1 {
               writeln!(w, "{}: {}", note_prefix.fg(self.note_color()), line)?;
             } else {
@@ -1001,16 +847,7 @@ impl Emitter for HumanReadableEmitter {
             }
           }
           for line in lines {
-            write_margin(
-              w,
-              0,
-              false,
-              false,
-              true,
-              Some((0, false)),
-              &[],
-              &None,
-            )?;
+            write_margin(w, 0, false, false, true, Some((0, false)), &[], &None)?;
             writeln!(w, "{:>pad$}{}", "", line, pad = note_prefix_len + 2)?;
           }
         }

@@ -9,9 +9,7 @@ pub fn strip_same_root(path: &Path, reference_path: &Path) -> PathBuf {
 
   let mut common_length = 0;
 
-  for (path_comp, ref_comp) in
-    path_components.iter().zip(reference_components.iter())
-  {
+  for (path_comp, ref_comp) in path_components.iter().zip(reference_components.iter()) {
     if path_comp == ref_comp {
       common_length += 1;
     } else {
@@ -19,8 +17,7 @@ pub fn strip_same_root(path: &Path, reference_path: &Path) -> PathBuf {
     }
   }
 
-  let stripped_path: PathBuf =
-    path_components.iter().skip(common_length).collect();
+  let stripped_path: PathBuf = path_components.iter().skip(common_length).collect();
 
   stripped_path
 }
@@ -30,9 +27,7 @@ pub fn strip_same_root(path: &Path, reference_path: &Path) -> PathBuf {
 /// # Errors
 ///
 /// Returns an error if the path cannot be canonicalized
-pub fn canonicalize_with_strip<P: AsRef<Path>>(
-  path: P,
-) -> Result<PathBuf, ZiraelError> {
+pub fn canonicalize_with_strip<P: AsRef<Path>>(path: P) -> Result<PathBuf, ZiraelError> {
   let canonical = fs_err::canonicalize(path)?;
   Ok(strip_windows_long_path_prefix(canonical))
 }

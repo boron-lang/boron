@@ -4,7 +4,7 @@ mod types;
 use crate::validator::errors::ComptimeNoGenerics;
 use zirael_hir::{Block, Expr, ExprKind, Function, Hir, Stmt, StmtKind};
 use zirael_resolver::{DefId, Resolver};
-use zirael_utils::prelude::DiagnosticCtx;
+use zirael_utils::prelude::{DiagnosticCtx, debug};
 
 pub struct ComptimeValidator<'a> {
   pub hir: &'a Hir,
@@ -25,9 +25,7 @@ pub fn validate_comptime(hir: &Hir, dcx: &DiagnosticCtx, resolver: &Resolver) {
 impl ComptimeValidator<'_> {
   fn validate_function(&self, _def_id: DefId, func: &Function) {
     if func.is_comptime && !func.generics.params.is_empty() {
-      self.dcx.emit(ComptimeNoGenerics {
-        span: func.generics.span,
-      });
+      self.dcx.emit(ComptimeNoGenerics { span: func.generics.span });
     }
 
     if let Some(body) = &func.body {
@@ -52,11 +50,7 @@ impl ComptimeValidator<'_> {
         }
       }
 
-      ExprKind::If {
-        condition,
-        then_block,
-        else_branch,
-      } => {
+      ExprKind::If { condition, then_block, else_branch } => {
         self.validate_expr(condition);
 
         self.validate_block(then_block);
@@ -106,8 +100,16 @@ impl ComptimeValidator<'_> {
         println!("{callee:?}");
       }
 
+      ExprKind::Struct { fields, .. } => {
+        for init in fields {
+          self.validate_expr(&init.value);
+        }
+      }
+
+      ExprKind::Err => debug!("found err in validator"),
+
       _ => {
-        todo!("unhandled")
+        todo!("unhandled {:?}", expr);
       }
     }
   }

@@ -13,18 +13,8 @@ pub struct Symbol {
 }
 
 impl Symbol {
-  pub fn new(
-    name: String,
-    def_id: DefId,
-    kind: SymbolKind,
-    scope_id: ScopeId,
-  ) -> Self {
-    Self {
-      name,
-      def_id,
-      kind,
-      scope_id,
-    }
+  pub fn new(name: String, def_id: DefId, kind: SymbolKind, scope_id: ScopeId) -> Self {
+    Self { name, def_id, kind, scope_id }
   }
 }
 
@@ -44,7 +34,7 @@ pub struct SymbolTable {
   /// Maps (scope, name) -> Symbol for module namespace.
   modules: DashMap<(ScopeId, String), Symbol>,
   /// Maps `NodeId` -> `DefId` for quick lookup of what a node resolved to.
-  resolutions: DashMap<NodeId, DefId>,
+  pub resolutions: DashMap<NodeId, DefId>,
 }
 
 impl SymbolTable {
@@ -68,10 +58,7 @@ impl SymbolTable {
   }
 
   pub fn lookup_value(&self, scope: ScopeId, name: &str) -> Option<Symbol> {
-    self
-      .values
-      .get(&(scope, name.to_owned()))
-      .map(|r| r.clone())
+    self.values.get(&(scope, name.to_owned())).map(|r| r.clone())
   }
 
   pub fn lookup_type(&self, scope: ScopeId, name: &str) -> Option<Symbol> {
@@ -79,10 +66,7 @@ impl SymbolTable {
   }
 
   pub fn lookup_module(&self, scope: ScopeId, name: &str) -> Option<Symbol> {
-    self
-      .modules
-      .get(&(scope, name.to_owned()))
-      .map(|r| r.clone())
+    self.modules.get(&(scope, name.to_owned())).map(|r| r.clone())
   }
 
   pub fn has_value(&self, scope: ScopeId, name: &str) -> bool {

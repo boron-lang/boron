@@ -1,9 +1,7 @@
 use std::fmt;
 use zirael_diagnostics::ToDiagnostic;
 use zirael_diagnostics::codes as diag_codes;
-use zirael_diagnostics::prelude::{
-  Diag, DiagnosticCode, DiagnosticLevel, Label,
-};
+use zirael_diagnostics::prelude::{Diag, DiagnosticCode, DiagnosticLevel, Label};
 use zirael_utils::prelude::Span;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -59,55 +57,35 @@ impl LexError {
         diag_codes::LEX_UNTERMINATED_BLOCK_COMMENT
       }
       LexErrorKind::InvalidEscape { .. } => diag_codes::LEX_INVALID_ESCAPE,
-      LexErrorKind::InvalidByteValue { .. } => {
-        diag_codes::LEX_INVALID_BYTE_VALUE
-      }
+      LexErrorKind::InvalidByteValue { .. } => diag_codes::LEX_INVALID_BYTE_VALUE,
       LexErrorKind::EmptyCharLiteral => diag_codes::LEX_EMPTY_CHAR_LITERAL,
       LexErrorKind::MultiCharLiteral => diag_codes::LEX_MULTI_CHAR_LITERAL,
       LexErrorKind::MissingDigitsAfterBase { .. } => {
         diag_codes::LEX_MISSING_DIGITS_AFTER_BASE
       }
-      LexErrorKind::InvalidDigitForBase { .. } => {
-        diag_codes::LEX_INVALID_DIGIT_FOR_BASE
-      }
+      LexErrorKind::InvalidDigitForBase { .. } => diag_codes::LEX_INVALID_DIGIT_FOR_BASE,
       LexErrorKind::MalformedExponent => diag_codes::LEX_MALFORMED_EXPONENT,
       LexErrorKind::InvalidUtf8 => diag_codes::LEX_INVALID_UTF8,
       LexErrorKind::UnexpectedBom => diag_codes::LEX_UNEXPECTED_BOM,
-      LexErrorKind::DisallowedCodePoint { .. } => {
-        diag_codes::LEX_DISALLOWED_CODE_POINT
-      }
-      LexErrorKind::NonAsciiWhitespace { .. } => {
-        diag_codes::LEX_NON_ASCII_WHITESPACE
-      }
+      LexErrorKind::DisallowedCodePoint { .. } => diag_codes::LEX_DISALLOWED_CODE_POINT,
+      LexErrorKind::NonAsciiWhitespace { .. } => diag_codes::LEX_NON_ASCII_WHITESPACE,
       LexErrorKind::InvalidIdentifierStart { .. } => {
         diag_codes::LEX_INVALID_IDENTIFIER_START
       }
       LexErrorKind::InvalidIdentifierContinue { .. } => {
         diag_codes::LEX_INVALID_IDENTIFIER_CONTINUE
       }
-      LexErrorKind::JoinControlInIdentifier => {
-        diag_codes::LEX_JOIN_CONTROL_IN_IDENTIFIER
-      }
-      LexErrorKind::UnattachedDocComment => {
-        diag_codes::LEX_UNATTACHED_DOC_COMMENT
-      }
-      LexErrorKind::UnexpectedCharacter { .. } => {
-        diag_codes::LEX_UNEXPECTED_CHARACTER
-      }
+      LexErrorKind::JoinControlInIdentifier => diag_codes::LEX_JOIN_CONTROL_IN_IDENTIFIER,
+      LexErrorKind::UnattachedDocComment => diag_codes::LEX_UNATTACHED_DOC_COMMENT,
+      LexErrorKind::UnexpectedCharacter { .. } => diag_codes::LEX_UNEXPECTED_CHARACTER,
     }
   }
 
   pub fn message(&self) -> String {
     match &self.kind {
-      LexErrorKind::UnterminatedString => {
-        "unterminated string literal".to_owned()
-      }
-      LexErrorKind::UnterminatedChar => {
-        "unterminated character literal".to_owned()
-      }
-      LexErrorKind::UnterminatedBlockComment => {
-        "unterminated block comment".to_owned()
-      }
+      LexErrorKind::UnterminatedString => "unterminated string literal".to_owned(),
+      LexErrorKind::UnterminatedChar => "unterminated character literal".to_owned(),
+      LexErrorKind::UnterminatedBlockComment => "unterminated block comment".to_owned(),
       LexErrorKind::InvalidEscape { escape } => {
         format!("invalid escape sequence '{escape}'")
       }
@@ -135,10 +113,7 @@ impl LexError {
         format!("disallowed code point U+{:04X}", *code_point as u32)
       }
       LexErrorKind::NonAsciiWhitespace { code_point } => {
-        format!(
-          "non-ASCII whitespace U+{:04X} not allowed",
-          *code_point as u32
-        )
+        format!("non-ASCII whitespace U+{:04X} not allowed", *code_point as u32)
       }
       LexErrorKind::InvalidIdentifierStart { char } => {
         format!("invalid character '{char}' at start of identifier")
@@ -161,16 +136,10 @@ impl LexError {
   pub fn label(&self) -> String {
     match &self.kind {
       LexErrorKind::UnterminatedString => "string started here".to_owned(),
-      LexErrorKind::UnterminatedChar => {
-        "character literal started here".to_owned()
-      }
-      LexErrorKind::UnterminatedBlockComment => {
-        "comment started here".to_owned()
-      }
+      LexErrorKind::UnterminatedChar => "character literal started here".to_owned(),
+      LexErrorKind::UnterminatedBlockComment => "comment started here".to_owned(),
       LexErrorKind::InvalidEscape { .. } => "invalid escape".to_owned(),
-      LexErrorKind::InvalidByteValue { .. } => {
-        "byte value too large".to_owned()
-      }
+      LexErrorKind::InvalidByteValue { .. } => "byte value too large".to_owned(),
       LexErrorKind::UnexpectedBom => "BOM not allowed here".to_owned(),
       _ => "error here".to_owned(),
     }
@@ -179,15 +148,10 @@ impl LexError {
   pub fn help(&self) -> Option<String> {
     match &self.kind {
       LexErrorKind::InvalidEscape { escape } if escape.starts_with("\\u") => {
-        Some(
-          "Unicode escapes must have exactly 4 hex digits: \\uXXXX".to_owned(),
-        )
+        Some("Unicode escapes must have exactly 4 hex digits: \\uXXXX".to_owned())
       }
       LexErrorKind::InvalidEscape { escape } if escape.starts_with("\\U") => {
-        Some(
-          "Unicode escapes must have exactly 8 hex digits: \\UXXXXXXXX"
-            .to_owned(),
-        )
+        Some("Unicode escapes must have exactly 8 hex digits: \\UXXXXXXXX".to_owned())
       }
       LexErrorKind::InvalidEscape { escape } if escape.starts_with("\\x") => {
         Some("Hex escapes must have exactly 2 hex digits: \\xXX".to_owned())

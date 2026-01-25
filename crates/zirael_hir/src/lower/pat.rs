@@ -25,13 +25,7 @@ impl LoweringContext<'_> {
       }
 
       Pattern::Tuple(tup) => (
-        PatKind::Tuple(
-          tup
-            .patterns
-            .iter()
-            .map(|p| self.lower_ast_pattern(p))
-            .collect(),
-        ),
+        PatKind::Tuple(tup.patterns.iter().map(|p| self.lower_ast_pattern(p)).collect()),
         tup.span,
       ),
 
@@ -85,21 +79,13 @@ impl LoweringContext<'_> {
         (
           PatKind::TupleStruct {
             def_id: def_id.unwrap_or(zirael_resolver::DefId(0)),
-            pats: e
-              .patterns
-              .iter()
-              .map(|p| self.lower_ast_pattern(p))
-              .collect(),
+            pats: e.patterns.iter().map(|p| self.lower_ast_pattern(p)).collect(),
           },
           e.span,
         )
       }
     };
 
-    Pat {
-      hir_id: self.next_hir_id(),
-      kind,
-      span,
-    }
+    Pat { hir_id: self.next_hir_id(), kind, span }
   }
 }

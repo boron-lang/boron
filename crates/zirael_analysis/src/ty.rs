@@ -30,36 +30,16 @@ pub enum TyVarKind {
 pub enum InferTy {
   Var(TyVar, Span),
   Primitive(PrimitiveKind, Span),
-  Adt {
-    def_id: DefId,
-    args: Vec<InferTy>,
-    span: Span,
-  },
-  Ptr {
-    mutability: Mutability,
-    ty: Box<InferTy>,
-    span: Span,
-  },
+  Adt { def_id: DefId, args: Vec<InferTy>, span: Span },
+  Ptr { mutability: Mutability, ty: Box<InferTy>, span: Span },
   Optional(Box<InferTy>, Span),
-  Array {
-    ty: Box<InferTy>,
-    len: usize,
-    span: Span,
-  },
+  Array { ty: Box<InferTy>, len: usize, span: Span },
   Slice(Box<InferTy>, Span),
   Tuple(Vec<InferTy>, Span),
-  Fn {
-    params: Vec<InferTy>,
-    ret: Box<InferTy>,
-    span: Span,
-  },
+  Fn { params: Vec<InferTy>, ret: Box<InferTy>, span: Span },
   Unit(Span),
   Never(Span),
-  Param {
-    def_id: DefId,
-    name: Identifier,
-    span: Span,
-  },
+  Param { def_id: DefId, name: Identifier, span: Span },
   Err(Span),
 }
 
@@ -95,9 +75,7 @@ impl InferTy {
       Self::Fn { params, ret, .. } => {
         params.iter().any(|t| t.has_vars()) || ret.has_vars()
       }
-      Self::Unit(_) | Self::Never(_) | Self::Param { .. } | Self::Err(_) => {
-        false
-      }
+      Self::Unit(_) | Self::Never(_) | Self::Param { .. } | Self::Err(_) => false,
     }
   }
 
@@ -197,10 +175,7 @@ pub enum UnifyError {
   NotAFloat { ty: InferTy },
 
   /// Mutability mismatch for pointers.
-  MutabilityMismatch {
-    expected: Mutability,
-    found: Mutability,
-  },
+  MutabilityMismatch { expected: Mutability, found: Mutability },
 
   /// Array length mismatch.
   ArrayLenMismatch { expected: usize, found: usize },

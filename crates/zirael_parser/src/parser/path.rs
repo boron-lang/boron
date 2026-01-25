@@ -1,7 +1,6 @@
 use crate::parser::Parser;
 use crate::parser::errors::{
-  ExpectedSuperOrIdentPath, GenericsFirstSegment, GenericsInSuper,
-  SelfAndPackageRootOnly,
+  ExpectedSuperOrIdentPath, GenericsFirstSegment, GenericsInSuper, SelfAndPackageRootOnly,
 };
 use crate::{NodeId, Path, PathRoot, PathSegment, TokenType};
 use zirael_utils::prelude::Identifier;
@@ -22,14 +21,9 @@ impl Parser<'_> {
       let generics = self.parse_generic_parameters();
 
       if let Some(generics) = generics {
-        self.emit(GenericsFirstSegment {
-          span: generics.span,
-        });
+        self.emit(GenericsFirstSegment { span: generics.span });
       }
-      segments.push(PathSegment {
-        identifier,
-        args: vec![],
-      });
+      segments.push(PathSegment { identifier, args: vec![] });
 
       None
     } else {
@@ -50,26 +44,18 @@ impl Parser<'_> {
             self.emit(GenericsInSuper { span: gens.span });
           }
 
-          segments.push(PathSegment {
-            identifier,
-            args: vec![],
-          });
+          segments.push(PathSegment { identifier, args: vec![] });
           self.advance();
         }
         TokenType::Package | TokenType::SelfValue => {
-          self.emit(SelfAndPackageRootOnly {
-            span: self.peek().span,
-          });
+          self.emit(SelfAndPackageRootOnly { span: self.peek().span });
           self.advance();
         }
         TokenType::Identifier(_) => {
           let identifier = self.parse_identifier();
           let generics = self.parse_generic_arguments();
 
-          segments.push(PathSegment {
-            identifier,
-            args: generics,
-          });
+          segments.push(PathSegment { identifier, args: generics });
         }
         _ => {
           self.emit(ExpectedSuperOrIdentPath {
@@ -81,11 +67,6 @@ impl Parser<'_> {
       }
     }
 
-    Path {
-      id: NodeId::new(),
-      root,
-      segments,
-      span: self.span_from(start),
-    }
+    Path { id: NodeId::new(), root, segments, span: self.span_from(start) }
   }
 }

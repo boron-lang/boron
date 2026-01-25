@@ -12,10 +12,7 @@ impl HirId {
   }
 
   pub fn make_owner(owner: DefId) -> Self {
-    Self {
-      owner,
-      local_id: LocalId::ZERO,
-    }
+    Self { owner, local_id: LocalId::ZERO }
   }
 }
 

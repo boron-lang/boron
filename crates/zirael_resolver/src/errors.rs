@@ -44,6 +44,7 @@ pub struct DuplicateDefinition {
 #[derive(Diagnostic)]
 #[error("cannot find module `{name}`")]
 #[code(RESOLVE_UNDEFINED_MODULE)]
+#[help("make sure you added it to module discovery: `mod path::to::module`")]
 pub struct UndefinedModule {
   pub name: String,
   #[error("not found")]
@@ -78,9 +79,7 @@ pub struct UnresolvedImport {
 }
 
 #[derive(Diagnostic)]
-#[error(
-  "`{root}::` path prefix is only valid in import declarations or mod discoveries"
-)]
+#[error("`{root}::` path prefix is only valid in import declarations or mod discoveries")]
 #[code(RESOLVE_INVALID_PATH_ROOT)]
 #[help("use an import to bring items into scope, then access them directly")]
 pub struct InvalidPathRoot {

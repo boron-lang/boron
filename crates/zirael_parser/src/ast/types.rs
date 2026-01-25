@@ -143,15 +143,7 @@ pub enum Mutability {
 
 impl Display for Mutability {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(
-      f,
-      "{}",
-      if matches!(self, Mutability::Const) {
-        "const"
-      } else {
-        "mut"
-      }
-    )
+    write!(f, "{}", if matches!(self, Mutability::Const) { "const" } else { "mut" })
   }
 }
 

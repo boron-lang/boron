@@ -1440,6 +1440,7 @@ name = "zirael_parser"
 version = "0.1.0"
 dependencies = [
  "dashmap 7.0.0-rc2",
+ "log",
  "stringcase",
  "unicode-normalization",
  "unicode-xid",

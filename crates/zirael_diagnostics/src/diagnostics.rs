@@ -8,7 +8,7 @@ use crate::{DiagnosticCode, ToDiagnostic};
 
 new_id!(DiagnosticId);
 
-/// Diagnostic when dropped and not consumed by either cancel or emit panics.
+/// A diagnostic panics on drop when not emitted or cancelled
 #[derive(Clone, Debug)]
 pub struct Diagnostic {
   pub id: DiagnosticId,
@@ -35,11 +35,7 @@ pub struct Diag {
 
 impl Diag {
   pub fn new(message: String, level: DiagnosticLevel) -> Self {
-    Self {
-      message,
-      level,
-      ..Default::default()
-    }
+    Self { message, level, ..Default::default() }
   }
 }
 
@@ -56,19 +52,8 @@ pub struct Label {
 }
 
 impl Label {
-  pub fn new(
-    message: impl Into<String>,
-    span: Span,
-    level: DiagnosticLevel,
-  ) -> Self {
-    Self {
-      message: Some(message.into()),
-      span,
-      file: None,
-      level,
-      order: 0,
-      priority: 0,
-    }
+  pub fn new(message: impl Into<String>, span: Span, level: DiagnosticLevel) -> Self {
+    Self { message: Some(message.into()), span, file: None, level, order: 0, priority: 0 }
   }
 
   pub fn new_with_file(
@@ -132,7 +117,7 @@ impl Drop for Diagnostic {
     assert!(
       !(!self.emitted && !self.cancelled),
       "Diagnostic {:?} dropped but it wasn't emitted or cancelled",
-      self.id
+      self
     );
   }
 }

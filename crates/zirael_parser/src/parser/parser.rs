@@ -1,21 +1,10 @@
 use crate::Path;
 use crate::import::ImportDecl;
 use crate::lexer::{Token, TokenType};
-use crate::parser::errors::{
-  ExpectedIdentifier, ExpectedTokens, UnexpectedToken,
-};
+use crate::parser::errors::{ExpectedIdentifier, ExpectedTokens, UnexpectedToken};
 use zirael_diagnostics::DiagnosticCtx;
 use zirael_diagnostics::ToDiagnostic;
 use zirael_utils::prelude::{Identifier, Span};
-
-pub const ITEM_TOKENS: &[TokenType] = &[
-  TokenType::Pub,
-  TokenType::Mod,
-  TokenType::Const,
-  TokenType::Func,
-  TokenType::Import,
-  TokenType::Comptime,
-];
 
 pub struct Parser<'dcx> {
   tokens: Vec<Token>,
@@ -32,17 +21,14 @@ pub struct Parser<'dcx> {
 
 impl<'dcx> Parser<'dcx> {
   pub fn new(tokens: Vec<Token>, dcx: &'dcx DiagnosticCtx) -> Self {
-    let tokens: Vec<Token> = tokens
-      .into_iter()
-      .filter(|t| !matches!(t.kind, TokenType::Whitespace))
-      .collect();
+    let tokens: Vec<Token> =
+      tokens.into_iter().filter(|t| !matches!(t.kind, TokenType::Whitespace)).collect();
 
     Self {
       tokens,
       pos: 0,
       dcx,
       doc_comment: None,
-
       discovery_modules: vec![],
       imports: vec![],
     }
@@ -66,12 +52,10 @@ impl<'dcx> Parser<'dcx> {
 
   #[inline]
   pub fn peek(&self) -> &Token {
-    self.tokens.get(self.pos).unwrap_or_else(|| {
-      self
-        .tokens
-        .last()
-        .expect("Token stream should never be empty")
-    })
+    self
+      .tokens
+      .get(self.pos)
+      .unwrap_or_else(|| self.tokens.last().expect("Token stream should never be empty"))
   }
 
   #[inline]
@@ -92,11 +76,6 @@ impl<'dcx> Parser<'dcx> {
   #[inline]
   pub fn check_if(&self, predicate: fn(&TokenType) -> bool) -> bool {
     (predicate)(&self.peek().kind)
-  }
-
-  #[inline]
-  pub fn check_any(&self, token_types: &[TokenType]) -> bool {
-    token_types.iter().any(|tt| self.check(tt.clone()))
   }
 
   #[inline]
@@ -126,11 +105,7 @@ impl<'dcx> Parser<'dcx> {
     }
   }
 
-  pub fn expect(
-    &mut self,
-    token_type: TokenType,
-    context: &str,
-  ) -> Option<Token> {
+  pub fn expect(&mut self, token_type: TokenType, context: &str) -> Option<Token> {
     if self.check(token_type.clone()) {
       Some(self.advance())
     } else {
@@ -145,11 +120,7 @@ impl<'dcx> Parser<'dcx> {
     }
   }
 
-  pub fn expect_any(
-    &mut self,
-    types: &[TokenType],
-    context: &str,
-  ) -> Option<Token> {
+  pub fn expect_any(&mut self, types: &[TokenType], context: &str) -> Option<Token> {
     let current = self.peek();
 
     if types.contains(&current.kind) {
@@ -165,6 +136,18 @@ impl<'dcx> Parser<'dcx> {
     }
   }
 
+  pub fn check_any(&self, types: &[TokenType]) -> bool {
+    types.contains(&self.peek().kind)
+  }
+
+  pub fn check_next_any(&self, types: &[TokenType]) -> bool {
+    let Some(tok) = self.peek_ahead(1) else {
+      return false;
+    };
+
+    types.contains(&tok.kind)
+  }
+
   pub fn advance_until_one_of(&mut self, types: &[TokenType]) {
     loop {
       if types.contains(&self.peek().kind) || self.is_at_end() {
@@ -176,11 +159,7 @@ impl<'dcx> Parser<'dcx> {
   }
 
   pub fn is(&mut self, token_type: TokenType) -> Option<Token> {
-    if self.check(token_type) {
-      Some(self.advance())
-    } else {
-      None
-    }
+    if self.check(token_type) { Some(self.advance()) } else { None }
   }
 
   #[inline]
@@ -189,11 +168,7 @@ impl<'dcx> Parser<'dcx> {
   }
 
   pub fn span_from(&self, start: Span) -> Span {
-    let end = if self.pos > 0 {
-      &self.tokens[self.pos - 1].span
-    } else {
-      &start
-    };
+    let end = if self.pos > 0 { &self.tokens[self.pos - 1].span } else { &start };
     Span::new(start.start, end.end, start.file_id)
   }
 
@@ -206,10 +181,7 @@ impl<'dcx> Parser<'dcx> {
     if let TokenType::Identifier(name) = &token.kind {
       Identifier::new(name.as_str(), token.span)
     } else {
-      self.emit(ExpectedIdentifier {
-        span: token.span,
-        found: token.kind,
-      });
+      self.emit(ExpectedIdentifier { span: token.span, found: token.kind });
       Identifier::dummy()
     }
   }
@@ -222,6 +194,10 @@ impl<'dcx> Parser<'dcx> {
 
   pub fn eat_semis(&mut self) {
     self.eat_all(TokenType::Semicolon);
+  }
+
+  pub fn eat_commas(&mut self) {
+    self.eat_all(TokenType::Comma)
   }
 
   pub fn is_identifier(&self) -> bool {

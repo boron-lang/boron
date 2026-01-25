@@ -48,24 +48,12 @@ impl TypeTable {
     self.def_types.get(&def_id).map(|s| s.clone())
   }
 
-  pub fn record_field_type(
-    &self,
-    struct_id: DefId,
-    field_name: String,
-    ty: InferTy,
-  ) {
+  pub fn record_field_type(&self, struct_id: DefId, field_name: String, ty: InferTy) {
     self.field_types.insert((struct_id, field_name), ty);
   }
 
-  pub fn field_type(
-    &self,
-    struct_id: DefId,
-    field_name: &str,
-  ) -> Option<InferTy> {
-    self
-      .field_types
-      .get(&(struct_id, field_name.to_owned()))
-      .map(|t| t.clone())
+  pub fn field_type(&self, struct_id: DefId, field_name: &str) -> Option<InferTy> {
+    self.field_types.get(&(struct_id, field_name.to_owned())).map(|t| t.clone())
   }
 
   pub fn record_method_type(
@@ -77,15 +65,8 @@ impl TypeTable {
     self.method_types.insert((struct_id, method_name), scheme);
   }
 
-  pub fn method_type(
-    &self,
-    struct_id: DefId,
-    method_name: &str,
-  ) -> Option<TypeScheme> {
-    self
-      .method_types
-      .get(&(struct_id, method_name.to_owned()))
-      .map(|s| s.clone())
+  pub fn method_type(&self, struct_id: DefId, method_name: &str) -> Option<TypeScheme> {
+    self.method_types.get(&(struct_id, method_name.to_owned())).map(|s| s.clone())
   }
 }
 
@@ -124,18 +105,10 @@ pub enum ConstraintKind {
   Subtype { sub: InferTy, sup: InferTy },
 
   /// A type must have a specific field
-  HasField {
-    ty: InferTy,
-    field: String,
-    field_ty: InferTy,
-  },
+  HasField { ty: InferTy, field: String, field_ty: InferTy },
 
   /// A type must be callable with given arguments
-  Callable {
-    callee: InferTy,
-    args: Vec<InferTy>,
-    ret: InferTy,
-  },
+  Callable { callee: InferTy, args: Vec<InferTy>, ret: InferTy },
 }
 
 impl InferCtx {
@@ -191,11 +164,7 @@ impl InferCtx {
   }
 
   pub fn var_kind(&self, var: TyVar) -> TyVarKind {
-    self
-      .var_kinds
-      .get(&var)
-      .map(|k| *k)
-      .unwrap_or(TyVarKind::General)
+    self.var_kinds.get(&var).map(|k| *k).unwrap_or(TyVarKind::General)
   }
 
   pub fn unify_var(&self, var: TyVar, ty: InferTy) {
@@ -220,26 +189,16 @@ impl InferCtx {
         args: args.iter().map(|t| self.resolve(t)).collect(),
         span: *span,
       },
-      InferTy::Ptr {
-        mutability,
-        ty,
-        span,
-      } => InferTy::Ptr {
+      InferTy::Ptr { mutability, ty, span } => InferTy::Ptr {
         mutability: *mutability,
         ty: Box::new(self.resolve(ty)),
         span: *span,
       },
-      InferTy::Optional(ty, span) => {
-        InferTy::Optional(Box::new(self.resolve(ty)), *span)
+      InferTy::Optional(ty, span) => InferTy::Optional(Box::new(self.resolve(ty)), *span),
+      InferTy::Array { ty, len, span } => {
+        InferTy::Array { ty: Box::new(self.resolve(ty)), len: *len, span: *span }
       }
-      InferTy::Array { ty, len, span } => InferTy::Array {
-        ty: Box::new(self.resolve(ty)),
-        len: *len,
-        span: *span,
-      },
-      InferTy::Slice(ty, span) => {
-        InferTy::Slice(Box::new(self.resolve(ty)), *span)
-      }
+      InferTy::Slice(ty, span) => InferTy::Slice(Box::new(self.resolve(ty)), *span),
       InferTy::Tuple(tys, span) => {
         InferTy::Tuple(tys.iter().map(|t| self.resolve(t)).collect(), *span)
       }
@@ -275,9 +234,7 @@ pub struct TypeEnv {
 
 impl TypeEnv {
   pub fn new() -> Self {
-    Self {
-      scopes: vec![HashMap::new()],
-    }
+    Self { scopes: vec![HashMap::new()] }
   }
 
   pub fn push_scope(&mut self) {

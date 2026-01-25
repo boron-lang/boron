@@ -61,11 +61,7 @@ fn main() -> color_eyre::Result<()> {
 
         for failure in failures {
           match failure {
-            FailureType::ExpectedErrorNotFound {
-              line,
-              pattern,
-              direction,
-            } => {
+            FailureType::ExpectedErrorNotFound { line, pattern, direction } => {
               println!(
                 "expected error on line {} with pattern: {pattern}, but none was found",
                 match direction {
@@ -111,32 +107,21 @@ fn main() -> color_eyre::Result<()> {
 }
 
 fn build_compiler() {
-  let mut spinner =
-    Spinner::new(Spinners::Aesthetic, "Building compiler".to_string());
+  let mut spinner = Spinner::new(Spinners::Aesthetic, "Building compiler".to_string());
 
-  let output = Command::new("cargo")
-    .arg("build")
-    .arg("-p")
-    .arg("zirael")
-    .arg("--release")
-    .output();
+  let output =
+    Command::new("cargo").arg("build").arg("-p").arg("zirael").arg("--release").output();
 
   match output {
     Ok(output) if output.status.success() => {
-      spinner.stop_with_message(
-        "Finished building compiler".bright_green().to_string(),
-      );
+      spinner.stop_with_message("Finished building compiler".bright_green().to_string());
     }
     Ok(output) => {
-      spinner.stop_with_message(
-        "Failed to build the compiler".bright_red().to_string(),
-      );
+      spinner.stop_with_message("Failed to build the compiler".bright_red().to_string());
       eprintln!("{}", String::from_utf8_lossy(&output.stderr));
     }
     Err(e) => {
-      spinner.stop_with_message(
-        "Failed to build the compiler".bright_red().to_string(),
-      );
+      spinner.stop_with_message("Failed to build the compiler".bright_red().to_string());
       eprintln!("Error running cargo: {}", e);
     }
   }

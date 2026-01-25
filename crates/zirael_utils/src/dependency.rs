@@ -11,11 +11,7 @@ pub struct Dependency {
 
 impl Dependency {
   pub fn new(name: String, entrypoint: PathBuf, root: PathBuf) -> Self {
-    Self {
-      name,
-      root,
-      entrypoint,
-    }
+    Self { name, root, entrypoint }
   }
 
   pub fn name(&self) -> &str {
@@ -38,20 +34,14 @@ impl FromStr for Dependency {
     let (name, rest) = match s.split_once(':') {
       Some((n, r)) => (n, r),
       None => {
-        bail!(
-          "Invalid dependency format. Expected 'name:root=entrypoint', got '{}'",
-          s
-        )
+        bail!("Invalid dependency format. Expected 'name:root=entrypoint', got '{}'", s)
       }
     };
 
     let (root, entrypoint) = match rest.split_once('=') {
       Some((r, e)) => (r, e),
       None => {
-        bail!(
-          "Invalid dependency format. Expected 'name:root=entrypoint', got '{}'",
-          s
-        )
+        bail!("Invalid dependency format. Expected 'name:root=entrypoint', got '{}'", s)
       }
     };
 

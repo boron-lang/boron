@@ -7,4 +7,5 @@ use_field_init_shorthand = true
 reorder_modules = true
 hard_tabs = false
 tab_spaces = 2
-max_width = 80
+max_width = 90
+use_small_heuristics = "Max"

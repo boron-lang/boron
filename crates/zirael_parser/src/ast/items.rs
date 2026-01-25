@@ -32,6 +32,18 @@ pub enum ItemKind {
   Mod(ModItem),
 }
 
+impl ItemKind {
+  pub fn node_id(&self) -> NodeId {
+    match self {
+      ItemKind::Const(c) => c.id,
+      ItemKind::Function(f) => f.id,
+      ItemKind::Struct(s) => s.id,
+      ItemKind::Enum(e) => e.id,
+      ItemKind::Mod(m) => m.id,
+    }
+  }
+}
+
 #[derive(Debug, Clone)]
 pub struct ModItem {
   pub id: NodeId,
@@ -73,7 +85,7 @@ pub struct StructItem {
 #[derive(Debug, Clone)]
 pub enum StructMember {
   Field(StructField),
-  Method(MethodItem),
+  Item(Item),
 }
 
 #[derive(Debug, Clone)]
@@ -83,18 +95,6 @@ pub struct StructField {
   pub visibility: Visibility,
   pub name: Identifier,
   pub ty: Type,
-  pub span: Span,
-}
-
-#[derive(Debug, Clone)]
-pub struct MethodItem {
-  pub id: NodeId,
-  pub attributes: Vec<Attribute>,
-  pub visibility: Visibility,
-  pub name: Identifier,
-  pub params: Vec<Param>,
-  pub return_type: Option<Type>,
-  pub body: Block,
   pub span: Span,
 }
 

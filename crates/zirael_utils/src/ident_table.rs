@@ -61,9 +61,7 @@ impl Identifier {
 
 impl IdentTable {
   pub fn new() -> Self {
-    Self {
-      interner: ThreadedRodeo::default(),
-    }
+    Self { interner: ThreadedRodeo::default() }
   }
 
   pub fn intern(&self, name: &str) -> Spur {
@@ -91,16 +89,8 @@ pub static GLOBAL_TABLE: std::sync::LazyLock<Mutex<IdentTable>> =
   std::sync::LazyLock::new(|| Mutex::new(IdentTable::new()));
 
 #[inline]
-pub fn get_or_intern(
-  name: &str,
-  span: Option<Span>,
-  dummy: bool,
-) -> Identifier {
-  Identifier(
-    GLOBAL_TABLE.lock().intern(name),
-    span.unwrap_or_default(),
-    dummy,
-  )
+pub fn get_or_intern(name: &str, span: Option<Span>, dummy: bool) -> Identifier {
+  Identifier(GLOBAL_TABLE.lock().intern(name), span.unwrap_or_default(), dummy)
 }
 
 #[inline]

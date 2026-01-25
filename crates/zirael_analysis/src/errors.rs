@@ -1,5 +1,6 @@
 use crate::{InferTy, TyVar};
 use zirael_diagnostic_macro::Diagnostic;
+use zirael_utils::ident_table::Identifier;
 use zirael_utils::prelude::Span;
 
 #[derive(Diagnostic)]
@@ -69,9 +70,7 @@ pub struct PathNotConst {
 }
 
 #[derive(Diagnostic)]
-#[error(
-  "attempted to initialize variable with `{found}`, but expected `{expected}`"
-)]
+#[error("attempted to initialize variable with `{found}`, but expected `{expected}`")]
 #[code(TYPE_CHECKER_VAR_INIT_MISMATCH)]
 pub struct VarInitMismatch {
   #[error("in this variable")]
@@ -102,4 +101,33 @@ pub struct ArrayLenMismatch {
   pub span: Span,
   pub expected: usize,
   pub found: usize,
+}
+
+#[derive(Diagnostic)]
+#[error("expected struct or enum variant in struct initialization, found `{found}`")]
+#[code(TYPE_CHECKER_INVALID_STRUCT_INIT)]
+pub struct InvalidStructInit {
+  #[error("in this struct init")]
+  pub span: Span,
+  pub found: String,
+}
+
+#[derive(Diagnostic)]
+#[error("no field to initialize named `{field}` on type `{ty}`")]
+#[code(TYPE_CHECKER_NO_FIELD)]
+pub struct NoFieldOnType {
+  #[error("in this field init")]
+  pub span: Span,
+  pub field: Identifier,
+  pub ty: String,
+}
+
+#[derive(Diagnostic)]
+#[error("attempted to initialize field with `{found}`, but expected `{expected}`")]
+#[code(TYPE_CHECKER_FIELD_INIT_MISMATCH)]
+pub struct FieldInitMismatch {
+  #[error("in this field")]
+  pub span: Span,
+  pub expected: String,
+  pub found: String,
 }

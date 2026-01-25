@@ -16,12 +16,7 @@ impl Line {
     byte_offset: usize,
     byte_len: usize,
   ) -> Self {
-    Self {
-      offset,
-      char_len,
-      byte_offset,
-      byte_len,
-    }
+    Self { offset, char_len, byte_offset, byte_len }
   }
 
   /// Get the offset of this line in the original [`Source`] (i.e: the number of characters that precede it).

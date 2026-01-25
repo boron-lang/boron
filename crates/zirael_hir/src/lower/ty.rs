@@ -33,10 +33,7 @@ impl LoweringContext<'_> {
         let def_id = self.get_def_id(path.id);
 
         if let Some(def_id) = def_id {
-          TyKind::Path {
-            def_id,
-            segments: self.lower_path(path),
-          }
+          TyKind::Path { def_id, segments: self.lower_path(path) }
         } else {
           TyKind::Err
         }
@@ -47,9 +44,7 @@ impl LoweringContext<'_> {
         ty: Box::new(self.lower_type(&ptr.inner)),
       },
 
-      Type::Optional(opt) => {
-        TyKind::Optional(Box::new(self.lower_type(&opt.inner)))
-      }
+      Type::Optional(opt) => TyKind::Optional(Box::new(self.lower_type(&opt.inner))),
 
       Type::Array(arr) => TyKind::Array {
         ty: Box::new(self.lower_type(&arr.element)),
@@ -72,11 +67,7 @@ impl LoweringContext<'_> {
       Type::Invalid => TyKind::Err,
     };
 
-    Ty {
-      hir_id: self.next_hir_id(),
-      kind,
-      span: get_type_span(ty),
-    }
+    Ty { hir_id: self.next_hir_id(), kind, span: get_type_span(ty) }
   }
 }
 

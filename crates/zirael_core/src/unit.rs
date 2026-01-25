@@ -42,8 +42,6 @@ impl<'ctx> CompilationUnit<'ctx> {
     self.validate_comptime();
 
     self.typeck();
-
-    println!("{:#?}", self.hir);
   }
 
   fn validate_comptime(&mut self) {
@@ -56,9 +54,7 @@ impl<'ctx> CompilationUnit<'ctx> {
 
   fn typeck(&mut self) {
     let Some(hir) = &self.hir else { return };
-    let dcx = self.ctx.dcx();
-
-    let table = typeck_hir(hir, dcx, &self.resolver);
+    let table = typeck_hir(hir, self.ctx, &self.resolver);
 
     self.emit_errors();
     self.typeck = Some(table);
@@ -115,18 +111,12 @@ impl<'ctx> CompilationUnit<'ctx> {
           module.construct_file(self.ctx.session.root(), source_file.path());
 
         let Some(path) = full_path else {
-          dcx.emit(ModuleNotFound {
-            module: module.clone(),
-            span: module.span,
-          });
+          dcx.emit(ModuleNotFound { module: module.clone(), span: module.span });
           continue;
         };
 
         if !path.exists() {
-          dcx.emit(ModuleNotFound {
-            module: module.clone(),
-            span: module.span,
-          });
+          dcx.emit(ModuleNotFound { module: module.clone(), span: module.span });
           continue;
         }
 

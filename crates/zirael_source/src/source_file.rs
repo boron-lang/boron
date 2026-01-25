@@ -143,10 +143,7 @@ impl SourceFile {
   /// Get the line that the given byte offset appears on, and the line/byte column numbers of the offset.
   ///
   /// Note that the line/column numbers are zero-indexed.
-  pub fn get_byte_line(
-    &self,
-    byte_offset: usize,
-  ) -> Option<(Line, usize, usize)> {
+  pub fn get_byte_line(&self, byte_offset: usize) -> Option<(Line, usize, usize)> {
     if byte_offset <= self.byte_len {
       let idx = self
         .lines

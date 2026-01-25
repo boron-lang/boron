@@ -12,10 +12,7 @@ pub struct Generics {
 
 impl Generics {
   pub fn empty() -> Self {
-    Self {
-      params: Vec::new(),
-      span: Span::default(),
-    }
+    Self { params: Vec::new(), span: Span::default() }
   }
 
   pub fn is_empty(&self) -> bool {

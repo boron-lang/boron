@@ -58,14 +58,8 @@ impl Resolver {
       let source_file = module_ref.source_file_id;
       self.import_graph.add_module(source_file);
 
-      self
-        .module_exports_values
-        .entry(source_file)
-        .or_insert_with(DashMap::new);
-      self
-        .module_exports_types
-        .entry(source_file)
-        .or_insert_with(DashMap::new);
+      self.module_exports_values.entry(source_file).or_insert_with(DashMap::new);
+      self.module_exports_types.entry(source_file).or_insert_with(DashMap::new);
     }
   }
 
@@ -73,10 +67,7 @@ impl Resolver {
     self.comptime_using_builtins.insert(node, kind);
   }
 
-  pub fn get_recorded_comptime_builtin(
-    &self,
-    node: NodeId,
-  ) -> Option<BuiltInKind> {
+  pub fn get_recorded_comptime_builtin(&self, node: NodeId) -> Option<BuiltInKind> {
     self.comptime_using_builtins.get(&node).map(|b| b.clone())
   }
 
@@ -112,28 +103,15 @@ impl Resolver {
     self.scopes.parent(id)
   }
 
-  pub fn save_module_rib(
-    &self,
-    file: SourceFileId,
-    scope_id: ScopeId,
-    rib: Rib,
-  ) {
+  pub fn save_module_rib(&self, file: SourceFileId, scope_id: ScopeId, rib: Rib) {
     self.module_ribs.insert(file, RwLock::new((scope_id, rib)));
   }
 
   pub fn get_module_rib(&self, file: SourceFileId) -> Option<(ScopeId, Rib)> {
-    self
-      .module_ribs
-      .get(&file)
-      .map(|entry| entry.read().clone())
+    self.module_ribs.get(&file).map(|entry| entry.read().clone())
   }
 
-  pub fn export_value(
-    &self,
-    module: SourceFileId,
-    name: String,
-    def_id: DefId,
-  ) {
+  pub fn export_value(&self, module: SourceFileId, name: String, def_id: DefId) {
     self
       .module_exports_values
       .entry(module)
@@ -149,31 +127,18 @@ impl Resolver {
       .insert(name, def_id);
   }
 
-  pub fn lookup_module_value(
-    &self,
-    module: SourceFileId,
-    name: &str,
-  ) -> Option<DefId> {
+  pub fn lookup_module_value(&self, module: SourceFileId, name: &str) -> Option<DefId> {
     let exports = self.module_exports_values.get(&module)?;
     exports.get(name).map(|r| *r)
   }
 
-  pub fn lookup_module_type(
-    &self,
-    module: SourceFileId,
-    name: &str,
-  ) -> Option<DefId> {
+  pub fn lookup_module_type(&self, module: SourceFileId, name: &str) -> Option<DefId> {
     let exports = self.module_exports_types.get(&module)?;
     exports.get(name).map(|r| *r)
   }
 
   /// Export a value from an inline module (mod foo { ... })
-  pub fn export_inline_value(
-    &self,
-    module_def: DefId,
-    name: String,
-    def_id: DefId,
-  ) {
+  pub fn export_inline_value(&self, module_def: DefId, name: String, def_id: DefId) {
     self
       .inline_module_exports_values
       .entry(module_def)
@@ -182,12 +147,7 @@ impl Resolver {
   }
 
   /// Export a type from an inline module (mod foo { ... })
-  pub fn export_inline_type(
-    &self,
-    module_def: DefId,
-    name: String,
-    def_id: DefId,
-  ) {
+  pub fn export_inline_type(&self, module_def: DefId, name: String, def_id: DefId) {
     self
       .inline_module_exports_types
       .entry(module_def)
@@ -215,12 +175,8 @@ impl Resolver {
     exports.get(name).map(|r| *r)
   }
 
-  pub fn lookup_file_for_path(&self, path: &Path) -> SourceFileId {
-    self
-      .path_to_files
-      .get(&path.id)
-      .map(|f| *f)
-      .expect("path should be already resolved")
+  pub fn lookup_file_for_path(&self, path: &Path) -> Option<SourceFileId> {
+    self.path_to_files.get(&path.id).map(|f| *f)
   }
 
   pub fn add_path_mapping(&self, path: &Path, source_file_id: SourceFileId) {

@@ -83,11 +83,7 @@ impl ImportGraph {
     }
   }
 
-  pub fn would_create_cycle(
-    &self,
-    from: SourceFileId,
-    to: SourceFileId,
-  ) -> bool {
+  pub fn would_create_cycle(&self, from: SourceFileId, to: SourceFileId) -> bool {
     let inner = self.inner.read();
 
     let Some(&from_idx) = inner.node_indices.get(&from) else {
@@ -109,12 +105,7 @@ impl ImportGraph {
 
     let mut deps = Vec::new();
     let mut visited = std::collections::HashSet::new();
-    Self::collect_dependencies_inner(
-      &inner.graph,
-      idx,
-      &mut deps,
-      &mut visited,
-    );
+    Self::collect_dependencies_inner(&inner.graph, idx, &mut deps, &mut visited);
     deps
   }
 
@@ -124,8 +115,7 @@ impl ImportGraph {
     deps: &mut Vec<SourceFileId>,
     visited: &mut std::collections::HashSet<NodeIndex>,
   ) {
-    for neighbor in graph.neighbors_directed(idx, petgraph::Direction::Incoming)
-    {
+    for neighbor in graph.neighbors_directed(idx, petgraph::Direction::Incoming) {
       if visited.insert(neighbor) {
         deps.push(graph[neighbor]);
         Self::collect_dependencies_inner(graph, neighbor, deps, visited);

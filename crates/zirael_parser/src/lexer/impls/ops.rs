@@ -250,10 +250,7 @@ impl Lexer<'_> {
       }
       Some(ch) => {
         let span = self.make_char_span();
-        return Err(LexError::new(
-          LexErrorKind::UnexpectedCharacter { char: ch },
-          span,
-        ));
+        return Err(LexError::new(LexErrorKind::UnexpectedCharacter { char: ch }, span));
       }
       None => {
         let span = self.make_char_span();

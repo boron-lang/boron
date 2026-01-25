@@ -20,10 +20,7 @@ impl Hir {
     Self::default()
   }
 
-  pub fn get_function(
-    &self,
-    def_id: DefId,
-  ) -> Option<Ref<'_, DefId, Function>> {
+  pub fn get_function(&self, def_id: DefId) -> Option<Ref<'_, DefId, Function>> {
     self.functions.get(&def_id)
   }
 

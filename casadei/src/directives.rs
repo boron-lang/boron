@@ -5,11 +5,7 @@ use zirael_core::prelude::PackageType;
 pub enum Directive {
   PackageType(PackageType),
   // the pattern can include {} that means that any value matches this part.
-  Error {
-    line: usize,
-    direction: LineDirection,
-    pattern: String,
-  },
+  Error { line: usize, direction: LineDirection, pattern: String },
   Invalid,
 }
 
@@ -19,11 +15,7 @@ pub enum LineDirection {
   Down,
 }
 
-pub fn parse_directive(
-  directive: String,
-  line: usize,
-  file: &PathBuf,
-) -> Directive {
+pub fn parse_directive(directive: String, line: usize, file: &PathBuf) -> Directive {
   let stripped = directive.strip_prefix("//#").unwrap_or(&directive);
 
   let (name_with_attrs, value) = match stripped.split_once(':') {
@@ -62,18 +54,11 @@ pub fn parse_directive(
           })
           .unwrap_or(LineDirection::Down);
 
-        Directive::Error {
-          line,
-          direction,
-          pattern: value.to_string(),
-        }
+        Directive::Error { line, direction, pattern: value.to_string() }
       }
     }
     _ => {
-      println!(
-        "warn: {name} found in {} is not a valid directive",
-        file.display()
-      );
+      println!("warn: {name} found in {} is not a valid directive", file.display());
       Directive::Invalid
     }
   }

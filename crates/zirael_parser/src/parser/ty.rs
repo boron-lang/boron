@@ -1,12 +1,12 @@
 use crate::parser::Parser;
 use crate::parser::errors::{
-  ConstAloneInType, ExpectedIdentifierInGeneric, ExpectedType,
-  ExpectedTypePathForBound, TrailingPlusInTypeBound,
+  ConstAloneInType, ExpectedIdentifierInGeneric, ExpectedType, ExpectedTypePathForBound,
+  TrailingPlusInTypeBound,
 };
 use crate::{
-  ArrayType, FunctionType, GenericParam, GenericParams, Mutability, NodeId,
-  OptionalType, PointerType, PrimitiveKind, PrimitiveType, TokenType,
-  TupleType, Type, TypeBound, UnitType,
+  ArrayType, FunctionType, GenericParam, GenericParams, Mutability, NodeId, OptionalType,
+  PointerType, PrimitiveKind, PrimitiveType, TokenType, TupleType, Type, TypeBound,
+  UnitType,
 };
 use zirael_source::span::Span;
 
@@ -17,11 +17,7 @@ impl Parser<'_> {
 
     while self.eat(TokenType::Question) {
       let span = self.span_from(start);
-      ty = Type::Optional(OptionalType {
-        id: NodeId::new(),
-        inner: Box::new(ty),
-        span,
-      });
+      ty = Type::Optional(OptionalType { id: NodeId::new(), inner: Box::new(ty), span });
     }
 
     ty
@@ -62,9 +58,7 @@ impl Parser<'_> {
         self.parse_path_type()
       }
       _ => {
-        self.emit(ExpectedType {
-          span: self.current_span(),
-        });
+        self.emit(ExpectedType { span: self.current_span() });
         Type::Invalid
       }
     }
@@ -84,10 +78,7 @@ impl Parser<'_> {
 
   fn parse_parenthesized_type(&mut self, start: Span) -> Type {
     if self.eat(TokenType::RightParen) {
-      return Type::Unit(UnitType {
-        id: NodeId::new(),
-        span: self.span_from(start),
-      });
+      return Type::Unit(UnitType { id: NodeId::new(), span: self.span_from(start) });
     }
 
     let first = self.parse_type();
@@ -119,10 +110,7 @@ impl Parser<'_> {
   fn parse_array_type(&mut self, start: Span) -> Type {
     let element = Box::new(self.parse_type());
 
-    if self
-      .expect(TokenType::Semicolon, "after array element type")
-      .is_none()
-    {
+    if self.expect(TokenType::Semicolon, "after array element type").is_none() {
       self.advance_until_one_of(&[TokenType::RightBracket]);
     }
 
@@ -145,11 +133,7 @@ impl Parser<'_> {
       if !matches!(next, Some(TokenType::ColonColon | TokenType::Lt)) {
         let span = self.advance().span;
 
-        return Type::Primitive(PrimitiveType {
-          id: NodeId::new(),
-          kind,
-          span,
-        });
+        return Type::Primitive(PrimitiveType { id: NodeId::new(), kind, span });
       }
     }
 
@@ -164,10 +148,7 @@ impl Parser<'_> {
   fn parse_function_type(&mut self, is_comptime: bool, span: Span) -> Type {
     let mut params = Vec::new();
 
-    if self
-      .expect(TokenType::LeftParen, "after func in function type")
-      .is_some()
-    {
+    if self.expect(TokenType::LeftParen, "after func in function type").is_some() {
       if !self.check(TokenType::RightParen) {
         loop {
           params.push(self.parse_type());
@@ -186,10 +167,7 @@ impl Parser<'_> {
     let return_type = if self.eat(TokenType::Arrow) {
       Box::new(self.parse_type())
     } else {
-      Box::new(Type::Unit(UnitType {
-        id: NodeId::new(),
-        span: self.span_from(span),
-      }))
+      Box::new(Type::Unit(UnitType { id: NodeId::new(), span: self.span_from(span) }))
     };
 
     Type::Function(FunctionType {
@@ -241,11 +219,7 @@ impl Parser<'_> {
         let span = self.peek().span;
         let path = self.parse_path();
 
-        bounds.push(TypeBound {
-          id: NodeId::new(),
-          span: self.span_from(span),
-          path,
-        });
+        bounds.push(TypeBound { id: NodeId::new(), span: self.span_from(span), path });
       } else {
         self.emit(ExpectedTypePathForBound {
           span: self.peek().span,
@@ -257,9 +231,7 @@ impl Parser<'_> {
       if self.check(TokenType::Plus) {
         self.advance();
         if self.check(TokenType::Gt) {
-          self.emit(TrailingPlusInTypeBound {
-            span: self.peek().span,
-          });
+          self.emit(TrailingPlusInTypeBound { span: self.peek().span });
           break;
         }
       } else {
@@ -319,11 +291,8 @@ impl Parser<'_> {
     loop {
       if self.is_identifier() {
         let name = self.parse_identifier();
-        let bounds = if self.eat(TokenType::Colon) {
-          self.parse_type_bounds()
-        } else {
-          vec![]
-        };
+        let bounds =
+          if self.eat(TokenType::Colon) { self.parse_type_bounds() } else { vec![] };
 
         generics.push(GenericParam {
           id: NodeId::new(),

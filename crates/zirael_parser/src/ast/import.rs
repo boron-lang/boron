@@ -51,23 +51,14 @@ impl Path {
   }
 
   pub fn dummy() -> Self {
-    Self {
-      id: NodeId::new(),
-      root: None,
-      segments: vec![],
-      span: Span::dummy(),
-    }
+    Self { id: NodeId::new(), root: None, segments: vec![], span: Span::dummy() }
   }
 
   pub fn is_empty_path(&self) -> bool {
     self.segments.is_empty() && self.root.is_none()
   }
 
-  pub fn construct_file(
-    &self,
-    root: PathBuf,
-    current: PathBuf,
-  ) -> Option<PathBuf> {
+  pub fn construct_file(&self, root: PathBuf, current: PathBuf) -> Option<PathBuf> {
     let mut path = match self.root {
       Some(PathRoot::Package) => root,
       Some(PathRoot::SelfMod) | None => current.parent()?.to_path_buf(),
@@ -102,11 +93,7 @@ impl Display for Path {
       write!(
         f,
         "{}{}",
-        if index == 0 && self.root.is_none() {
-          ""
-        } else {
-          "::"
-        },
+        if index == 0 && self.root.is_none() { "" } else { "::" },
         segment.identifier.text()
       )?;
     }

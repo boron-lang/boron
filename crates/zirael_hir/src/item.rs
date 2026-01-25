@@ -33,11 +33,7 @@ pub struct Param {
 #[derive(Debug, Clone)]
 pub enum ParamKind {
   /// Regular named parameter: `name: Type`
-  Regular {
-    name: Identifier,
-    ty: Ty,
-    default: Option<Expr>,
-  },
+  Regular { name: Identifier, ty: Ty, default: Option<Expr> },
   /// Self parameter: `self`, `mut self`, `*self`, `*mut self`
   SelfParam { kind: SelfKind },
   /// Variadic parameter: `...args: Type`
@@ -60,8 +56,14 @@ pub struct Struct {
   pub visibility: Visibility,
   pub generics: Generics,
   pub fields: Vec<Field>,
-  pub methods: Vec<Method>,
+  pub items: Vec<DefId>,
   pub span: Span,
+}
+
+impl Struct {
+  pub fn has_field(&self, field: Identifier) -> bool {
+    self.fields.iter().find(|f| f.name == field).is_some()
+  }
 }
 
 #[derive(Debug, Clone)]
@@ -70,18 +72,6 @@ pub struct Field {
   pub name: Identifier,
   pub visibility: Visibility,
   pub ty: Ty,
-  pub span: Span,
-}
-
-#[derive(Debug, Clone)]
-pub struct Method {
-  pub hir_id: HirId,
-  pub def_id: DefId,
-  pub name: Identifier,
-  pub visibility: Visibility,
-  pub params: Vec<Param>,
-  pub return_type: Option<Ty>,
-  pub body: Block,
   pub span: Span,
 }
 

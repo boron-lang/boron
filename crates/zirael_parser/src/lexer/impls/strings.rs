@@ -49,10 +49,7 @@ impl Lexer<'_> {
     Ok(Token::new(TokenType::StringLiteral(value), span, lexeme))
   }
 
-  fn parse_escape_sequence(
-    &mut self,
-    allow_unicode: bool,
-  ) -> LexResult<String> {
+  fn parse_escape_sequence(&mut self, allow_unicode: bool) -> LexResult<String> {
     let start_offset = self.offset;
 
     match self.peek() {
@@ -103,9 +100,7 @@ impl Lexer<'_> {
         } else {
           let span = self.make_span(start_offset);
           Err(LexError::new(
-            LexErrorKind::InvalidEscape {
-              escape: format!("\\u{hex}"),
-            },
+            LexErrorKind::InvalidEscape { escape: format!("\\u{hex}") },
             span,
           ))
         }
@@ -119,9 +114,7 @@ impl Lexer<'_> {
         } else {
           let span = self.make_span(start_offset);
           Err(LexError::new(
-            LexErrorKind::InvalidEscape {
-              escape: format!("\\U{hex}"),
-            },
+            LexErrorKind::InvalidEscape { escape: format!("\\U{hex}") },
             span,
           ))
         }
@@ -133,12 +126,7 @@ impl Lexer<'_> {
       }
       None => {
         let span = self.make_span(start_offset);
-        Err(LexError::new(
-          LexErrorKind::InvalidEscape {
-            escape: "\\".to_owned(),
-          },
-          span,
-        ))
+        Err(LexError::new(LexErrorKind::InvalidEscape { escape: "\\".to_owned() }, span))
       }
     }
   }
@@ -156,9 +144,7 @@ impl Lexer<'_> {
         _ => {
           let span = self.make_span(start_offset);
           return Err(LexError::new(
-            LexErrorKind::InvalidEscape {
-              escape: format!("\\x{digits}"),
-            },
+            LexErrorKind::InvalidEscape { escape: format!("\\x{digits}") },
             span,
           ));
         }
@@ -259,10 +245,7 @@ impl Lexer<'_> {
 
     if value > 255 {
       let span = self.make_span(start_offset);
-      return Err(LexError::new(
-        LexErrorKind::InvalidByteValue { value },
-        span,
-      ));
+      return Err(LexError::new(LexErrorKind::InvalidByteValue { value }, span));
     }
 
     if self.peek() == Some('\'') {
@@ -275,11 +258,7 @@ impl Lexer<'_> {
 
     let span = self.make_span(start_offset);
 
-    Ok(Token::new(
-      TokenType::ByteLiteral(value as u8),
-      span,
-      lexeme,
-    ))
+    Ok(Token::new(TokenType::ByteLiteral(value as u8), span, lexeme))
   }
 
   pub(crate) fn lex_byte_string(&mut self) -> LexResult<Token> {
@@ -326,10 +305,9 @@ impl Lexer<'_> {
 
               if value > 255 {
                 let span = self.make_span(start_offset);
-                self.dcx.emit(LexError::new(
-                  LexErrorKind::InvalidByteValue { value },
-                  span,
-                ));
+                self
+                  .dcx
+                  .emit(LexError::new(LexErrorKind::InvalidByteValue { value }, span));
                 bytes.push(0);
               } else {
                 bytes.push(value as u8);
@@ -346,10 +324,7 @@ impl Lexer<'_> {
 
           if value > 255 {
             let span = self.make_span(start_offset);
-            self.dcx.emit(LexError::new(
-              LexErrorKind::InvalidByteValue { value },
-              span,
-            ));
+            self.dcx.emit(LexError::new(LexErrorKind::InvalidByteValue { value }, span));
             bytes.push(0);
           } else {
             bytes.push(value as u8);
@@ -363,10 +338,6 @@ impl Lexer<'_> {
 
     let span = self.make_span(start_offset);
 
-    Ok(Token::new(
-      TokenType::ByteStringLiteral(bytes),
-      span,
-      lexeme,
-    ))
+    Ok(Token::new(TokenType::ByteStringLiteral(bytes), span, lexeme))
   }
 }

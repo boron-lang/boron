@@ -160,11 +160,7 @@ pub struct Token {
 
 impl Token {
   pub fn new(token_type: TokenType, span: Span, lexeme: String) -> Self {
-    Self {
-      kind: token_type,
-      span,
-      lexeme,
-    }
+    Self { kind: token_type, span, lexeme }
   }
 }
 

@@ -10,11 +10,7 @@ impl Parser<'_> {
 
     if self.check(TokenType::RightBrace) {
       self.advance();
-      return Block {
-        id: NodeId::new(),
-        span: self.span_from(span),
-        statements,
-      };
+      return Block { id: NodeId::new(), span: self.span_from(span), statements };
     }
 
     loop {
@@ -41,11 +37,7 @@ impl Parser<'_> {
 
     self.expect(TokenType::RightBrace, "to close block");
 
-    Block {
-      id: NodeId::new(),
-      span: self.span_from(span),
-      statements,
-    }
+    Block { id: NodeId::new(), span: self.span_from(span), statements }
   }
 
   pub fn stmt_safe_boundary(&mut self) {
@@ -73,9 +65,7 @@ impl Parser<'_> {
         };
 
         if !self.check(Assign) {
-          self.emit(AllVarsInitialized {
-            span: self.span_from(span),
-          });
+          self.emit(AllVarsInitialized { span: self.span_from(span) });
           self.stmt_safe_boundary();
           return None;
         }

@@ -1,8 +1,6 @@
 use crate::import::ImportDecl;
 use crate::parser::Parser;
-use crate::parser::errors::{
-  AliasingABinding, ImportNotAPath, UnexpectedImportKind,
-};
+use crate::parser::errors::{AliasingABinding, ImportNotAPath, UnexpectedImportKind};
 use crate::{ImportKind, ImportSpec, NodeId, Path, TokenType};
 
 impl Parser<'_> {
@@ -73,9 +71,7 @@ impl Parser<'_> {
     self.expect(TokenType::From, "to indicate the import path");
 
     let path = if self.check_if(|t| matches!(t, &TokenType::StringLiteral(_))) {
-      self.emit(ImportNotAPath {
-        span: self.peek().span,
-      });
+      self.emit(ImportNotAPath { span: self.peek().span });
       self.advance();
       Path::dummy()
     } else {
@@ -84,11 +80,6 @@ impl Parser<'_> {
 
     self.eat_semis();
 
-    Some(ImportDecl {
-      id: NodeId::new(),
-      span: self.span_from(span),
-      path,
-      kind,
-    })
+    Some(ImportDecl { id: NodeId::new(), span: self.span_from(span), path, kind })
   }
 }

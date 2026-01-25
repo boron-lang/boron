@@ -13,11 +13,7 @@ pub struct AppState {
 
 impl AppState {
   pub fn new(total_tests: u64) -> Arc<Mutex<Self>> {
-    Arc::new(Mutex::new(Self {
-      total_tests,
-      completed_tests: 0,
-      test_results: vec![],
-    }))
+    Arc::new(Mutex::new(Self { total_tests, completed_tests: 0, test_results: vec![] }))
   }
 
   pub fn increment_completed(&mut self) {
@@ -53,11 +49,7 @@ impl App {
     overall.set_message("Overall");
     overall.enable_steady_tick(Duration::from_millis(100));
 
-    Self {
-      multi,
-      overall,
-      state,
-    }
+    Self { multi, overall, state }
   }
 
   pub fn run(self) -> color_eyre::Result<()> {

@@ -48,9 +48,7 @@ impl Display for ExpectedTokens {
 }
 
 #[derive(Diagnostic)]
-#[error(
-  "`mod` takes a path to the module (eg. path::to::module), not a string literal"
-)]
+#[error("`mod` takes a path to the module (eg. path::to::module), not a string literal")]
 #[code(PARSE_MOD_STRING_LIT)]
 pub struct ModStringLit {
   #[error("invalid use here")]
@@ -163,9 +161,7 @@ pub struct TrailingPlusInTypeBound {
 }
 
 #[derive(Diagnostic)]
-#[error(
-  "expected an identifier or `...` to begin a function parameter, found {found}"
-)]
+#[error("expected an identifier or `...` to begin a function parameter, found {found}")]
 #[code(PARSE_EXPECTED_IDENT_OR_DOTS)]
 pub struct ExpectedIdentOrDots {
   #[error("invalid start here")]
@@ -252,9 +248,7 @@ pub struct ExpectedBuiltinName {
 #[derive(Diagnostic)]
 #[error("invalid assignment target")]
 #[code(PARSE_INVALID_ASSIGN_TARGET)]
-#[help(
-  "assignment targets must be a variable, field access, or index expression"
-)]
+#[help("assignment targets must be a variable, field access, or index expression")]
 pub struct InvalidAssignTarget {
   #[error("cannot assign to this expression")]
   pub span: Span,

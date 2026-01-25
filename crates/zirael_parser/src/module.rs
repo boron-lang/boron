@@ -13,10 +13,7 @@ pub struct Module {
 
 impl Module {
   pub fn new(source_file_id: SourceFileId, node: ProgramNode) -> Self {
-    Self {
-      node,
-      source_file_id,
-    }
+    Self { node, source_file_id }
   }
 }
 
@@ -27,9 +24,7 @@ pub struct Modules {
 
 impl Modules {
   pub fn new() -> Self {
-    Self {
-      sources: DashMap::new(),
-    }
+    Self { sources: DashMap::new() }
   }
 
   pub fn add(&self, module: Module) -> SourceFileId {
@@ -42,10 +37,7 @@ impl Modules {
     self.sources.get(&id)
   }
 
-  pub fn get_unchecked(
-    &self,
-    id: SourceFileId,
-  ) -> Ref<'_, SourceFileId, Module> {
+  pub fn get_unchecked(&self, id: SourceFileId) -> Ref<'_, SourceFileId, Module> {
     self.sources.get(&id).unwrap()
   }
 

@@ -68,11 +68,9 @@ impl<'tests> TestRunner<'tests> {
           .directives
           .iter()
           .filter_map(|d| match d {
-            Directive::Error {
-              line,
-              direction,
-              pattern,
-            } => Some((*line, direction.clone(), pattern.clone())),
+            Directive::Error { line, direction, pattern } => {
+              Some((*line, direction.clone(), pattern.clone()))
+            }
             _ => None,
           })
           .collect_vec();
@@ -91,12 +89,10 @@ impl<'tests> TestRunner<'tests> {
                 )
               })
             })
-            .map(|(line, direction, pattern)| {
-              FailureType::ExpectedErrorNotFound {
-                line: *line,
-                direction: direction.clone(),
-                pattern: pattern.clone(),
-              }
+            .map(|(line, direction, pattern)| FailureType::ExpectedErrorNotFound {
+              line: *line,
+              direction: direction.clone(),
+              pattern: pattern.clone(),
             }),
         );
 
@@ -105,17 +101,15 @@ impl<'tests> TestRunner<'tests> {
           .diagnostics
           .iter()
           .filter(|diagnostic| {
-            !error_directives.iter().any(
-              |(directive_line, direction, pattern)| {
-                matches_directive(
-                  diagnostic.value(),
-                  *directive_line,
-                  direction,
-                  pattern,
-                  sources,
-                )
-              },
-            )
+            !error_directives.iter().any(|(directive_line, direction, pattern)| {
+              matches_directive(
+                diagnostic.value(),
+                *directive_line,
+                direction,
+                pattern,
+                sources,
+              )
+            })
           })
           .map(|diagnostic| diagnostic.value().diag.message.clone())
           .collect();
@@ -130,10 +124,8 @@ impl<'tests> TestRunner<'tests> {
           TestStatus::Failed(failures)
         }
       } else {
-        let has_error_directives = test
-          .directives
-          .iter()
-          .any(|d| matches!(d, Directive::Error { .. }));
+        let has_error_directives =
+          test.directives.iter().any(|d| matches!(d, Directive::Error { .. }));
 
         if has_error_directives {
           TestStatus::Failed(vec![FailureType::ExpectedErrorsButCompiled])
@@ -145,11 +137,7 @@ impl<'tests> TestRunner<'tests> {
       TestStatus::Failed(vec![FailureType::OtherCompilerError])
     };
 
-    TestResult {
-      result,
-      output: output.lock().get_ref().clone(),
-      test_id: test.id,
-    }
+    TestResult { result, output: output.lock().get_ref().clone(), test_id: test.id }
   }
 }
 
@@ -176,16 +164,11 @@ fn matches_directive(
   matches_pattern(&diagnostic.diag.message, pattern)
 }
 
-fn get_diagnostic_line(
-  diagnostic: &Diagnostic,
-  sources: &Sources,
-) -> Option<usize> {
+fn get_diagnostic_line(diagnostic: &Diagnostic, sources: &Sources) -> Option<usize> {
   diagnostic.diag.labels.iter().find_map(|label| {
     let file_id = label.file();
     let src = sources.get(file_id)?;
-    src
-      .get_byte_line(label.span.start)
-      .map(|(_, line_idx, _)| line_idx)
+    src.get_byte_line(label.span.start).map(|(_, line_idx, _)| line_idx)
   })
 }
 

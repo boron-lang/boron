@@ -189,15 +189,8 @@ pub struct MatchArm {
 
 #[derive(Debug, Clone)]
 pub enum Literal {
-  Int {
-    value: String,
-    base: IntBase,
-    suffix: Option<IntSuffix>,
-  },
-  Float {
-    value: String,
-    suffix: Option<FloatSuffix>,
-  },
+  Int { value: String, base: IntBase, suffix: Option<IntSuffix> },
+  Float { value: String, suffix: Option<FloatSuffix> },
   Bool(bool),
   Char(char),
   String(String),

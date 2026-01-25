@@ -9,10 +9,7 @@ pub enum ConstValue {
   String(String),
   Array(Vec<ConstValue>),
   Struct(Vec<ConstValue>),
-  Enum {
-    tag: i128,
-    payload: Option<Box<ConstValue>>,
-  },
+  Enum { tag: i128, payload: Option<Box<ConstValue>> },
   Type(SemanticTy),
   Unit,
   Poison,

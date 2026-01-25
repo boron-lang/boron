@@ -1,14 +1,13 @@
 use crate::generics::{GenericParam, GenericParamKind, Generics, TypeBound};
 use crate::item::{
-  Const, Enum, Field, Function, Method, Param, ParamKind, SelfKind, Struct,
-  Variant, VariantField, VariantKind,
+  Const, Enum, Field, Function, Param, ParamKind, SelfKind, Struct, Variant,
+  VariantField, VariantKind,
 };
 use crate::lower::context::LoweringContext;
 use zirael_parser::ast::ProgramNode;
 use zirael_parser::ast::items::{
-  ConstItem, EnumItem, FunctionItem, Item as AstItem, ItemKind, MethodItem,
-  StructField, StructItem, StructMember, Variant as AstVariant,
-  VariantPayload as AstVariantPayload, Visibility,
+  ConstItem, EnumItem, FunctionItem, Item as AstItem, ItemKind, StructField, StructItem,
+  StructMember, Variant as AstVariant, VariantPayload as AstVariantPayload, Visibility,
 };
 use zirael_parser::ast::params;
 use zirael_parser::ast::{
@@ -86,15 +85,19 @@ impl LoweringContext<'_> {
       let generics = ctx.lower_generics(&s.generics);
 
       let mut fields = Vec::new();
-      let mut methods = Vec::new();
+      let mut items = Vec::new();
 
       for member in &s.members {
         match member {
           StructMember::Field(f) => {
             fields.push(ctx.lower_field(f));
           }
-          StructMember::Method(m) => {
-            methods.push(ctx.lower_method(m));
+          StructMember::Item(m) => {
+            ctx.lower_item(m);
+
+            if let Some(def_id) = self.resolver.symbols.get_resolution(m.id) {
+              items.push(def_id);
+            };
           }
         }
       }
@@ -106,7 +109,7 @@ impl LoweringContext<'_> {
         visibility,
         generics,
         fields,
-        methods,
+        items,
         span: s.span,
       }
     });
@@ -125,21 +128,6 @@ impl LoweringContext<'_> {
     }
   }
 
-  fn lower_method(&mut self, m: &MethodItem) -> Method {
-    let def_id = self.get_def_id(m.id);
-
-    Method {
-      hir_id: self.next_hir_id(),
-      def_id: def_id.unwrap_or(DefId(0)), // TODO: handle missing def_id
-      name: m.name,
-      visibility: m.visibility,
-      params: m.params.iter().map(|p| self.lower_param(p)).collect(),
-      return_type: m.return_type.as_ref().map(|t| self.lower_type(t)),
-      body: self.lower_block(&m.body),
-      span: m.span,
-    }
-  }
-
   fn lower_enum(&mut self, e: &EnumItem, visibility: Visibility) {
     let Some(def_id) = self.get_def_id(e.id) else {
       return;
@@ -152,15 +140,7 @@ impl LoweringContext<'_> {
       let generics = ctx.lower_generics(&e.generics);
       let variants = e.variants.iter().map(|v| ctx.lower_variant(v)).collect();
 
-      Enum {
-        hir_id,
-        def_id,
-        name: e.name,
-        visibility,
-        generics,
-        variants,
-        span: e.span,
-      }
+      Enum { hir_id, def_id, name: e.name, visibility, generics, variants, span: e.span }
     });
 
     self.hir.enums.insert(def_id, hir_enum);
@@ -171,9 +151,9 @@ impl LoweringContext<'_> {
 
     let kind = match &v.payload {
       None => VariantKind::Unit,
-      Some(AstVariantPayload::Tuple(fields)) => VariantKind::Tuple(
-        fields.iter().map(|f| self.lower_variant_field(f)).collect(),
-      ),
+      Some(AstVariantPayload::Tuple(fields)) => {
+        VariantKind::Tuple(fields.iter().map(|f| self.lower_variant_field(f)).collect())
+      }
       Some(AstVariantPayload::Discriminant(expr)) => {
         VariantKind::Discriminant(self.lower_expr(expr))
       }
@@ -241,10 +221,7 @@ impl LoweringContext<'_> {
         (ParamKind::SelfParam { kind }, s.span, self.get_def_id(s.id))
       }
       params::Param::Variadic(v) => (
-        ParamKind::Variadic {
-          name: v.name,
-          ty: self.lower_type(&v.ty),
-        },
+        ParamKind::Variadic { name: v.name, ty: self.lower_type(&v.ty) },
         v.span,
         self.get_def_id(v.id),
       ),
@@ -258,20 +235,13 @@ impl LoweringContext<'_> {
     }
   }
 
-  pub fn lower_generics(
-    &mut self,
-    generics: &Option<AstGenericParams>,
-  ) -> Generics {
+  pub fn lower_generics(&mut self, generics: &Option<AstGenericParams>) -> Generics {
     let Some(g) = generics else {
       return Generics::empty();
     };
 
     Generics {
-      params: g
-        .params
-        .iter()
-        .map(|p| self.lower_generic_param(p))
-        .collect(),
+      params: g.params.iter().map(|p| self.lower_generic_param(p)).collect(),
       span: g.span,
     }
   }

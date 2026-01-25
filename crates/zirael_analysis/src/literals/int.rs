@@ -3,11 +3,7 @@ use zirael_diagnostic_macro::Diagnostic;
 use zirael_diagnostics::DiagnosticCtx;
 use zirael_parser::IntBase;
 
-pub fn construct_i128(
-  dcx: &DiagnosticCtx,
-  base: IntBase,
-  value: String,
-) -> i128 {
+pub fn construct_i128(dcx: &DiagnosticCtx, base: IntBase, value: String) -> i128 {
   let radix = base.radix();
 
   match i128::from_str_radix(&value, radix) {

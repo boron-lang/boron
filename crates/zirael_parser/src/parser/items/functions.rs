@@ -17,9 +17,7 @@ impl Parser<'_> {
 
     let has_parens = self.eat(TokenType::LeftParen);
     if !has_parens {
-      self.emit(ExpectedParenToOpenList {
-        span: self.peek().span,
-      });
+      self.emit(ExpectedParenToOpenList { span: self.peek().span });
       self.advance_until_one_of(&[
         TokenType::Arrow,
         TokenType::LeftBrace,
@@ -40,25 +38,16 @@ impl Parser<'_> {
       if self.eat(TokenType::Not) {
         // TODO: diagnostic on invalid usage in normal types
         // `!` type is only allowed in the function return type
-        Type::Never(NeverType {
-          id: NodeId::new(),
-          span: self.previous().span,
-        })
+        Type::Never(NeverType { id: NodeId::new(), span: self.previous().span })
       } else {
         self.parse_type()
       }
     } else {
-      Type::Unit(UnitType {
-        id: NodeId::new(),
-        span: Span::dummy(),
-      })
+      Type::Unit(UnitType { id: NodeId::new(), span: Span::dummy() })
     };
 
-    let body = if self.check(TokenType::LeftBrace) {
-      Some(self.parse_block())
-    } else {
-      None
-    };
+    let body =
+      if self.check(TokenType::LeftBrace) { Some(self.parse_block()) } else { None };
 
     Some(FunctionItem {
       id: NodeId::new(),

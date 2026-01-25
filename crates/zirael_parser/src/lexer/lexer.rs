@@ -26,15 +26,7 @@ impl<'ctx> Lexer<'ctx> {
     let chars: Vec<char> = source.chars().collect();
     let current = chars.first().copied();
 
-    Lexer {
-      source,
-      chars,
-      file_id: sf.file_id,
-      pos: 0,
-      offset: 0,
-      current,
-      dcx,
-    }
+    Lexer { source, chars, file_id: sf.file_id, pos: 0, offset: 0, current, dcx }
   }
 
   pub(crate) fn current_position(&self) -> usize {

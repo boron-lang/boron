@@ -6,9 +6,7 @@ use zirael_utils::dependency::Dependency;
 use zirael_utils::project_config::ProjectConfig;
 use zirael_utils::{enums, term_style};
 
-#[derive(
-  Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug, Default,
-)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug, Default)]
 pub enum CliMode {
   #[default]
   Debug,
@@ -150,11 +148,7 @@ pub struct Cli {
   )]
   pub check_only: bool,
 
-  #[arg(
-    value_name = "no-color",
-    help = "No color in the output",
-    long = "no-color"
-  )]
+  #[arg(value_name = "no-color", help = "No color in the output", long = "no-color")]
   pub no_color: bool,
 }
 
@@ -179,8 +173,7 @@ impl TryFrom<Cli> for ProjectConfig {
 }
 
 pub use term_style::{
-  ERROR, GOOD, HEADER, INVALID, LITERAL, NOP, NOTE, PLACEHOLDER, USAGE, VALID,
-  WARN,
+  ERROR, GOOD, HEADER, INVALID, LITERAL, NOP, NOTE, PLACEHOLDER, USAGE, VALID, WARN,
 };
 use zirael_diagnostics::prelude::DiagnosticOutputType;
 use zirael_utils::prelude::canonicalize_with_strip;

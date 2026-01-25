@@ -1,0 +1,16 @@
+pub struct Vec2<T> {
+    x: T,
+    y: T
+}
+
+struct Hello {
+    value: *const u8
+}
+
+func main() {
+    //#error: attempted to initialize field with `*const u8`, but expected `float`
+    var vec = Vec2 { .x = 10.0, .y = "Food Wars" };
+
+    //#error: attempted to initialize field with `integer`, but expected `*const u8`
+    var hello = Hello { .value = 10 };
+}

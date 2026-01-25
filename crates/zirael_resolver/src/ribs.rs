@@ -13,12 +13,7 @@ pub struct Rib {
 
 impl Rib {
   pub fn new(scope_id: ScopeId, kind: RibKind) -> Self {
-    Self {
-      scope_id,
-      kind,
-      values: HashMap::new(),
-      types: HashMap::new(),
-    }
+    Self { scope_id, kind, values: HashMap::new(), types: HashMap::new() }
   }
 
   pub fn define_value(&mut self, name: String, def_id: DefId) {

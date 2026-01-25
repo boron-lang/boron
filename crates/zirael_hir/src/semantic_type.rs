@@ -5,36 +5,21 @@ use zirael_resolver::DefId;
 pub enum SemanticTy {
   Primitive(PrimitiveKind),
 
-  Struct {
-    def_id: DefId,
-    fields: Vec<SemanticTy>,
-  },
+  Struct { def_id: DefId, fields: Vec<SemanticTy> },
 
-  Enum {
-    def_id: DefId,
-    variants: Vec<EnumVariant>,
-  },
+  Enum { def_id: DefId, variants: Vec<EnumVariant> },
 
-  Ptr {
-    mutability: Mutability,
-    inner: Box<SemanticTy>,
-  },
+  Ptr { mutability: Mutability, inner: Box<SemanticTy> },
 
   Optional(Box<SemanticTy>),
 
-  Array {
-    elem: Box<SemanticTy>,
-    len: usize,
-  },
+  Array { elem: Box<SemanticTy>, len: usize },
 
   Slice(Box<SemanticTy>),
 
   Tuple(Vec<SemanticTy>),
 
-  Fn {
-    params: Vec<SemanticTy>,
-    ret: Box<SemanticTy>,
-  },
+  Fn { params: Vec<SemanticTy>, ret: Box<SemanticTy> },
 
   Unit,
   Never,

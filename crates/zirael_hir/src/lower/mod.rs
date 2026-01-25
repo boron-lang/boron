@@ -18,11 +18,7 @@ use zirael_diagnostics::DiagnosticCtx;
 use zirael_parser::module::Modules;
 use zirael_resolver::Resolver;
 
-pub fn lower_to_hir(
-  resolver: &Resolver,
-  modules: &Modules,
-  _dcx: &DiagnosticCtx,
-) -> Hir {
+pub fn lower_to_hir(resolver: &Resolver, modules: &Modules, _dcx: &DiagnosticCtx) -> Hir {
   let hir = Hir::new();
 
   for module in modules.all() {

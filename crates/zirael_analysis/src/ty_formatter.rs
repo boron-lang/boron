@@ -3,9 +3,7 @@ use std::fmt::Write;
 
 impl TyChecker<'_> {
   pub fn format_type(&self, ty: &InferTy) -> String {
-    self
-      ._format(ty)
-      .unwrap_or_else(|_| "<couldn't format>".to_string())
+    self._format(ty).unwrap_or_else(|_| "<couldn't format>".to_string())
   }
 
   fn _format(&self, ty: &InferTy) -> Result<String, std::fmt::Error> {
@@ -16,9 +14,17 @@ impl TyChecker<'_> {
           f,
           "{}",
           match kind.value() {
-            TyVarKind::Integer => "integer",
-            TyVarKind::Float => "float",
-            TyVarKind::General => "type variable",
+            TyVarKind::Integer => "integer".to_string(),
+            TyVarKind::Float => "float".to_string(),
+            TyVarKind::General => {
+              let ty = self.infcx.substitution.get(var);
+
+              if let Some(ty) = ty {
+                self.format_type(&ty).to_string()
+              } else {
+                "type variable".to_string()
+              }
+            }
           }
         )?,
         None => write!(f, "{}", var)?,
@@ -30,11 +36,7 @@ impl TyChecker<'_> {
         write!(
           f,
           "{}",
-          if let Some(def) = name {
-            def.name
-          } else {
-            def_id.0.to_string()
-          }
+          if let Some(def) = name { def.name } else { def_id.0.to_string() }
         )?;
         if !args.is_empty() {
           write!(f, "<")?;

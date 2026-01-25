@@ -25,10 +25,7 @@ impl Lexer<'_> {
       match self.peek() {
         None => {
           let span = self.make_span(start_offset);
-          return Err(LexError::new(
-            LexErrorKind::UnterminatedBlockComment,
-            span,
-          ));
+          return Err(LexError::new(LexErrorKind::UnterminatedBlockComment, span));
         }
         Some('*') if self.peek_ahead(1) == Some('/') => {
           self.advance();
@@ -64,10 +61,6 @@ impl Lexer<'_> {
 
     let span = self.make_span(start_offset);
 
-    Token::new(
-      TokenType::DocComment(content.clone()),
-      span,
-      format!("///{content}"),
-    )
+    Token::new(TokenType::DocComment(content.clone()), span, format!("///{content}"))
   }
 }

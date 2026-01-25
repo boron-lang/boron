@@ -69,16 +69,8 @@ impl TyChecker<'_> {
       }
 
       (
-        InferTy::Ptr {
-          mutability: m1,
-          ty: t1,
-          span: span1,
-        },
-        InferTy::Ptr {
-          mutability: m2,
-          ty: t2,
-          span: span2,
-        },
+        InferTy::Ptr { mutability: m1, ty: t1, span: span1 },
+        InferTy::Ptr { mutability: m2, ty: t2, span: span2 },
       ) => {
         if m1 != m2 {
           //todo: with span
@@ -90,21 +82,11 @@ impl TyChecker<'_> {
         self.unify(t1, t2)
       }
 
-      (InferTy::Optional(t1, _), InferTy::Optional(t2, _)) => {
-        self.unify(t1, t2)
-      }
+      (InferTy::Optional(t1, _), InferTy::Optional(t2, _)) => self.unify(t1, t2),
 
       (
-        InferTy::Array {
-          ty: t1,
-          len: l1,
-          span: span1,
-        },
-        InferTy::Array {
-          ty: t2,
-          len: l2,
-          span: span2,
-        },
+        InferTy::Array { ty: t1, len: l1, span: span1 },
+        InferTy::Array { ty: t2, len: l2, span: span2 },
       ) => {
         if l1 != l2 {
           // todo: carry span
@@ -135,16 +117,8 @@ impl TyChecker<'_> {
       }
 
       (
-        InferTy::Fn {
-          params: p1,
-          ret: r1,
-          span: span1,
-        },
-        InferTy::Fn {
-          params: p2,
-          ret: r2,
-          span: span2,
-        },
+        InferTy::Fn { params: p1, ret: r1, span: span1 },
+        InferTy::Fn { params: p2, ret: r2, span: span2 },
       ) => {
         if p1.len() != p2.len() {
           return UnifyResult::Err(UnifyError::ArityMismatch {
@@ -162,16 +136,8 @@ impl TyChecker<'_> {
       }
 
       (
-        InferTy::Adt {
-          def_id: d1,
-          args: a1,
-          span: span1,
-        },
-        InferTy::Adt {
-          def_id: d2,
-          args: a2,
-          span: span2,
-        },
+        InferTy::Adt { def_id: d1, args: a1, span: span1 },
+        InferTy::Adt { def_id: d2, args: a2, span: span2 },
       ) => {
         if d1 != d2 {
           return UnifyResult::Err(UnifyError::Mismatch {
@@ -194,10 +160,7 @@ impl TyChecker<'_> {
         UnifyResult::Ok
       }
 
-      _ => UnifyResult::Err(UnifyError::Mismatch {
-        expected: a,
-        found: b,
-      }),
+      _ => UnifyResult::Err(UnifyError::Mismatch { expected: a, found: b }),
     }
   }
 }

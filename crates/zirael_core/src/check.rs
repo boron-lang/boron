@@ -13,11 +13,7 @@ pub fn check_project(
   is_test: bool,
 ) -> Result<Session> {
   let file = &config.entrypoint;
-  info!(
-    "checking entrypoint: {} with {} mode",
-    file.display(),
-    config.mode
-  );
+  info!("checking entrypoint: {} with {} mode", file.display(), config.mode);
 
   if let Some(ext) = file.extension() {
     if ext != FILE_EXTENSION {

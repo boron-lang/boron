@@ -1,6 +1,6 @@
 use crate::expr::{
-  Block, ComptimeArg, Expr, ExprKind, FieldInit, Literal, Local, MatchArm,
-  PathExpr, PathSegment, Stmt, StmtKind,
+  Block, ComptimeArg, Expr, ExprKind, FieldInit, Literal, Local, MatchArm, PathExpr,
+  PathSegment, Stmt, StmtKind,
 };
 use crate::lower::context::LoweringContext;
 use crate::pat::{Pat, PatKind};
@@ -12,7 +12,7 @@ use zirael_parser::ast::expressions::{
 use zirael_parser::ast::statements;
 use zirael_parser::{IntBase, IntSuffix};
 use zirael_source::prelude::Span;
-use zirael_utils::prelude::Identifier;
+use zirael_utils::prelude::{Identifier, debug};
 
 fn byte_literal(value: u8) -> Literal {
   Literal::Int {
@@ -47,7 +47,7 @@ impl LoweringContext<'_> {
       }
 
       AstExprKind::Path(path) => {
-        let def_id = self.get_def_id(expr.id);
+        let def_id = self.get_def_id(path.id);
 
         if let Some(def_id) = def_id {
           ExprKind::Path(PathExpr {
@@ -62,6 +62,7 @@ impl LoweringContext<'_> {
               .collect(),
           })
         } else {
+          debug!("failed to lower a path {:#?}", path);
           ExprKind::Err
         }
       }
@@ -76,6 +77,7 @@ impl LoweringContext<'_> {
             }],
           })
         } else {
+          debug!("failed to lower self {:?}", expr);
           ExprKind::Err
         }
       }
@@ -86,10 +88,9 @@ impl LoweringContext<'_> {
         rhs: Box::new(self.lower_expr(right)),
       },
 
-      AstExprKind::Unary { op, operand } => ExprKind::Unary {
-        op: *op,
-        operand: Box::new(self.lower_expr(operand)),
-      },
+      AstExprKind::Unary { op, operand } => {
+        ExprKind::Unary { op: *op, operand: Box::new(self.lower_expr(operand)) }
+      }
 
       AstExprKind::Assign { op, target, value } => ExprKind::Assign {
         op: *op,
@@ -107,20 +108,16 @@ impl LoweringContext<'_> {
         args: args.iter().map(|a| self.lower_expr(&a.value)).collect(),
       },
 
-      AstExprKind::Field { object, field } => ExprKind::Field {
-        object: Box::new(self.lower_expr(object)),
-        field: *field,
-      },
+      AstExprKind::Field { object, field } => {
+        ExprKind::Field { object: Box::new(self.lower_expr(object)), field: *field }
+      }
 
       AstExprKind::Index { object, index } => ExprKind::Index {
         object: Box::new(self.lower_expr(object)),
         index: Box::new(self.lower_expr(index)),
       },
 
-      AstExprKind::AddrOf {
-        mutability,
-        operand,
-      } => ExprKind::AddrOf {
+      AstExprKind::AddrOf { mutability, operand } => ExprKind::AddrOf {
         mutability: *mutability,
         operand: Box::new(self.lower_expr(operand)),
       },
@@ -142,6 +139,7 @@ impl LoweringContext<'_> {
               .collect(),
           }
         } else {
+          debug!("failed to lower struct {:?}", expr);
           ExprKind::Err
         }
       }
@@ -153,10 +151,7 @@ impl LoweringContext<'_> {
       AstExprKind::Array { values, repeat } => {
         let repeat = repeat.as_ref().map(|e| Box::new(self.lower_expr(e)));
 
-        ExprKind::Array(
-          values.iter().map(|e| self.lower_expr(e)).collect(),
-          repeat,
-        )
+        ExprKind::Array(values.iter().map(|e| self.lower_expr(e)).collect(), repeat)
       }
 
       AstExprKind::Block(block) => ExprKind::Block(self.lower_block(block)),
@@ -165,42 +160,28 @@ impl LoweringContext<'_> {
 
       AstExprKind::Match(match_expr) => ExprKind::Match {
         scrutinee: Box::new(self.lower_expr(&match_expr.scrutinee)),
-        arms: match_expr
-          .arms
-          .iter()
-          .map(|a| self.lower_match_arm(a))
-          .collect(),
+        arms: match_expr.arms.iter().map(|a| self.lower_match_arm(a)).collect(),
       },
 
-      AstExprKind::Loop(loop_expr) => ExprKind::Loop {
-        body: self.lower_block(&loop_expr.body),
-      },
+      AstExprKind::Loop(loop_expr) => {
+        ExprKind::Loop { body: self.lower_block(&loop_expr.body) }
+      }
 
       AstExprKind::While(_) | AstExprKind::For(_) | AstExprKind::Range(_) => {
         todo!("desugar")
       }
 
       AstExprKind::Break(break_expr) => ExprKind::Break {
-        value: break_expr
-          .value
-          .as_ref()
-          .map(|v| Box::new(self.lower_expr(v))),
+        value: break_expr.value.as_ref().map(|v| Box::new(self.lower_expr(v))),
       },
 
       AstExprKind::Continue(_) => ExprKind::Continue,
 
       AstExprKind::Return(ret_expr) => ExprKind::Return {
-        value: ret_expr
-          .value
-          .as_ref()
-          .map(|v| Box::new(self.lower_expr(v))),
+        value: ret_expr.value.as_ref().map(|v| Box::new(self.lower_expr(v))),
       },
 
-      AstExprKind::Ternary {
-        condition,
-        then_expr,
-        else_expr,
-      } => ExprKind::If {
+      AstExprKind::Ternary { condition, then_expr, else_expr } => ExprKind::If {
         condition: Box::new(self.lower_expr(condition)),
         then_block: Block {
           hir_id: self.next_hir_id(),
@@ -222,18 +203,11 @@ impl LoweringContext<'_> {
           })
           .collect_vec();
 
-        ExprKind::Comptime {
-          callee: Box::new(self.lower_expr(callee)),
-          args,
-        }
+        ExprKind::Comptime { callee: Box::new(self.lower_expr(callee)), args }
       }
     };
 
-    Expr {
-      hir_id: self.next_hir_id(),
-      kind,
-      span: expr.span,
-    }
+    Expr { hir_id: self.next_hir_id(), kind, span: expr.span }
   }
 
   fn lower_if_expr(&mut self, if_expr: &expressions::IfExpr) -> ExprKind {
@@ -246,11 +220,7 @@ impl LoweringContext<'_> {
       })),
       Some(expressions::ElseBranch::If(nested_if)) => {
         let kind = self.lower_if_expr(nested_if);
-        Some(Box::new(Expr {
-          hir_id: self.next_hir_id(),
-          kind,
-          span: nested_if.span,
-        }))
+        Some(Box::new(Expr { hir_id: self.next_hir_id(), kind, span: nested_if.span }))
       }
     };
 
@@ -279,9 +249,7 @@ impl LoweringContext<'_> {
       let is_last = i == block.statements.len() - 1;
 
       match stmt {
-        statements::Statement::Expr(expr_stmt)
-          if is_last && !expr_stmt.has_semicolon =>
-        {
+        statements::Statement::Expr(expr_stmt) if is_last && !expr_stmt.has_semicolon => {
           trailing_expr = Some(Box::new(self.lower_expr(&expr_stmt.expr)));
         }
         _ => {
@@ -290,19 +258,13 @@ impl LoweringContext<'_> {
       }
     }
 
-    Block {
-      hir_id: self.next_hir_id(),
-      stmts,
-      expr: trailing_expr,
-      span: block.span,
-    }
+    Block { hir_id: self.next_hir_id(), stmts, expr: trailing_expr, span: block.span }
   }
 
   fn lower_stmt(&mut self, stmt: &statements::Statement) -> Stmt {
     let (kind, span) = match stmt {
       statements::Statement::VarDecl(var) => {
-        let def_id =
-          self.get_def_id(var.id).unwrap_or(zirael_resolver::DefId(0));
+        let def_id = self.get_def_id(var.id).unwrap_or(zirael_resolver::DefId(0));
 
         let local = Local {
           hir_id: self.next_hir_id(),
@@ -333,12 +295,7 @@ impl LoweringContext<'_> {
           def_id,
           pat: Pat {
             hir_id: self.next_hir_id(),
-            kind: PatKind::Binding {
-              def_id,
-              name: c.name,
-              is_mut: false,
-              subpat: None,
-            },
+            kind: PatKind::Binding { def_id, name: c.name, is_mut: false, subpat: None },
             span: *c.name.span(),
           },
           ty: c.ty.as_ref().map(|t| self.lower_type(t)),
@@ -371,24 +328,15 @@ impl LoweringContext<'_> {
       }
     };
 
-    Stmt {
-      hir_id: self.next_hir_id(),
-      kind,
-      span,
-    }
+    Stmt { hir_id: self.next_hir_id(), kind, span }
   }
 
   pub fn lower_literal(&self, lit: &AstLiteral) -> Literal {
     match lit {
-      AstLiteral::Int(i) => Literal::Int {
-        value: i.value.clone(),
-        base: i.base,
-        suffix: i.suffix,
-      },
-      AstLiteral::Float(f) => Literal::Float {
-        value: f.value.clone(),
-        suffix: f.suffix,
-      },
+      AstLiteral::Int(i) => {
+        Literal::Int { value: i.value.clone(), base: i.base, suffix: i.suffix }
+      }
+      AstLiteral::Float(f) => Literal::Float { value: f.value.clone(), suffix: f.suffix },
       AstLiteral::Bool(b) => Literal::Bool(b.value),
       AstLiteral::Char(c) => Literal::Char(c.value),
       AstLiteral::String(s) => Literal::String(s.value.clone()),

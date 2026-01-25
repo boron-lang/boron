@@ -24,13 +24,7 @@ impl Scope {
     source_file: SourceFileId,
     owner: Option<DefId>,
   ) -> Self {
-    Self {
-      id: ScopeId::new(),
-      parent,
-      kind,
-      source_file,
-      owner,
-    }
+    Self { id: ScopeId::new(), parent, kind, source_file, owner }
   }
 
   pub fn root(source_file: SourceFileId) -> Self {
@@ -102,10 +96,7 @@ impl Scopes {
   }
 
   pub fn ancestors(&self, id: ScopeId) -> ScopeAncestors<'_> {
-    ScopeAncestors {
-      scopes: self,
-      current: Some(id),
-    }
+    ScopeAncestors { scopes: self, current: Some(id) }
   }
 }
 
