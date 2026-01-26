@@ -8,7 +8,7 @@ use crate::parser::errors::{
   MissingColonInTernary, MissingInKeyword, RepeatSyntaxOnlyAtStart,
   RepeatSyntaxRequiredValue,
 };
-use crate::{IntBase, NodeId, Path, PathSegment, TokenType};
+use crate::{IntBase, NodeId, Path, PathParsingContext, PathSegment, TokenType};
 use std::collections::HashMap;
 use zirael_source::prelude::Span;
 use zirael_utils::prelude::Identifier;
@@ -516,7 +516,7 @@ impl Parser<'_> {
 
   fn parse_path_or_struct_expr(&mut self) -> Expr {
     let start = self.current_span();
-    let path = self.parse_path();
+    let path = self.parse_path(PathParsingContext::Normal);
 
     if self.check(TokenType::LeftBrace)
       && self.peek_ahead(1).is_some_and(|t| matches!(t.kind, TokenType::Dot))
@@ -719,8 +719,8 @@ impl Parser<'_> {
           span: self.span_from(start),
         })
       }
-      TokenType::Identifier(_) | TokenType::Package | TokenType::Super => {
-        let path = self.parse_path();
+      TokenType::Identifier(_) => {
+        let path = self.parse_path(PathParsingContext::Normal);
 
         if self.eat(TokenType::LeftBrace) {
           let mut fields = vec![];

@@ -19,6 +19,7 @@ pub use symbol::{Symbol, SymbolKind, SymbolTable};
 pub use visitor::ResolveVisitor;
 
 pub mod prelude {
+  pub use crate::builtin_kind::*;
   pub use crate::def::{DefId, DefKind, Definition};
   pub use crate::import_order::{ImportGraph, ResolutionOrder};
   pub use crate::module_resolver::ModuleResolver;

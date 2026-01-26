@@ -30,6 +30,12 @@ pub struct ImportSpec {
   pub span: Span,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PathParsingContext {
+  ImportOrMod,
+  Normal,
+}
+
 #[derive(Debug, Clone)]
 pub struct Path {
   pub id: NodeId,

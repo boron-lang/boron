@@ -131,3 +131,24 @@ pub struct FieldInitMismatch {
   pub expected: String,
   pub found: String,
 }
+
+#[derive(Diagnostic)]
+#[error("{callee} expected `{expected}` arguments, found `{found}`")]
+#[code(TYPE_CHECKER_ARITY_MISMATCH)]
+pub struct ArityMismatch {
+  #[error("in this expr")]
+  pub span: Span,
+  pub callee: String,
+  pub expected: usize,
+  pub found: usize,
+}
+
+#[derive(Diagnostic)]
+#[error("expected {expected}, but found {found} in function argument")]
+#[code(TYPE_CHECKER_FUNC_ARG_MISMATCH)]
+pub struct FuncArgMismatch {
+  #[error("in this argument")]
+  pub span: Span,
+  pub expected: String,
+  pub found: String,
+}

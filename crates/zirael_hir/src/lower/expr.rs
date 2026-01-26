@@ -207,7 +207,9 @@ impl LoweringContext<'_> {
       }
     };
 
-    Expr { hir_id: self.next_hir_id(), kind, span: expr.span }
+    let id = self.next_hir_id();
+    self.hir.node_to_hir.insert(expr.id, id);
+    Expr { hir_id: id, kind, span: expr.span }
   }
 
   fn lower_if_expr(&mut self, if_expr: &expressions::IfExpr) -> ExprKind {

@@ -1,12 +1,12 @@
 use crate::parser::Parser;
 use crate::parser::errors::{
-  ExpectedSuperOrIdentPath, GenericsFirstSegment, GenericsInSuper, SelfAndPackageRootOnly,
+  ExpectedIdentifierInNormalPath, ExpectedSuperOrIdentPath, GenericsInImportOrMod,
+  PackageInRootOnly, SuperOnlyInModOrImport,
 };
-use crate::{NodeId, Path, PathRoot, PathSegment, TokenType};
-use zirael_utils::prelude::Identifier;
+use crate::{NodeId, Path, PathParsingContext, PathRoot, PathSegment, TokenType};
 
 impl Parser<'_> {
-  pub fn parse_path(&mut self) -> Path {
+  pub fn parse_path(&mut self, ctx: PathParsingContext) -> Path {
     let start = self.current_span();
     let mut segments = Vec::new();
 
@@ -18,12 +18,12 @@ impl Parser<'_> {
       Some(PathRoot::Super)
     } else if self.is_identifier() {
       let identifier = self.parse_identifier();
-      let generics = self.parse_generic_parameters();
+      let (span, generics) = self.parse_generic_arguments();
 
-      if let Some(generics) = generics {
-        self.emit(GenericsFirstSegment { span: generics.span });
+      if ctx == PathParsingContext::ImportOrMod && !generics.is_empty() {
+        self.emit(GenericsInImportOrMod { span });
       }
-      segments.push(PathSegment { identifier, args: vec![] });
+      segments.push(PathSegment { identifier, args: generics });
 
       None
     } else {
@@ -37,31 +37,47 @@ impl Parser<'_> {
 
       match self.peek().kind {
         TokenType::Super => {
-          let identifier = Identifier::new("super", self.peek().span);
-          let generics = self.parse_generic_parameters();
+          let identifier = self.parse_identifier();
+          let (span, generics) = self.parse_generic_arguments();
 
-          if let Some(gens) = generics {
-            self.emit(GenericsInSuper { span: gens.span });
+          if ctx == PathParsingContext::Normal {
+            self.emit(SuperOnlyInModOrImport { span: *identifier.span() })
+          }
+
+          if !generics.is_empty() {
+            self.emit(GenericsInImportOrMod { span })
           }
 
           segments.push(PathSegment { identifier, args: vec![] });
           self.advance();
         }
-        TokenType::Package | TokenType::SelfValue => {
-          self.emit(SelfAndPackageRootOnly { span: self.peek().span });
+        TokenType::Package => {
+          self.emit(PackageInRootOnly { span: self.peek().span });
           self.advance();
         }
         TokenType::Identifier(_) => {
           let identifier = self.parse_identifier();
-          let generics = self.parse_generic_arguments();
+          let (span, generics) = self.parse_generic_arguments();
+
+          if !generics.is_empty() && ctx == PathParsingContext::ImportOrMod {
+            self.emit(GenericsInImportOrMod { span })
+          }
 
           segments.push(PathSegment { identifier, args: generics });
         }
         _ => {
-          self.emit(ExpectedSuperOrIdentPath {
-            span: self.peek().span,
-            found: self.peek().kind.clone(),
-          });
+          if ctx == PathParsingContext::Normal {
+            self.emit(ExpectedIdentifierInNormalPath {
+              span: self.peek().span,
+              found: self.peek().kind.clone(),
+            });
+          } else {
+            self.emit(ExpectedSuperOrIdentPath {
+              span: self.peek().span,
+              found: self.peek().kind.clone(),
+            });
+          }
+
           self.advance();
         }
       }

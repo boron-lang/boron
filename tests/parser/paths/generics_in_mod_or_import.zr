@@ -1,0 +1,4 @@
+//#error: generic arguments can't appear in module or import paths
+import x from hello<i32>;
+//#error: generic arguments can't appear in module or import paths
+import y from welcome::to<i32>;

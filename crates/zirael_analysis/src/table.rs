@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::functions::FinalComptimeArg;
 use crate::ty::{InferTy, TyVar, TyVarKind, TypeScheme};
 use dashmap::DashMap;
 use parking_lot::RwLock;
@@ -20,6 +21,9 @@ pub struct TypeTable {
 
   /// Maps method signatures to thier type scheme.
   pub(crate) method_types: DashMap<(DefId, String), TypeScheme>,
+
+  /// Maps comptime function call to it's arguments
+  pub comptime_args: DashMap<HirId, Vec<FinalComptimeArg>>,
 }
 
 impl TypeTable {
@@ -29,6 +33,7 @@ impl TypeTable {
       def_types: DashMap::new(),
       field_types: DashMap::new(),
       method_types: DashMap::new(),
+      comptime_args: DashMap::new(),
     }
   }
 

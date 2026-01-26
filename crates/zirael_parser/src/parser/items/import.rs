@@ -1,7 +1,7 @@
 use crate::import::ImportDecl;
 use crate::parser::Parser;
 use crate::parser::errors::{AliasingABinding, ImportNotAPath, UnexpectedImportKind};
-use crate::{ImportKind, ImportSpec, NodeId, Path, TokenType};
+use crate::{ImportKind, ImportSpec, NodeId, Path, PathParsingContext, TokenType};
 
 impl Parser<'_> {
   pub(crate) fn parse_import(&mut self) -> Option<ImportDecl> {
@@ -75,7 +75,7 @@ impl Parser<'_> {
       self.advance();
       Path::dummy()
     } else {
-      self.parse_path()
+      self.parse_path(PathParsingContext::ImportOrMod)
     };
 
     self.eat_semis();

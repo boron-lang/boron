@@ -11,5 +11,6 @@ mod vec;
 import vec from vec;
 
 func main() {
-    var value = vec::Vec2 { .x = 10.0, .y = "15.0" };
+    var value = vec::Vec2 { .x = 10.0, .y = 20.0 };
+    var size = sizeOf!(vec::Vec2)
 }

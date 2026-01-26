@@ -1,6 +1,9 @@
+use crate::builtins::{BuiltInParam, get_builtin};
 use crate::errors::{
-  FieldInitMismatch, InvalidStructInit, NoFieldOnType, VarInitMismatch,
+  ArityMismatch, FieldInitMismatch, FuncArgMismatch, InvalidStructInit, NoFieldOnType,
+  VarInitMismatch,
 };
+use crate::functions::FinalComptimeArg;
 use crate::interpreter::{
   Interpreter, InterpreterCache, InterpreterContext, InterpreterMode,
 };
@@ -9,13 +12,14 @@ use crate::ty::{Expectation, InferTy, TyVar, TypeScheme};
 use crate::{UnifyError, UnifyResult};
 use std::collections::HashMap;
 use zirael_diagnostics::DiagnosticCtx;
-use zirael_hir::expr::{FieldInit, PathExpr};
+use zirael_hir::expr::{ComptimeArg, FieldInit, PathExpr};
 use zirael_hir::{
   Block, Const, Expr, ExprKind, Function, Hir, Literal, ParamKind, Pat, PatKind, Stmt,
   StmtKind,
 };
 use zirael_parser::Mutability;
 use zirael_parser::ast::types::PrimitiveKind;
+use zirael_resolver::prelude::BuiltInKind;
 use zirael_resolver::{DefId, DefKind, Resolver};
 use zirael_utils::context::Context;
 use zirael_utils::ident_table::Identifier;
@@ -312,6 +316,74 @@ impl<'a> TyChecker<'a> {
 
       ExprKind::Struct { def_id, fields } => {
         self.check_struct_init(def_id, fields, env, expr)
+      }
+
+      ExprKind::Comptime { args, .. } => {
+        let builtin = self
+          .resolver
+          .get_recorded_comptime_builtin(self.hir.hir_to_node(&expr.hir_id).unwrap());
+
+        if let Some(builtin) = builtin {
+          let func = get_builtin(&builtin);
+
+          if func.params.len() != args.len() {
+            self.dcx().emit(ArityMismatch {
+              span: expr.span,
+              callee: format!("builtin function `{}!`", builtin.name()),
+              expected: func.params.len(),
+              found: args.len(),
+            });
+
+            return InferTy::Err(expr.span);
+          }
+
+          let mut final_args = vec![];
+          for (param, arg) in func.params.iter().zip(args) {
+            match param {
+              BuiltInParam::Type => {
+                if let ComptimeArg::Expr(expr) = arg {
+                  self.dcx().emit(FuncArgMismatch {
+                    span: expr.span,
+                    expected: "a comptime type".to_string(),
+                    found: "an expression".to_string(),
+                  });
+                } else if let ComptimeArg::Type(ty) = arg {
+                  final_args.push(FinalComptimeArg::Ty(self.lower_hir_ty(ty)));
+                }
+              }
+              BuiltInParam::Expr(ty) => {
+                if let ComptimeArg::Type(ty) = arg {
+                  final_args.push(FinalComptimeArg::Ty(self.lower_hir_ty(ty)));
+                } else if let ComptimeArg::Expr(expr) = arg {
+                  let expr_ty =
+                    self.check_expr(expr, env, &Expectation::ExpectHasType(ty.clone()));
+                  let result = self.unify(&expr_ty, ty);
+
+                  match &result {
+                    UnifyResult::Err(err) => {
+                      if let UnifyError::Mismatch { .. } = err {
+                        self.dcx().emit(FuncArgMismatch {
+                          span: expr.span,
+                          expected: self.format_type(ty),
+                          found: self.format_type(&expr_ty),
+                        });
+                      } else {
+                        self.handle_unify_result(result);
+                      }
+                    }
+                    UnifyResult::Ok => {
+                      final_args.push(FinalComptimeArg::Expr(*expr.clone()));
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          self.table.comptime_args.insert(expr.hir_id, final_args);
+        }
+
+        InferTy::Err(expr.span)
       }
 
       _ => {

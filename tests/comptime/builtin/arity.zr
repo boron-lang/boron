@@ -1,0 +1,4 @@
+func main() {
+    //#error: builtin function `{}` expected `{}` arguments, found `{}`
+    var size = sizeOf!()
+}

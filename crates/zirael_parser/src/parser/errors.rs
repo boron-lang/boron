@@ -107,10 +107,10 @@ pub struct ExpectedType {
 }
 
 #[derive(Diagnostic)]
-#[error("`self` and `package` are only allowed in root of the path")]
-#[code(PARSE_SELF_AND_PACKAGE_ROOT_ONLY)]
+#[error("`package` is only allowed in root of the path")]
+#[code(PARSE_PACKAGE_ROOT_ONLY)]
 #[help("only super is allowed at any position")]
-pub struct SelfAndPackageRootOnly {
+pub struct PackageInRootOnly {
   #[error("found here")]
   pub span: Span,
 }
@@ -119,6 +119,15 @@ pub struct SelfAndPackageRootOnly {
 #[error("expected `super` or an identifier in the path, found {found}")]
 #[code(PARSE_EXPECTED_SUPER_OR_IDENT_PATH)]
 pub struct ExpectedSuperOrIdentPath {
+  #[error("invalid part found here")]
+  pub span: Span,
+  pub found: TokenType,
+}
+
+#[derive(Diagnostic)]
+#[error("expected an identifier in the path, found {found}")]
+#[code(PARSE_EXPECTED_IDENTIFIER_IN_NORMAL_PATH)]
+pub struct ExpectedIdentifierInNormalPath {
   #[error("invalid part found here")]
   pub span: Span,
   pub found: TokenType,
@@ -345,20 +354,10 @@ pub struct ModuleNotFound {
 }
 
 #[derive(Diagnostic)]
-#[error("generic arguments are not allowed in `super` segment")]
-#[code(PARSE_GENERICS_IN_SUPER)]
-pub struct GenericsInSuper {
-  #[error("found here. these are useless")]
-  pub span: Span,
-}
-
-#[derive(Diagnostic)]
-#[error("generic arguments can't appear after the first path segment")]
-#[help(
-  "generic arguments in this place don't make sense. you can only attach generic arguments to items"
-)]
-#[code(PARSE_GENERICS_FIRST_SEGMENT)]
-pub struct GenericsFirstSegment {
+#[error("generic arguments can't appear in module or import paths")]
+#[help("generic arguments in this place don't make sense")]
+#[code(PARSE_GENERICS_IN_IMPORT_OR_MOD)]
+pub struct GenericsInImportOrMod {
   #[error("found here")]
   pub span: Span,
 }
@@ -422,5 +421,13 @@ pub struct InvalidRepeatSyntax {
 #[code(PARSE_REPEAT_SYNTAX_REQUIRED_VALUE)]
 pub struct RepeatSyntaxRequiredValue {
   #[error("semicolon without preceding value")]
+  pub span: Span,
+}
+
+#[derive(Diagnostic)]
+#[error("`super` is only allowed in import or mod paths")]
+#[code(PARSE_SUPER_ONLY_IN_MOD_OR_IMPORT)]
+pub struct SuperOnlyInModOrImport {
+  #[error("found here")]
   pub span: Span,
 }

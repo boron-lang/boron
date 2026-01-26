@@ -1,7 +1,8 @@
 use crate::prelude::*;
 use std::process::exit;
+use zirael_analysis::results::BuiltInResults;
 use zirael_analysis::validator::validate_comptime;
-use zirael_analysis::{TypeTable, typeck_hir};
+use zirael_analysis::{TypeTable, expand_builtins, typeck_hir};
 use zirael_hir::hir::Hir;
 use zirael_hir::lower::lower_to_hir;
 use zirael_parser::module::{Module, Modules};
@@ -17,6 +18,7 @@ pub struct CompilationUnit<'ctx> {
   pub resolver: Resolver,
   pub hir: Option<Hir>,
   pub typeck: Option<TypeTable>,
+  pub builtin_results: Option<BuiltInResults>,
 }
 
 impl<'ctx> CompilationUnit<'ctx> {
@@ -28,6 +30,7 @@ impl<'ctx> CompilationUnit<'ctx> {
       resolver: Resolver::new(),
       hir: None,
       typeck: None,
+      builtin_results: None,
     }
   }
 
@@ -42,6 +45,17 @@ impl<'ctx> CompilationUnit<'ctx> {
     self.validate_comptime();
 
     self.typeck();
+    self.expand_builtins();
+  }
+
+  fn expand_builtins(&mut self) {
+    let Some(hir) = &self.hir else { return };
+    let Some(typeck) = &self.typeck else {
+      return;
+    };
+
+    self.builtin_results = Some(expand_builtins(self.ctx, &self.resolver, typeck, hir));
+    self.emit_errors();
   }
 
   fn validate_comptime(&mut self) {

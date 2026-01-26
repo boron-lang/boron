@@ -1344,6 +1344,7 @@ dependencies = [
  "dashmap 7.0.0-rc2",
  "num-bigint",
  "num-traits",
+ "once_cell",
  "parking_lot",
  "zirael_diagnostic_macro",
  "zirael_diagnostics",

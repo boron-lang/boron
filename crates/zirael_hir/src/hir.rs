@@ -3,6 +3,7 @@ use crate::item::{Const, Enum, Function, Struct};
 
 use dashmap::DashMap;
 use dashmap::mapref::one::Ref;
+use zirael_parser::NodeId;
 use zirael_resolver::DefId;
 use zirael_source::prelude::SourceFileId;
 
@@ -13,6 +14,7 @@ pub struct Hir {
   pub enums: DashMap<DefId, Enum>,
   pub consts: DashMap<DefId, Const>,
   pub modules: DashMap<SourceFileId, Vec<DefId>>,
+  pub node_to_hir: DashMap<NodeId, HirId>
 }
 
 impl Hir {
@@ -41,6 +43,10 @@ impl Hir {
     file_id: SourceFileId,
   ) -> Option<Ref<'_, SourceFileId, Vec<DefId>>> {
     self.modules.get(&file_id)
+  }
+  
+  pub fn hir_to_node(&self, hir: &HirId) -> Option<NodeId> {
+    self.node_to_hir.iter().find(|r| r.value() == hir).map(|r| r.key().clone())
   }
 }
 

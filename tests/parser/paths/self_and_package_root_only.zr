@@ -1,2 +1,2 @@
 //#error: `package` is only allowed in root of the path
-mod self::utils::package;
+import x from hello::package;

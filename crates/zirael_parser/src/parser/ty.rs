@@ -3,11 +3,7 @@ use crate::parser::errors::{
   ConstAloneInType, ExpectedIdentifierInGeneric, ExpectedType, ExpectedTypePathForBound,
   TrailingPlusInTypeBound,
 };
-use crate::{
-  ArrayType, FunctionType, GenericParam, GenericParams, Mutability, NodeId, OptionalType,
-  PointerType, PrimitiveKind, PrimitiveType, TokenType, TupleType, Type, TypeBound,
-  UnitType,
-};
+use crate::{ArrayType, FunctionType, GenericParam, GenericParams, Mutability, NodeId, OptionalType, PathParsingContext, PointerType, PrimitiveKind, PrimitiveType, TokenType, TupleType, Type, TypeBound, UnitType};
 use zirael_source::span::Span;
 
 impl Parser<'_> {
@@ -141,7 +137,7 @@ impl Parser<'_> {
   }
 
   fn parse_path_type(&mut self) -> Type {
-    let path = self.parse_path();
+    let path = self.parse_path(PathParsingContext::Normal);
     Type::Path(path)
   }
 
@@ -217,7 +213,7 @@ impl Parser<'_> {
     loop {
       if self.is_identifier() {
         let span = self.peek().span;
-        let path = self.parse_path();
+        let path = self.parse_path(PathParsingContext::Normal);
 
         bounds.push(TypeBound { id: NodeId::new(), span: self.span_from(span), path });
       } else {
@@ -242,9 +238,10 @@ impl Parser<'_> {
     bounds
   }
 
-  pub fn parse_generic_arguments(&mut self) -> Vec<Type> {
+  pub fn parse_generic_arguments(&mut self) -> (Span, Vec<Type>) {
+    let start = self.peek().span;
     if !self.check(TokenType::Lt) {
-      return vec![];
+      return (Default::default(), vec![]);
     }
     let mut args = vec![];
     self.advance();
@@ -277,7 +274,7 @@ impl Parser<'_> {
     }
 
     self.expect(TokenType::Gt, "to end generic arguments list");
-    args
+    (self.span_from(start), args)
   }
 
   pub fn parse_generic_parameters(&mut self) -> Option<GenericParams> {

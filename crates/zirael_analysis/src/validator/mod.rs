@@ -96,9 +96,7 @@ impl ComptimeValidator<'_> {
 
       ExprKind::Continue | ExprKind::Path(..) | ExprKind::Literal(..) => {}
 
-      ExprKind::Comptime { callee, args } => {
-        println!("{callee:?}");
-      }
+      ExprKind::Comptime { callee, args } => {}
 
       ExprKind::Struct { fields, .. } => {
         for init in fields {

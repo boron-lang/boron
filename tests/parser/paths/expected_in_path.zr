@@ -1,0 +1,7 @@
+//#error: expected `super` or an identifier in the path, found integer literal
+import x from hello::20;
+
+func main() {
+    //#error: expected an identifier in the path, found integer literal
+    var val = vec::10 { .x = 10.0, .y = 15.0 };
+}

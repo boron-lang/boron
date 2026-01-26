@@ -1,4 +1,4 @@
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub enum BuiltInKind {
   SizeOf,
   AlignOf,
@@ -17,6 +17,16 @@ impl BuiltInKind {
       "unreachable" => Some(Self::Unreachable),
 
       _ => None,
+    }
+  }
+
+  pub fn name(self) -> &'static str {
+    match self {
+      Self::SizeOf => "sizeOf",
+      Self::AlignOf => "alignOf",
+      Self::TypeOf => "typeOf",
+      Self::CompileError => "compileError",
+      Self::Unreachable => "unreachable",
     }
   }
 }

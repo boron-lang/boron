@@ -17,3 +17,4 @@ pub use table::{Constraint, ConstraintKind, InferCtx, TypeEnv, TypeTable};
 pub use ty::{
   Expectation, InferTy, TyVar, TyVarKind, TypeScheme, UnifyError, UnifyResult,
 };
+pub use builtin::*;

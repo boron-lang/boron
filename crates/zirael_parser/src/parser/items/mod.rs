@@ -6,8 +6,8 @@ use crate::parser::errors::{
   ModStringLit,
 };
 use crate::{
-  ConstItem, ItemKind, ModItem, NodeId, Path, TokenType, Type, Visibility,
-  log_parse_failure,
+  ConstItem, ItemKind, ModItem, NodeId, Path, PathParsingContext, TokenType, Type,
+  Visibility, log_parse_failure,
 };
 use zirael_source::prelude::Span;
 use zirael_utils::prelude::debug;
@@ -48,7 +48,7 @@ impl Parser<'_> {
 
       return None;
     }
-    Some(self.parse_path())
+    Some(self.parse_path(PathParsingContext::ImportOrMod))
   }
 
   pub(crate) fn parse_item(&mut self) -> Option<Item> {

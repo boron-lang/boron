@@ -940,7 +940,7 @@ impl<'a> ResolveVisitor<'a> {
           let name = p.segments[0].identifier.text();
 
           if let Some(kind) = BuiltInKind::try_constructing(&name) {
-            self.resolver().record_comptime_builtin(callee.id, kind);
+            self.resolver().record_comptime_builtin(expr.id, kind);
           } else {
             self.resolve_expr(callee);
           }
