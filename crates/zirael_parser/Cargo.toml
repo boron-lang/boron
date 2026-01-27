@@ -14,7 +14,7 @@ zirael_diagnostic_macro = { workspace = true }
 zirael_source = { workspace = true }
 stringcase = "0.4.0"
 dashmap = { workspace = true }
-log = "0.4.29"
+zirael_target = { workspace = true }
 
 [lints]
 workspace = true

@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use zirael_diagnostics::{DiagnosticCtx, DiagnosticWriter};
 use zirael_source::prelude::{SourceFileId, Sources};
+use zirael_target::target::Target;
 
 struct GraphWithMap {
   graph: Mutex<DiGraph<SourceFileId, ()>>,
@@ -47,6 +48,7 @@ pub struct Session {
   config: ProjectConfig,
   dcx: DiagnosticCtx,
   module_graph: ModuleGraph,
+  target: Target,
 
   is_test: bool,
 }
@@ -68,7 +70,12 @@ impl Session {
       config,
       is_test,
       module_graph: ModuleGraph::new(),
+      target: Target::host(),
     }
+  }
+
+  pub fn target(&self) -> &Target {
+    &self.target
   }
 
   pub fn config(&self) -> &ProjectConfig {

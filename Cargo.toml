@@ -31,7 +31,7 @@ thiserror = "2.0.17"
 which = "8.0.0"
 yansi = "1.0.1"
 petgraph = "0.8.3"
-
+strum = { version = "0.27", features = ["derive"] }
 clap = { version = "4.5.41", features = ["derive"] }
 lasso = { version = "0.7.3", features = ["multi-threaded"] }
 serde = { version = "1.0.219", features = ["derive"] }
@@ -47,6 +47,7 @@ zirael_source = { path = "crates/zirael_source" }
 zirael_utils = { path = "crates/zirael_utils" }
 zirael_hir = { path = "crates/zirael_hir" }
 zirael_analysis = { path = "crates/zirael_analysis" }
+zirael_target = { path = "crates/zirael_target" }
 
 [workspace.lints.rust]
 unsafe_code = "deny"

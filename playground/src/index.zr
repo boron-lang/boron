@@ -1,16 +1,26 @@
+mod vec;
+import vec from vec;
+
 func identity<T>(value: T) -> T {
     value
 }
 
-//comptime func square(a: i32) -> i32 {
-//    return a * a;
-//}
-
-mod vec;
-
-import vec from vec;
-
 func main() {
-    var value = vec::Vec2 { .x = 10.0, .y = 20.0 };
-    var size = sizeOf!(vec::Vec2)
+    // Signed integers
+    var size_i8 = sizeOf!(i8);
+    var size_i16 = sizeOf!(i16);
+    var size_i32 = sizeOf!(i32);
+    var size_i64 = sizeOf!(i64);
+    var size_i128 = sizeOf!(i128);
+
+    // Unsigned integers
+    var size_u8 = sizeOf!(u8);
+    var size_u16 = sizeOf!(u16);
+    var size_u32 = sizeOf!(u32);
+    var size_u64 = sizeOf!(u64);
+    var size_u128 = sizeOf!(u128);
+
+    // Other types
+    var size_char = sizeOf!(char);
+    var size_bool = sizeOf!(bool);
 }

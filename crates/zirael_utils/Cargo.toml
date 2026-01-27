@@ -21,6 +21,7 @@ zirael_source = { workspace = true }
 zirael_diagnostics = { workspace = true }
 petgraph = { workspace = true }
 dashmap = { workspace = true }
+zirael_target = { workspace = true }
 
 [lints]
 workspace = true
