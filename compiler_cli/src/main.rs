@@ -1,6 +1,6 @@
 use crate::cli::try_cli;
 use std::process::exit;
-use zirael_core::prelude::*;
+use boron_core::prelude::*;
 
 mod cli;
 

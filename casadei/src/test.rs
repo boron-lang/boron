@@ -3,9 +3,9 @@ use color_eyre::Result;
 use itertools::Itertools;
 use std::env;
 use std::path::PathBuf;
-use zirael_core::prelude::fs::read_to_string;
-use zirael_core::prelude::strip_same_root;
-use zirael_source::new_id;
+use boron_core::prelude::fs::read_to_string;
+use boron_core::prelude::strip_same_root;
+use boron_source::new_id;
 
 new_id!(TestId);
 

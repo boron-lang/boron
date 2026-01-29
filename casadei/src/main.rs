@@ -17,8 +17,8 @@ use std::io::{Write, stderr};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Instant;
-use zirael_core::prelude::{Colorize, canonicalize_with_strip};
-use zirael_core::vars::FILE_EXTENSION;
+use boron_core::prelude::{Colorize, canonicalize_with_strip};
+use boron_core::vars::FILE_EXTENSION;
 
 fn main() -> color_eyre::Result<()> {
   color_eyre::install()?;
@@ -110,7 +110,7 @@ fn build_compiler() {
   let mut spinner = Spinner::new(Spinners::Aesthetic, "Building compiler".to_string());
 
   let output =
-    Command::new("cargo").arg("build").arg("-p").arg("zirael").arg("--release").output();
+    Command::new("cargo").arg("build").arg("-p").arg("boron").arg("--release").output();
 
   match output {
     Ok(output) if output.status.success() => {

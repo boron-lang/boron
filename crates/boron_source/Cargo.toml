@@ -1,0 +1,15 @@
+[package]
+name = "boron_source"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "boron shared source/span utilities"
+
+[dependencies]
+dashmap = { workspace = true }
+parking_lot = { workspace = true }
+paste = "1.0.15"
+
+[lints]
+workspace = true

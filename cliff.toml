@@ -2,7 +2,7 @@
 
 [remote.github]
 owner = "malezjaa"
-repo = "zirael"
+repo = "boron"
 
 [changelog]
 # template for the changelog header

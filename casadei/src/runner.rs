@@ -6,7 +6,7 @@ use itertools::Itertools;
 use parking_lot::Mutex;
 use std::io::Cursor;
 use std::sync::Arc;
-use zirael_core::prelude::*;
+use boron_core::prelude::*;
 
 pub struct TestRunner<'tests> {
   pub tests: &'tests Vec<Test>,

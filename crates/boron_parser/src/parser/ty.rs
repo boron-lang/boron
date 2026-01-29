@@ -1,0 +1,325 @@
+use crate::parser::Parser;
+use crate::parser::errors::{
+  ConstAloneInType, ExpectedIdentifierInGeneric, ExpectedType, ExpectedTypePathForBound,
+  TrailingPlusInTypeBound,
+};
+use crate::{ArrayType, FunctionType, GenericParam, GenericParams, Mutability, NodeId, OptionalType, PathParsingContext, PointerType, PrimitiveKind, PrimitiveType, TokenType, TupleType, Type, TypeBound, UnitType};
+use boron_source::span::Span;
+
+impl Parser<'_> {
+  pub fn parse_type(&mut self) -> Type {
+    let start = self.current_span();
+    let mut ty = self.parse_type_inner(start);
+
+    while self.eat(TokenType::Question) {
+      let span = self.span_from(start);
+      ty = Type::Optional(OptionalType { id: NodeId::new(), inner: Box::new(ty), span });
+    }
+
+    ty
+  }
+
+  fn parse_type_inner(&mut self, start: Span) -> Type {
+    if self.eat(TokenType::Star) {
+      return self.parse_pointer_type(start);
+    }
+
+    if self.eat(TokenType::Const) {
+      let const_span = self.previous().span;
+
+      return if self.peek().kind == TokenType::Func {
+        self.advance();
+        self.parse_function_type(true, start)
+      } else {
+        self.emit(ConstAloneInType { span: const_span });
+        self.parse_type()
+      };
+    }
+
+    if self.eat(TokenType::Func) {
+      return self.parse_function_type(false, start);
+    }
+
+    match self.peek().kind.clone() {
+      TokenType::LeftParen => {
+        self.advance();
+        self.parse_parenthesized_type(start)
+      }
+      TokenType::LeftBracket => {
+        self.advance();
+        self.parse_array_type(start)
+      }
+      TokenType::Identifier(name) => self.parse_identifier_type(start, name),
+      TokenType::Package | TokenType::SelfValue | TokenType::Super => {
+        self.parse_path_type()
+      }
+      _ => {
+        self.emit(ExpectedType { span: self.current_span() });
+        Type::Invalid
+      }
+    }
+  }
+
+  fn parse_pointer_type(&mut self, start: Span) -> Type {
+    let mutability = self.parse_mutability();
+    let inner = Box::new(self.parse_type());
+
+    Type::Pointer(PointerType {
+      id: NodeId::new(),
+      mutability,
+      inner,
+      span: self.span_from(start),
+    })
+  }
+
+  fn parse_parenthesized_type(&mut self, start: Span) -> Type {
+    if self.eat(TokenType::RightParen) {
+      return Type::Unit(UnitType { id: NodeId::new(), span: self.span_from(start) });
+    }
+
+    let first = self.parse_type();
+
+    if self.eat(TokenType::Comma) {
+      let mut elements = vec![first];
+
+      while !self.check(TokenType::RightParen) && !self.is_at_end() {
+        elements.push(self.parse_type());
+
+        if !self.eat(TokenType::Comma) {
+          break;
+        }
+      }
+
+      self.expect(TokenType::RightParen, "to close tuple type");
+
+      return Type::Tuple(TupleType {
+        id: NodeId::new(),
+        elements,
+        span: self.span_from(start),
+      });
+    }
+
+    self.expect(TokenType::RightParen, "to close type");
+    first
+  }
+
+  fn parse_array_type(&mut self, start: Span) -> Type {
+    let element = Box::new(self.parse_type());
+
+    if self.expect(TokenType::Semicolon, "after array element type").is_none() {
+      self.advance_until_one_of(&[TokenType::RightBracket]);
+    }
+
+    let size = self.parse_const_expr();
+
+    self.expect(TokenType::RightBracket, "to close array type");
+
+    Type::Array(ArrayType {
+      id: NodeId::new(),
+      element,
+      size,
+      span: self.span_from(start),
+    })
+  }
+
+  fn parse_identifier_type(&mut self, start: Span, name: String) -> Type {
+    if let Some(kind) = Self::primitive_kind(&name) {
+      let next = self.peek_ahead(1).map(|t| t.kind.clone());
+
+      if !matches!(next, Some(TokenType::ColonColon | TokenType::Lt)) {
+        let span = self.advance().span;
+
+        return Type::Primitive(PrimitiveType { id: NodeId::new(), kind, span });
+      }
+    }
+
+    self.parse_path_type()
+  }
+
+  fn parse_path_type(&mut self) -> Type {
+    let path = self.parse_path(PathParsingContext::Normal);
+    Type::Path(path)
+  }
+
+  fn parse_function_type(&mut self, is_comptime: bool, span: Span) -> Type {
+    let mut params = Vec::new();
+
+    if self.expect(TokenType::LeftParen, "after func in function type").is_some() {
+      if !self.check(TokenType::RightParen) {
+        loop {
+          params.push(self.parse_type());
+
+          if self.eat(TokenType::Comma) {
+            continue;
+          }
+
+          break;
+        }
+      }
+
+      self.expect(TokenType::RightParen, "to close function type parameters");
+    }
+
+    let return_type = if self.eat(TokenType::Arrow) {
+      Box::new(self.parse_type())
+    } else {
+      Box::new(Type::Unit(UnitType { id: NodeId::new(), span: self.span_from(span) }))
+    };
+
+    Type::Function(FunctionType {
+      id: NodeId::new(),
+      is_comptime,
+      params,
+      return_type,
+      span: self.span_from(span),
+    })
+  }
+
+  fn parse_mutability(&mut self) -> Mutability {
+    if self.eat(TokenType::Const) {
+      Mutability::Const
+    } else if self.eat(TokenType::Mut) {
+      Mutability::Mut
+    } else {
+      Mutability::Const
+    }
+  }
+
+  fn primitive_kind(name: &str) -> Option<PrimitiveKind> {
+    match name {
+      "i8" => Some(PrimitiveKind::I8),
+      "i16" => Some(PrimitiveKind::I16),
+      "i32" => Some(PrimitiveKind::I32),
+      "i64" => Some(PrimitiveKind::I64),
+      "i128" => Some(PrimitiveKind::I128),
+      "isize" => Some(PrimitiveKind::ISize),
+      "u8" => Some(PrimitiveKind::U8),
+      "u16" => Some(PrimitiveKind::U16),
+      "u32" => Some(PrimitiveKind::U32),
+      "u64" => Some(PrimitiveKind::U64),
+      "u128" => Some(PrimitiveKind::U128),
+      "usize" => Some(PrimitiveKind::USize),
+      "f32" => Some(PrimitiveKind::F32),
+      "f64" => Some(PrimitiveKind::F64),
+      "bool" => Some(PrimitiveKind::Bool),
+      "char" => Some(PrimitiveKind::Char),
+      _ => None,
+    }
+  }
+
+  pub fn parse_type_bounds(&mut self) -> Vec<TypeBound> {
+    let mut bounds = vec![];
+
+    loop {
+      if self.is_identifier() {
+        let span = self.peek().span;
+        let path = self.parse_path(PathParsingContext::Normal);
+
+        bounds.push(TypeBound { id: NodeId::new(), span: self.span_from(span), path });
+      } else {
+        self.emit(ExpectedTypePathForBound {
+          span: self.peek().span,
+          found: self.peek().kind.clone(),
+        });
+        self.advance_until_one_of(&[TokenType::Comma, TokenType::Gt]);
+      }
+
+      if self.check(TokenType::Plus) {
+        self.advance();
+        if self.check(TokenType::Gt) {
+          self.emit(TrailingPlusInTypeBound { span: self.peek().span });
+          break;
+        }
+      } else {
+        break;
+      }
+    }
+
+    bounds
+  }
+
+  pub fn parse_generic_arguments(&mut self) -> (Span, Vec<Type>) {
+    let start = self.peek().span;
+    if !self.check(TokenType::Lt) {
+      return (Default::default(), vec![]);
+    }
+    let mut args = vec![];
+    self.advance();
+
+    loop {
+      if self.check(TokenType::Gt) {
+        break;
+      }
+
+      let ty = self.parse_type();
+
+      if matches!(ty, Type::Invalid) {
+        self.advance_until_one_of(&[TokenType::Comma, TokenType::Gt]);
+        if self.check(TokenType::Gt) {
+          break;
+        }
+        if self.check(TokenType::Comma) {
+          self.advance();
+        }
+        continue;
+      }
+
+      args.push(ty);
+
+      if self.check(TokenType::Comma) {
+        self.advance();
+      } else {
+        break;
+      }
+    }
+
+    self.expect(TokenType::Gt, "to end generic arguments list");
+    (self.span_from(start), args)
+  }
+
+  pub fn parse_generic_parameters(&mut self) -> Option<GenericParams> {
+    if !self.check(TokenType::Lt) {
+      return None;
+    }
+    let span = self.peek().span;
+    let mut generics = vec![];
+    self.advance();
+
+    loop {
+      if self.is_identifier() {
+        let name = self.parse_identifier();
+        let bounds =
+          if self.eat(TokenType::Colon) { self.parse_type_bounds() } else { vec![] };
+
+        generics.push(GenericParam {
+          id: NodeId::new(),
+          name,
+          bounds,
+          span: self.span_from(span),
+        });
+      } else {
+        self.emit(ExpectedIdentifierInGeneric {
+          span: self.peek().span,
+          found: self.peek().kind.clone(),
+        });
+        self.advance_until_one_of(&[TokenType::Comma, TokenType::Gt]);
+      }
+
+      if self.check(TokenType::Comma) {
+        self.advance();
+        if self.check(TokenType::Gt) {
+          break;
+        }
+      } else {
+        break;
+      }
+    }
+
+    self.expect(TokenType::Gt, "to end generic parameters list");
+    Some(GenericParams {
+      id: NodeId::new(),
+      params: generics,
+      span: self.span_from(span),
+    })
+  }
+}

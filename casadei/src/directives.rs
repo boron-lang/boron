@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use zirael_core::prelude::PackageType;
+use boron_core::prelude::PackageType;
 
 #[derive(Clone, Debug)]
 pub enum Directive {

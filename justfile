@@ -4,7 +4,7 @@ set windows-shell := ["powershell"]
 set shell := ["bash", "-cu"]
 
 _default:
-    @just --list -u 
+    @just --list -u
 
 fix:
     cargo clippy \
@@ -25,10 +25,10 @@ fix:
     git status
 
 playground args='':
-    cargo run -p zirael playground/test.zr {{ args }} --name playground -o playground/build --type binary
+    cargo run -p boron playground/test.zr {{ args }} --name playground -o playground/build --type binary
 
 build-std args='':
-    cargo run -p zirael std/src/lib.zr {{ args }} --name std -o std/build --type library
+    cargo run -p boron std/src/lib.zr {{ args }} --name std -o std/build --type library
 
 check-playground args='':
-    cargo run -p zirael playground/src/index.zr {{ args }} --name std -o playground/build --type library
+    cargo run -p boron playground/src/index.zr {{ args }} --name std -o playground/build --type library

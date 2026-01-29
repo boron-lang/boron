@@ -9,7 +9,7 @@ resolver = "2"
 [workspace.package]
 version = "0.1.0"
 license = "MIT"
-repository = "https://github.com/malezjaa/zirael"
+repository = "https://github.com/malezjaa/boron"
 edition = "2024"
 
 [workspace.dependencies]
@@ -36,18 +36,18 @@ clap = { version = "4.5.41", features = ["derive"] }
 lasso = { version = "0.7.3", features = ["multi-threaded"] }
 serde = { version = "1.0.219", features = ["derive"] }
 
-zirael_c_compiler = { path = "crates/zirael_c_compiler" }
-zirael_cli = { path = "crates/zirael_cli" }
-zirael_core = { path = "crates/zirael_core" }
-zirael_diagnostic_macro = { path = "crates/zirael_diagnostic_macro" }
-zirael_diagnostics = { path = "crates/zirael_diagnostics" }
-zirael_parser = { path = "crates/zirael_parser" }
-zirael_resolver = { path = "crates/zirael_resolver" }
-zirael_source = { path = "crates/zirael_source" }
-zirael_utils = { path = "crates/zirael_utils" }
-zirael_hir = { path = "crates/zirael_hir" }
-zirael_analysis = { path = "crates/zirael_analysis" }
-zirael_target = { path = "crates/zirael_target" }
+boron_c_compiler = { path = "crates/boron_c_compiler" }
+boron_cli = { path = "crates/boron_cli" }
+boron_core = { path = "crates/boron_core" }
+boron_diagnostic_macro = { path = "crates/boron_diagnostic_macro" }
+boron_diagnostics = { path = "crates/boron_diagnostics" }
+boron_parser = { path = "crates/boron_parser" }
+boron_resolver = { path = "crates/boron_resolver" }
+boron_source = { path = "crates/boron_source" }
+boron_utils = { path = "crates/boron_utils" }
+boron_hir = { path = "crates/boron_hir" }
+boron_analysis = { path = "crates/boron_analysis" }
+boron_target = { path = "crates/boron_target" }
 
 [workspace.lints.rust]
 unsafe_code = "deny"

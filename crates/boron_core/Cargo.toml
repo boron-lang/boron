@@ -1,0 +1,22 @@
+[package]
+name = "boron_core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "boron Core"
+
+[dependencies]
+boron_parser = { workspace = true }
+boron_resolver = { workspace = true }
+boron_hir = { workspace = true }
+boron_utils = { workspace = true }
+boron_diagnostics = { workspace = true }
+anyhow = { workspace = true }
+boron_c_compiler = { workspace = true }
+fs-err = { workspace = true }
+boron_source = { workspace = true }
+boron_analysis = { workspace = true }
+
+[lints]
+workspace = true

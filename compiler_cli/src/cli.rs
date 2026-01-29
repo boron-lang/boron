@@ -2,9 +2,9 @@ use clap::Parser as _;
 use std::io::{Cursor, Write as _, stderr};
 use std::sync::Arc;
 use std::time::Instant;
-use zirael_cli::Cli;
-use zirael_cli::logger::setup_logger;
-use zirael_core::prelude::*;
+use boron_cli::Cli;
+use boron_cli::logger::setup_logger;
+use boron_core::prelude::*;
 
 pub fn try_cli() -> Result<()> {
   let instant = Instant::now();

@@ -128,6 +128,182 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "812e12b5285cc515a9c72a5c1d3b6d46a19dac5acfef5265968c166106e31dd3"
 
 [[package]]
+name = "boron"
+version = "0.1.0"
+dependencies = [
+ "boron_cli",
+ "boron_core",
+ "clap",
+]
+
+[[package]]
+name = "boron_analysis"
+version = "0.1.0"
+dependencies = [
+ "boron_diagnostic_macro",
+ "boron_diagnostics",
+ "boron_hir",
+ "boron_parser",
+ "boron_resolver",
+ "boron_source",
+ "boron_utils",
+ "dashmap 7.0.0-rc2",
+ "num-bigint",
+ "num-traits",
+ "once_cell",
+ "parking_lot",
+]
+
+[[package]]
+name = "boron_c_compiler"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "boron_utils",
+ "fs-err",
+ "indicatif",
+ "log",
+ "serde",
+ "thiserror",
+ "which",
+]
+
+[[package]]
+name = "boron_cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "boron_diagnostics",
+ "boron_utils",
+ "clap",
+ "colored",
+ "env_logger",
+ "log",
+]
+
+[[package]]
+name = "boron_core"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "boron_analysis",
+ "boron_c_compiler",
+ "boron_diagnostics",
+ "boron_hir",
+ "boron_parser",
+ "boron_resolver",
+ "boron_source",
+ "boron_utils",
+ "fs-err",
+]
+
+[[package]]
+name = "boron_diagnostic_macro"
+version = "0.1.0"
+dependencies = [
+ "boron_diagnostics",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.104",
+ "thiserror",
+]
+
+[[package]]
+name = "boron_diagnostics"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "boron_source",
+ "dashmap 7.0.0-rc2",
+ "derivative",
+ "generational-arena",
+ "log",
+ "parking_lot",
+ "unicode-width",
+ "yansi",
+]
+
+[[package]]
+name = "boron_hir"
+version = "0.1.0"
+dependencies = [
+ "boron_diagnostics",
+ "boron_parser",
+ "boron_resolver",
+ "boron_source",
+ "boron_utils",
+ "dashmap 7.0.0-rc2",
+ "itertools",
+]
+
+[[package]]
+name = "boron_parser"
+version = "0.1.0"
+dependencies = [
+ "boron_diagnostic_macro",
+ "boron_diagnostics",
+ "boron_source",
+ "boron_target",
+ "boron_utils",
+ "dashmap 7.0.0-rc2",
+ "stringcase",
+ "unicode-normalization",
+ "unicode-xid",
+]
+
+[[package]]
+name = "boron_resolver"
+version = "0.1.0"
+dependencies = [
+ "boron_diagnostic_macro",
+ "boron_diagnostics",
+ "boron_parser",
+ "boron_source",
+ "boron_utils",
+ "dashmap 7.0.0-rc2",
+ "parking_lot",
+ "petgraph",
+ "thiserror",
+]
+
+[[package]]
+name = "boron_source"
+version = "0.1.0"
+dependencies = [
+ "dashmap 7.0.0-rc2",
+ "parking_lot",
+ "paste",
+]
+
+[[package]]
+name = "boron_target"
+version = "0.1.0"
+dependencies = [
+ "strum 0.27.2",
+]
+
+[[package]]
+name = "boron_utils"
+version = "0.1.0"
+dependencies = [
+ "anstyle",
+ "anyhow",
+ "boron_diagnostics",
+ "boron_source",
+ "boron_target",
+ "colored",
+ "dashmap 7.0.0-rc2",
+ "fs-err",
+ "lasso",
+ "log",
+ "parking_lot",
+ "petgraph",
+ "rayon",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -137,6 +313,10 @@ checksum = "46c5e41b57b8bba42a04676d81cb89e9ee8e859a1a66f80a5a72e1cb76b34d43"
 name = "casadei"
 version = "0.1.0"
 dependencies = [
+ "boron_cli",
+ "boron_core",
+ "boron_diagnostics",
+ "boron_source",
  "color-eyre",
  "glob",
  "indicatif",
@@ -144,10 +324,6 @@ dependencies = [
  "log",
  "parking_lot",
  "spinners",
- "zirael_cli",
- "zirael_core",
- "zirael_diagnostics",
- "zirael_source",
 ]
 
 [[package]]
@@ -1347,180 +1523,4 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.104",
-]
-
-[[package]]
-name = "zirael"
-version = "0.1.0"
-dependencies = [
- "clap",
- "zirael_cli",
- "zirael_core",
-]
-
-[[package]]
-name = "zirael_analysis"
-version = "0.1.0"
-dependencies = [
- "dashmap 7.0.0-rc2",
- "num-bigint",
- "num-traits",
- "once_cell",
- "parking_lot",
- "zirael_diagnostic_macro",
- "zirael_diagnostics",
- "zirael_hir",
- "zirael_parser",
- "zirael_resolver",
- "zirael_source",
- "zirael_utils",
-]
-
-[[package]]
-name = "zirael_c_compiler"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "fs-err",
- "indicatif",
- "log",
- "serde",
- "thiserror",
- "which",
- "zirael_utils",
-]
-
-[[package]]
-name = "zirael_cli"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "colored",
- "env_logger",
- "log",
- "zirael_diagnostics",
- "zirael_utils",
-]
-
-[[package]]
-name = "zirael_core"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "fs-err",
- "zirael_analysis",
- "zirael_c_compiler",
- "zirael_diagnostics",
- "zirael_hir",
- "zirael_parser",
- "zirael_resolver",
- "zirael_source",
- "zirael_utils",
-]
-
-[[package]]
-name = "zirael_diagnostic_macro"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.104",
- "thiserror",
- "zirael_diagnostics",
-]
-
-[[package]]
-name = "zirael_diagnostics"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "dashmap 7.0.0-rc2",
- "derivative",
- "generational-arena",
- "log",
- "parking_lot",
- "unicode-width",
- "yansi",
- "zirael_source",
-]
-
-[[package]]
-name = "zirael_hir"
-version = "0.1.0"
-dependencies = [
- "dashmap 7.0.0-rc2",
- "itertools",
- "zirael_diagnostics",
- "zirael_parser",
- "zirael_resolver",
- "zirael_source",
- "zirael_utils",
-]
-
-[[package]]
-name = "zirael_parser"
-version = "0.1.0"
-dependencies = [
- "dashmap 7.0.0-rc2",
- "stringcase",
- "unicode-normalization",
- "unicode-xid",
- "zirael_diagnostic_macro",
- "zirael_diagnostics",
- "zirael_source",
- "zirael_target",
- "zirael_utils",
-]
-
-[[package]]
-name = "zirael_resolver"
-version = "0.1.0"
-dependencies = [
- "dashmap 7.0.0-rc2",
- "parking_lot",
- "petgraph",
- "thiserror",
- "zirael_diagnostic_macro",
- "zirael_diagnostics",
- "zirael_parser",
- "zirael_source",
- "zirael_utils",
-]
-
-[[package]]
-name = "zirael_source"
-version = "0.1.0"
-dependencies = [
- "dashmap 7.0.0-rc2",
- "parking_lot",
- "paste",
-]
-
-[[package]]
-name = "zirael_target"
-version = "0.1.0"
-dependencies = [
- "strum 0.27.2",
-]
-
-[[package]]
-name = "zirael_utils"
-version = "0.1.0"
-dependencies = [
- "anstyle",
- "anyhow",
- "colored",
- "dashmap 7.0.0-rc2",
- "fs-err",
- "lasso",
- "log",
- "parking_lot",
- "petgraph",
- "rayon",
- "serde",
- "thiserror",
- "zirael_diagnostics",
- "zirael_source",
- "zirael_target",
 ]
