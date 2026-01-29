@@ -2,6 +2,7 @@ use crate::ids::HirId;
 use crate::item::{Const, Enum, Function, Struct};
 
 use dashmap::DashMap;
+use dashmap::mapref::multiple::RefMulti;
 use dashmap::mapref::one::Ref;
 use zirael_parser::NodeId;
 use zirael_resolver::DefId;
@@ -47,6 +48,10 @@ impl Hir {
   
   pub fn hir_to_node(&self, hir: &HirId) -> Option<NodeId> {
     self.node_to_hir.iter().find(|r| r.value() == hir).map(|r| r.key().clone())
+  }
+  
+  pub fn is_struct_child(&self, id: &DefId) -> Option<RefMulti<'_, DefId, Struct>> {
+    self.structs.iter().find(|s| s.items.contains(id))
   }
 }
 

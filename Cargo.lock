@@ -1372,6 +1372,7 @@ dependencies = [
  "zirael_hir",
  "zirael_parser",
  "zirael_resolver",
+ "zirael_source",
  "zirael_utils",
 ]
 

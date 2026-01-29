@@ -1,4 +1,6 @@
+use crate::errors::CannotInferType;
 use crate::{InferTy, TyChecker, TyVar, TyVarKind, TypeScheme};
+use zirael_hir::TyKind::Infer;
 use zirael_parser::PrimitiveKind;
 
 impl TyChecker<'_> {
@@ -24,33 +26,6 @@ impl TyChecker<'_> {
       let defaulted = self.default_ty_vars(resolved);
       self.table.field_types.insert(key, defaulted);
     }
-
-    let method_entries: Vec<_> = self
-      .table
-      .method_types
-      .iter()
-      .map(|e| (e.key().clone(), e.value().clone()))
-      .collect();
-
-    for (key, scheme) in method_entries {
-      let finalized_scheme = self.finalize_scheme(scheme);
-      self.table.method_types.insert(key, finalized_scheme);
-    }
-
-    let def_entries: Vec<_> =
-      self.table.def_types.iter().map(|e| (*e.key(), e.value().clone())).collect();
-
-    for (def_id, scheme) in def_entries {
-      let finalized_scheme = self.finalize_scheme(scheme);
-      self.table.def_types.insert(def_id, finalized_scheme);
-    }
-  }
-
-  pub fn finalize_scheme(&self, scheme: TypeScheme) -> TypeScheme {
-    let resolved = self.infcx.resolve(&scheme.ty);
-    // For polymorphic type variables in the scheme, we keep them as-is
-    let defaulted = self.default_ty_vars_except(resolved, &scheme.vars);
-    TypeScheme { vars: scheme.vars, ty: defaulted }
   }
 
   /// Default unconstrained type variables to concrete types.
@@ -61,6 +36,7 @@ impl TyChecker<'_> {
 
   pub fn default_ty_vars_except(&self, ty: InferTy, except: &[TyVar]) -> InferTy {
     match ty {
+      InferTy::Generic(_) => ty,
       InferTy::Var(v, span) => {
         if except.contains(&v) {
           InferTy::Var(v, span)
@@ -68,7 +44,7 @@ impl TyChecker<'_> {
           match self.infcx.var_kind(v) {
             TyVarKind::Integer => InferTy::Primitive(PrimitiveKind::I32, span),
             TyVarKind::Float => InferTy::Primitive(PrimitiveKind::F64, span),
-            TyVarKind::General => InferTy::Err(span),
+            TyVarKind::General => InferTy::Var(v, span),
           }
         }
       }
@@ -112,4 +88,21 @@ impl TyChecker<'_> {
       | InferTy::Err(_) => ty,
     }
   }
+
+  pub fn has_unresolved_generics(&self, ty: &InferTy) -> bool {
+    match ty {
+      InferTy::Generic(_) => true,
+      InferTy::Adt { args, .. } => args.iter().any(|t| self.has_unresolved_generics(t)),
+      InferTy::Ptr { ty, .. } => self.has_unresolved_generics(ty),
+      InferTy::Optional(ty, _) => self.has_unresolved_generics(ty),
+      InferTy::Array { ty, .. } => self.has_unresolved_generics(ty),
+      InferTy::Slice(ty, _) => self.has_unresolved_generics(ty),
+      InferTy::Tuple(tys, _) => tys.iter().any(|t| self.has_unresolved_generics(t)),
+      InferTy::Fn { params, ret, .. } => {
+        params.iter().any(|t| self.has_unresolved_generics(t)) || self.has_unresolved_generics(ret)
+      }
+      _ => false,
+    }
+  }
+
 }

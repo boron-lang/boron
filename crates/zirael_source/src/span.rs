@@ -125,6 +125,6 @@ impl Default for Span {
 
 impl Debug for Span {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "Span({}..{} - {:?})", self.start, self.end, self.file_id)
+    write!(f, "{}..{}", self.start, self.end)
   }
 }

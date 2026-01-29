@@ -11,6 +11,7 @@ zirael_hir = { workspace = true }
 zirael_parser = { workspace = true }
 zirael_resolver = { workspace = true }
 zirael_utils = { workspace = true }
+zirael_source = { workspace = true }
 dashmap = { workspace = true }
 parking_lot = { workspace = true }
 num-bigint = "0.4.6"

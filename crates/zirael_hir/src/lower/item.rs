@@ -229,7 +229,7 @@ impl LoweringContext<'_> {
 
     Param {
       hir_id: self.next_hir_id(),
-      def_id: id.unwrap_or(zirael_resolver::DefId(0)),
+      def_id: id.unwrap_or(DefId(0)),
       kind,
       span,
     }

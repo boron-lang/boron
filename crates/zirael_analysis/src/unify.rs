@@ -1,4 +1,5 @@
-use crate::{InferTy, TyChecker, TyVarKind, UnifyError, UnifyResult};
+use crate::{InferTy, TyChecker, TyVar, TyVarKind};
+use zirael_parser::Mutability;
 
 impl TyChecker<'_> {
   #[must_use = "the caller should handle the result"]
@@ -162,5 +163,83 @@ impl TyChecker<'_> {
 
       _ => UnifyResult::Err(UnifyError::Mismatch { expected: a, found: b }),
     }
+  }
+}
+
+#[derive(Debug, Clone)]
+pub enum UnifyResult {
+  Ok,
+  Err(UnifyError),
+}
+
+impl UnifyResult {
+  pub fn is_ok(&self) -> bool {
+    matches!(self, Self::Ok)
+  }
+
+  pub fn is_err(&self) -> bool {
+    matches!(self, Self::Err(_))
+  }
+}
+
+#[derive(Debug, Clone)]
+pub enum UnifyError {
+  /// Two concrete types don't match.
+  Mismatch { expected: InferTy, found: InferTy },
+
+  /// Occurs check failed (infinite type).
+  OccursCheck { var: TyVar, ty: InferTy },
+
+  /// Arity mismatch (e.g., tuple or function parameter count).
+  ArityMismatch { expected: usize, found: usize },
+
+  /// Integer type variable couldn't unify with a non-integer type.
+  NotAnInteger { ty: InferTy },
+
+  /// Float type variable couldn't unify with a non-float type.
+  NotAFloat { ty: InferTy },
+
+  /// Mutability mismatch for pointers.
+  MutabilityMismatch { expected: Mutability, found: Mutability },
+
+  /// Array length mismatch.
+  ArrayLenMismatch { expected: usize, found: usize },
+
+  /// Incompatible type variable kinds (e.g., Integer vs Float).
+  IncompatibleKinds { kind1: TyVarKind, kind2: TyVarKind },
+}
+
+#[derive(Debug, Clone)]
+pub enum Expectation {
+  /// Infer freely.
+  None,
+  /// A specific type is expected.
+  ExpectHasType(InferTy),
+  /// A coercible type is acceptable.
+  Coercion(InferTy),
+}
+
+impl Expectation {
+  pub fn none() -> Self {
+    Self::None
+  }
+
+  pub fn has_type(ty: InferTy) -> Self {
+    Self::ExpectHasType(ty)
+  }
+
+  pub fn coercion(ty: InferTy) -> Self {
+    Self::Coercion(ty)
+  }
+
+  pub fn to_option(&self) -> Option<&InferTy> {
+    match self {
+      Self::None => None,
+      Self::ExpectHasType(ty) | Self::Coercion(ty) => Some(ty),
+    }
+  }
+
+  pub fn is_none(&self) -> bool {
+    matches!(self, Self::None)
   }
 }

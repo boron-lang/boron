@@ -8,8 +8,8 @@ use crate::interpreter::{
   Interpreter, InterpreterCache, InterpreterContext, InterpreterMode,
 };
 use crate::table::{InferCtx, TypeEnv, TypeTable};
-use crate::ty::{Expectation, InferTy, TyVar, TypeScheme};
-use crate::{UnifyError, UnifyResult};
+use crate::ty::{InferTy, TyVar, TypeScheme};
+use crate::unify::{Expectation, UnifyError, UnifyResult};
 use std::collections::HashMap;
 use zirael_diagnostics::DiagnosticCtx;
 use zirael_hir::expr::{ComptimeArg, FieldInit, PathExpr};
@@ -43,6 +43,7 @@ pub fn typeck_hir(hir: &Hir, ctx: &Context, resolver: &Resolver) -> TypeTable {
   }
 
   checker.finalize_types();
+  checker.debug_print_resolved_types();
   checker.table
 }
 
@@ -207,7 +208,7 @@ impl<'a> TyChecker<'a> {
     let ty = match &expr.kind {
       ExprKind::Literal(lit) => self.check_literal_with_span(lit, expr.span),
 
-      ExprKind::Path(path) => self.check_path(path, env),
+      ExprKind::Path(path) => self.check_path(path.def_id, env),
 
       ExprKind::Binary { op: _, lhs, rhs } => {
         let lhs_ty = self.check_expr(lhs, env, &Expectation::none());
@@ -475,18 +476,18 @@ impl<'a> TyChecker<'a> {
     }
   }
 
-  fn check_path(&self, path: &PathExpr, env: &TypeEnv) -> InferTy {
-    if let Some(cnst) = self.hir.get_const(path.def_id) {
+  pub fn check_path(&self, id: DefId, env: &TypeEnv) -> InferTy {
+    if let Some(cnst) = self.hir.get_const(id) {
       let _ = self
         .new_interpreter(InterpreterMode::Const, InterpreterContext::Const)
         .evaluate_const(&cnst);
     }
 
-    if let Some(ty) = env.lookup(path.def_id) {
+    if let Some(ty) = env.lookup(id) {
       return ty.clone();
     }
 
-    if let Some(scheme) = self.table.def_type(path.def_id) {
+    if let Some(scheme) = self.table.def_type(id) {
       return self.instantiate(&scheme);
     }
 
@@ -646,5 +647,36 @@ impl<'a> TyChecker<'a> {
         // TODO: Handle other patterns
       }
     }
+  }
+
+  pub fn debug_print_resolved_types(&self) {
+    eprintln!("\n=== Substitution Map ===");
+    for entry in self.infcx.substitution.iter() {
+      let var = entry.key();
+      let ty = entry.value();
+      eprintln!("  {:?} -> {:?}", var, ty);
+    }
+
+    eprintln!("\n=== Type Variable Kinds ===");
+    for entry in self.infcx.var_kinds.iter() {
+      let var = entry.key();
+      let kind = entry.value();
+      eprintln!("  {:?} => {:?}", var, kind);
+    }
+
+    eprintln!("\n=== Resolved Node Types ===");
+    for entry in self.table.node_types.iter() {
+      let hir_id = entry.key();
+      let ty = entry.value();
+      let resolved = self.infcx.resolve(ty);
+      eprintln!("  {:?} => {:?}", hir_id, self.format_type(&resolved));
+    }
+    eprintln!("\n=== Type Schemes ===");
+    for entry in self.table.def_types.iter() {
+      let def_id = entry.key();
+      let scheme = entry.value();
+      eprintln!("  {:?} => {:?}", def_id, scheme);
+    }
+    eprintln!();
   }
 }

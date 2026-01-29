@@ -1,26 +1,13 @@
-mod vec;
-import vec from vec;
+pub struct Vec2<T> {
+    x: T,
+    y: T,
 
-func identity<T>(value: T) -> T {
-    value
+    func new(x: T, y: T) -> Vec2<T> {
+        Vec2 { .x, .y }
+    }
 }
 
 func main() {
-    // Signed integers
-    var size_i8 = sizeOf!(i8);
-    var size_i16 = sizeOf!(i16);
-    var size_i32 = sizeOf!(i32);
-    var size_i64 = sizeOf!(i64);
-    var size_i128 = sizeOf!(i128);
-
-    // Unsigned integers
-    var size_u8 = sizeOf!(u8);
-    var size_u16 = sizeOf!(u16);
-    var size_u32 = sizeOf!(u32);
-    var size_u64 = sizeOf!(u64);
-    var size_u128 = sizeOf!(u128);
-
-    // Other types
-    var size_char = sizeOf!(char);
-    var size_bool = sizeOf!(bool);
+    var test = Vec2 { .x = 10.0, .y = 15.0 };
+    var x = Vec2 { .x = 10, .y = 15 };
 }

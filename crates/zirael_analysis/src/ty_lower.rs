@@ -1,7 +1,8 @@
 use crate::errors::ArrayLenNotANumber;
 use crate::interpreter::values::ConstValue;
 use crate::interpreter::{InterpreterContext, InterpreterMode};
-use crate::{InferTy, TyChecker, TyVar};
+use crate::ty::GenericId;
+use crate::{InferTy, TyChecker, TyVar, TypeEnv};
 use zirael_hir::ty::ArrayLen;
 use zirael_hir::{GenericParamKind, Generics, Ty, TyKind};
 use zirael_resolver::DefKind;
@@ -19,13 +20,17 @@ impl TyChecker<'_> {
           return InferTy::Var(var, ty.span);
         }
 
-        let infer_args: Vec<InferTy> = segments
+        self.check_path(*def_id, &TypeEnv::new());
+
+        let infer_args = segments
           .iter()
           .flat_map(|seg| seg.args.iter())
           .map(|t| self.lower_hir_ty(t))
           .collect();
+
         InferTy::Adt { def_id: *def_id, args: infer_args, span: ty.span }
       }
+
       TyKind::Ptr { mutability, ty: inner } => InferTy::Ptr {
         mutability: *mutability,
         ty: Box::new(self.lower_hir_ty(inner)),

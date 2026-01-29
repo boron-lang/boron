@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter};
+
 #[macro_export]
 macro_rules! new_id {
   ($name:ident) => {
@@ -16,6 +18,16 @@ macro_rules! new_id {
 
         pub fn dummy() -> Self {
           Self(usize::MAX - 1)
+        }
+
+        pub fn index(&self) -> usize {
+          self.0
+        }
+      }
+
+      impl ::std::fmt::Display for $name {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+          write!(f, "{}({})", stringify!($name), self.0)
         }
       }
     }

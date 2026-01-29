@@ -53,6 +53,15 @@ pub enum PointerWidth {
   Bits64,
 }
 
+impl PointerWidth {
+  pub fn size_bytes(&self) -> usize {
+    match self {
+      PointerWidth::Bits64 => 8,
+      PointerWidth::Bits32 => 4,
+    }
+  }
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, Debug, EnumString)]
 pub enum CCompiler {
   #[strum(serialize = "gcc")]

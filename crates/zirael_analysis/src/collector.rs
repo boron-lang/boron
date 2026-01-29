@@ -1,16 +1,28 @@
+use crate::ty::GenericId;
 use crate::{InferTy, TyChecker, TypeScheme};
-use zirael_hir::{Function, Param, ParamKind};
+use zirael_hir::{Function, GenericParamKind, Generics, Param, ParamKind};
+use zirael_source::span::Span;
 
 impl TyChecker<'_> {
   fn function_signature(&self, func: &Function) -> TypeScheme {
-    let ty_vars = self.register_generics(&func.generics);
+    let generics = if let Some(strukt) = self.hir.is_struct_child(&func.def_id) {
+      let mut generics = Generics { span: Span::dummy(), params: vec![] };
+      generics.params.extend(strukt.generics.params.clone());
+      generics.params.extend(func.generics.params.clone());
+
+      generics
+    } else {
+      func.generics.clone()
+    };
+
+    let generics = self.register_generics(&generics);
 
     let params = self.param_types(&func.params);
     let ret = self.lower_hir_ty(&func.return_type);
 
     let fn_ty = InferTy::Fn { params, ret: Box::new(ret), span: func.span };
 
-    TypeScheme { vars: ty_vars, ty: fn_ty }
+    TypeScheme { vars: generics, ty: fn_ty }
   }
 
   fn param_types(&self, params: &Vec<Param>) -> Vec<InferTy> {
@@ -36,7 +48,7 @@ impl TyChecker<'_> {
       let def_id = *entry.key();
       let strukt = entry.value();
 
-      let ty_vars = self.register_generics(&strukt.generics);
+      let generics = self.register_generics(&strukt.generics);
 
       for field in &strukt.fields {
         let field_ty = self.lower_hir_ty(&field.ty);
@@ -45,34 +57,20 @@ impl TyChecker<'_> {
 
       let struct_ty = InferTy::Adt {
         def_id,
-        args: ty_vars.iter().map(|&v| InferTy::Var(v, strukt.span)).collect(),
+        args: generics.iter().map(|&g| InferTy::Var(g, Span::default())).collect(),
         span: strukt.span,
       };
-      self
-        .table
-        .record_def_type(def_id, TypeScheme { vars: ty_vars.clone(), ty: struct_ty });
+
+      self.table.record_def_type(def_id, TypeScheme { vars: generics, ty: struct_ty });
     }
 
     for entry in &self.hir.enums {
-      let def_id = *entry.key();
-      let eenum = entry.value();
-
-      let ty_vars = self.register_generics(&eenum.generics);
-
-      let enum_ty = InferTy::Adt {
-        def_id,
-        args: ty_vars.iter().map(|&v| InferTy::Var(v, eenum.span)).collect(),
-        span: eenum.span,
-      };
-      self.table.record_def_type(def_id, TypeScheme { vars: ty_vars, ty: enum_ty });
-
-      // TODO: Record enum variant types
+      todo!()
     }
 
     for entry in &self.hir.consts {
       let def_id = *entry.key();
       let konst = entry.value();
-      self.infcx.clear_type_params();
       let ty = self.lower_hir_ty(&konst.ty);
       self.table.record_def_type(def_id, TypeScheme::mono(ty));
     }

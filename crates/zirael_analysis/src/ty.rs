@@ -1,23 +1,12 @@
 use std::fmt::{Display, Formatter};
 use zirael_parser::ast::types::{Mutability, PrimitiveKind};
 use zirael_resolver::DefId;
+use zirael_source::new_id;
 use zirael_utils::ident_table::Identifier;
 use zirael_utils::prelude::Span;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct TyVar(pub u32);
-
-impl TyVar {
-  pub fn new(id: u32) -> Self {
-    Self(id)
-  }
-}
-
-impl Display for TyVar {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "Type Variable {}", self.0)
-  }
-}
+new_id!(TyVar);
+new_id!(GenericId);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TyVarKind {
@@ -28,7 +17,6 @@ pub enum TyVarKind {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum InferTy {
-  Var(TyVar, Span),
   Primitive(PrimitiveKind, Span),
   Adt { def_id: DefId, args: Vec<InferTy>, span: Span },
   Ptr { mutability: Mutability, ty: Box<InferTy>, span: Span },
@@ -40,6 +28,8 @@ pub enum InferTy {
   Unit(Span),
   Never(Span),
   Param { def_id: DefId, name: Identifier, span: Span },
+  Var(TyVar, Span),
+  Generic(GenericId),
   Err(Span),
 }
 
@@ -59,6 +49,7 @@ impl InferTy {
       Self::Never(span) => *span,
       Self::Param { span, .. } => *span,
       Self::Err(span) => *span,
+      Self::Generic(..) => Span::dummy(),
     }
   }
 
@@ -75,7 +66,11 @@ impl InferTy {
       Self::Fn { params, ret, .. } => {
         params.iter().any(|t| t.has_vars()) || ret.has_vars()
       }
-      Self::Unit(_) | Self::Never(_) | Self::Param { .. } | Self::Err(_) => false,
+      Self::Unit(_)
+      | Self::Never(_)
+      | Self::Param { .. }
+      | Self::Generic(_)
+      | Self::Err(_) => false,
     }
   }
 
@@ -138,83 +133,5 @@ impl TypeScheme {
 
   pub fn is_mono(&self) -> bool {
     self.vars.is_empty()
-  }
-}
-
-#[derive(Debug, Clone)]
-pub enum UnifyResult {
-  Ok,
-  Err(UnifyError),
-}
-
-impl UnifyResult {
-  pub fn is_ok(&self) -> bool {
-    matches!(self, Self::Ok)
-  }
-
-  pub fn is_err(&self) -> bool {
-    matches!(self, Self::Err(_))
-  }
-}
-
-#[derive(Debug, Clone)]
-pub enum UnifyError {
-  /// Two concrete types don't match.
-  Mismatch { expected: InferTy, found: InferTy },
-
-  /// Occurs check failed (infinite type).
-  OccursCheck { var: TyVar, ty: InferTy },
-
-  /// Arity mismatch (e.g., tuple or function parameter count).
-  ArityMismatch { expected: usize, found: usize },
-
-  /// Integer type variable couldn't unify with a non-integer type.
-  NotAnInteger { ty: InferTy },
-
-  /// Float type variable couldn't unify with a non-float type.
-  NotAFloat { ty: InferTy },
-
-  /// Mutability mismatch for pointers.
-  MutabilityMismatch { expected: Mutability, found: Mutability },
-
-  /// Array length mismatch.
-  ArrayLenMismatch { expected: usize, found: usize },
-
-  /// Incompatible type variable kinds (e.g., Integer vs Float).
-  IncompatibleKinds { kind1: TyVarKind, kind2: TyVarKind },
-}
-
-#[derive(Debug, Clone)]
-pub enum Expectation {
-  /// Infer freely.
-  None,
-  /// A specific type is expected.
-  ExpectHasType(InferTy),
-  /// A coercible type is acceptable.
-  Coercion(InferTy),
-}
-
-impl Expectation {
-  pub fn none() -> Self {
-    Self::None
-  }
-
-  pub fn has_type(ty: InferTy) -> Self {
-    Self::ExpectHasType(ty)
-  }
-
-  pub fn coercion(ty: InferTy) -> Self {
-    Self::Coercion(ty)
-  }
-
-  pub fn to_option(&self) -> Option<&InferTy> {
-    match self {
-      Self::None => None,
-      Self::ExpectHasType(ty) | Self::Coercion(ty) => Some(ty),
-    }
-  }
-
-  pub fn is_none(&self) -> bool {
-    matches!(self, Self::None)
   }
 }

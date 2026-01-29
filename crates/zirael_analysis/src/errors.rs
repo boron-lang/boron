@@ -152,3 +152,11 @@ pub struct FuncArgMismatch {
   pub expected: String,
   pub found: String,
 }
+
+#[derive(Diagnostic)]
+#[error("cannot infer type for this expression")]
+#[code(TYPE_CHECKER_CANNOT_INFER_TYPE)]
+pub struct CannotInferType {
+  #[error("type must be known at this point")]
+  pub span: Span,
+}

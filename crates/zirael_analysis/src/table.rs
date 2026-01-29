@@ -1,7 +1,7 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::functions::FinalComptimeArg;
-use crate::ty::{InferTy, TyVar, TyVarKind, TypeScheme};
+use crate::ty::{GenericId, InferTy, TyVar, TyVarKind, TypeScheme};
 use dashmap::DashMap;
 use parking_lot::RwLock;
 use zirael_hir::HirId;
@@ -83,47 +83,19 @@ impl Default for TypeTable {
 
 #[derive(Debug)]
 pub struct InferCtx {
-  next_var: RwLock<u32>,
-
   pub(crate) var_kinds: DashMap<TyVar, TyVarKind>,
   /// maps type variables to their resolved types
   pub(crate) substitution: DashMap<TyVar, InferTy>,
   /// Maps type parameter `DefIds` to their type variables
   type_params: RwLock<HashMap<DefId, TyVar>>,
-  /// Constraint set for delayed unification
-  constraints: RwLock<Vec<Constraint>>,
-}
-
-/// A type constraint to be solved.
-#[derive(Debug, Clone)]
-pub struct Constraint {
-  pub kind: ConstraintKind,
-  pub span: Span,
-}
-
-#[derive(Debug, Clone)]
-pub enum ConstraintKind {
-  /// Two types must be equal: `T1 = T2`
-  Eq(InferTy, InferTy),
-
-  /// A type must be a subtype of another (for coercions)
-  Subtype { sub: InferTy, sup: InferTy },
-
-  /// A type must have a specific field
-  HasField { ty: InferTy, field: String, field_ty: InferTy },
-
-  /// A type must be callable with given arguments
-  Callable { callee: InferTy, args: Vec<InferTy>, ret: InferTy },
 }
 
 impl InferCtx {
   pub fn new() -> Self {
     Self {
-      next_var: RwLock::new(0),
       var_kinds: DashMap::new(),
       substitution: DashMap::new(),
       type_params: RwLock::new(HashMap::new()),
-      constraints: RwLock::new(Vec::new()),
     }
   }
 
@@ -149,9 +121,7 @@ impl InferCtx {
   }
 
   pub fn fresh_var(&self, kind: TyVarKind) -> TyVar {
-    let mut next = self.next_var.write();
-    let var = TyVar::new(*next);
-    *next += 1;
+    let var = TyVar::new();
     self.var_kinds.insert(var, kind);
     var
   }
@@ -173,6 +143,12 @@ impl InferCtx {
   }
 
   pub fn unify_var(&self, var: TyVar, ty: InferTy) {
+    if let InferTy::Var(v, _) = ty
+      && v == var
+    {
+      return;
+    }
+
     self.substitution.insert(var, ty);
   }
 
@@ -181,47 +157,57 @@ impl InferCtx {
   }
 
   pub fn resolve(&self, ty: &InferTy) -> InferTy {
+    self.resolve_with_seen(ty, &mut HashSet::new())
+  }
+
+  fn resolve_with_seen(&self, ty: &InferTy, seen: &mut HashSet<TyVar>) -> InferTy {
     match ty {
       InferTy::Var(var, span) => {
+        if seen.contains(var) {
+          return ty.clone();
+        }
+
         if let Some(resolved) = self.probe_var(*var) {
-          self.resolve(&resolved)
+          seen.insert(*var);
+          let result = self.resolve_with_seen(&resolved, seen);
+          seen.remove(var);
+          result
         } else {
           ty.clone()
         }
       }
       InferTy::Adt { def_id, args, span } => InferTy::Adt {
         def_id: *def_id,
-        args: args.iter().map(|t| self.resolve(t)).collect(),
+        args: args.iter().map(|t| self.resolve_with_seen(t, seen)).collect(),
         span: *span,
       },
       InferTy::Ptr { mutability, ty, span } => InferTy::Ptr {
         mutability: *mutability,
-        ty: Box::new(self.resolve(ty)),
+        ty: Box::new(self.resolve_with_seen(ty, seen)),
         span: *span,
       },
-      InferTy::Optional(ty, span) => InferTy::Optional(Box::new(self.resolve(ty)), *span),
-      InferTy::Array { ty, len, span } => {
-        InferTy::Array { ty: Box::new(self.resolve(ty)), len: *len, span: *span }
+      InferTy::Optional(ty, span) => {
+        InferTy::Optional(Box::new(self.resolve_with_seen(ty, seen)), *span)
       }
-      InferTy::Slice(ty, span) => InferTy::Slice(Box::new(self.resolve(ty)), *span),
-      InferTy::Tuple(tys, span) => {
-        InferTy::Tuple(tys.iter().map(|t| self.resolve(t)).collect(), *span)
+      InferTy::Array { ty, len, span } => InferTy::Array {
+        ty: Box::new(self.resolve_with_seen(ty, seen)),
+        len: *len,
+        span: *span,
+      },
+      InferTy::Slice(ty, span) => {
+        InferTy::Slice(Box::new(self.resolve_with_seen(ty, seen)), *span)
       }
+      InferTy::Tuple(tys, span) => InferTy::Tuple(
+        tys.iter().map(|t| self.resolve_with_seen(t, seen)).collect(),
+        *span,
+      ),
       InferTy::Fn { params, ret, span } => InferTy::Fn {
-        params: params.iter().map(|t| self.resolve(t)).collect(),
-        ret: Box::new(self.resolve(ret)),
+        params: params.iter().map(|t| self.resolve_with_seen(t, seen)).collect(),
+        ret: Box::new(self.resolve_with_seen(ret, seen)),
         span: *span,
       },
       _ => ty.clone(),
     }
-  }
-
-  pub fn add_constraint(&self, constraint: Constraint) {
-    self.constraints.write().push(constraint);
-  }
-
-  pub fn take_constraints(&self) -> Vec<Constraint> {
-    std::mem::take(&mut *self.constraints.write())
   }
 }
 

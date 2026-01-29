@@ -305,6 +305,20 @@ impl<'a> ResolveVisitor<'a> {
       *func.name.span(),
       vis,
     );
+
+    for param in &func.params {
+      let (name, id, span) = match param {
+        Param::Regular(reg) => (reg.name.text(), reg.id, reg.span),
+        Param::Variadic(var) => (var.name.text(), var.id, var.span),
+        Param::SelfParam(s) => ("self".to_string(), s.id, s.span),
+      };
+
+      let def =
+        Definition::new(name.clone(), id, self.current_file(), DefKind::Param, span);
+      let def_id = self.resolver().add_definition(def);
+      self.module_resolver.define_value(name, def_id);
+      self.module_resolver.resolver.symbols.record_resolution(id, def_id);
+    }
   }
 
   fn define_struct(&mut self, s: &StructItem, vis: Visibility) {
@@ -501,31 +515,9 @@ impl<'a> ResolveVisitor<'a> {
     match param {
       Param::SelfParam(_) => {}
       Param::Regular(regular) => {
-        let name = regular.name.text();
-        let span = *regular.name.span();
-        let def = Definition::new(
-          regular.name.text(),
-          regular.id,
-          self.current_file(),
-          DefKind::Param,
-          span,
-        );
-        let def_id = self.resolver().add_definition(def);
-        self.module_resolver.define_value(name, def_id);
         self.resolve_type(&regular.ty);
       }
       Param::Variadic(variadic) => {
-        let name = variadic.name.text();
-        let span = *variadic.name.span();
-        let def = Definition::new(
-          name.clone(),
-          variadic.id,
-          self.current_file(),
-          DefKind::Param,
-          span,
-        );
-        let def_id = self.resolver().add_definition(def);
-        self.module_resolver.define_value(name, def_id);
         self.resolve_type(&variadic.ty);
       }
     }

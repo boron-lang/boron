@@ -1,16 +1,12 @@
 use crate::InferTy;
 use crate::expander::BuiltInExpander;
 use crate::interpreter::values::ConstValue;
+use crate::size_of::{SizeOfContext, size_of_ty};
 
 impl<'a> BuiltInExpander<'a> {
   pub fn size_of(&self, ty: InferTy) -> ConstValue {
-    let target = self.ctx.session.target();
+    let ctx = SizeOfContext { ctx: self.ctx, hir: self.hir, resolver: self.resolver };
 
-    let x = match ty {
-      InferTy::Primitive(p, _) => ConstValue::Int(target.size_of(p) as i128),
-      _ => ConstValue::Int(0),
-    };
-    println!("{:?}", x);
-    x
+    ConstValue::Int(size_of_ty(&ctx, &ty) as i128)
   }
 }
