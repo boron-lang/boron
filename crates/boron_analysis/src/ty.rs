@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter};
+use dashmap::DashMap;
 use boron_parser::ast::types::{Mutability, PrimitiveKind};
 use boron_resolver::DefId;
 use boron_source::new_id;
@@ -124,11 +125,12 @@ impl InferTy {
 pub struct TypeScheme {
   pub vars: Vec<TyVar>,
   pub ty: InferTy,
+  pub map: DashMap<DefId, TyVar>
 }
 
 impl TypeScheme {
   pub fn mono(ty: InferTy) -> Self {
-    Self { vars: vec![], ty }
+    Self { vars: vec![], ty, map: DashMap::new() }
   }
 
   pub fn is_mono(&self) -> bool {

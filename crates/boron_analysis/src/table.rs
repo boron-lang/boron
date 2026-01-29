@@ -2,11 +2,11 @@ use std::collections::{HashMap, HashSet};
 
 use crate::functions::FinalComptimeArg;
 use crate::ty::{GenericId, InferTy, TyVar, TyVarKind, TypeScheme};
-use dashmap::DashMap;
-use parking_lot::RwLock;
 use boron_hir::HirId;
 use boron_resolver::DefId;
 use boron_utils::prelude::Span;
+use dashmap::DashMap;
+use parking_lot::RwLock;
 
 #[derive(Debug)]
 pub struct TypeTable {
@@ -87,7 +87,7 @@ pub struct InferCtx {
   /// maps type variables to their resolved types
   pub(crate) substitution: DashMap<TyVar, InferTy>,
   /// Maps type parameter `DefIds` to their type variables
-  type_params: RwLock<HashMap<DefId, TyVar>>,
+  pub type_params: DashMap<DefId, TyVar>,
 }
 
 impl InferCtx {
@@ -95,29 +95,26 @@ impl InferCtx {
     Self {
       var_kinds: DashMap::new(),
       substitution: DashMap::new(),
-      type_params: RwLock::new(HashMap::new()),
+      type_params: DashMap::new(),
     }
   }
 
   pub fn clear_type_params(&self) {
-    self.type_params.write().clear();
+    self.type_params.clear();
   }
 
   pub fn get_or_create_type_param(&self, def_id: DefId) -> TyVar {
-    {
-      let type_params = self.type_params.read();
-      if let Some(&var) = type_params.get(&def_id) {
-        return var;
-      }
+    if let Some(var) = self.type_params.get(&def_id) {
+      return *var.value();
     }
 
     let var = self.fresh_var(TyVarKind::General);
-    self.type_params.write().insert(def_id, var);
+    self.type_params.insert(def_id, var);
     var
   }
 
   pub fn lookup_type_param(&self, def_id: DefId) -> Option<TyVar> {
-    self.type_params.read().get(&def_id).copied()
+    self.type_params.get(&def_id).map(|w| w.value().clone())
   }
 
   pub fn fresh_var(&self, kind: TyVarKind) -> TyVar {

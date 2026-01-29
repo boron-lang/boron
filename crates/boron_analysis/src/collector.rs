@@ -1,6 +1,9 @@
+use std::collections::HashMap;
+use dashmap::DashMap;
 use crate::ty::GenericId;
-use crate::{InferTy, TyChecker, TypeScheme};
+use crate::{InferTy, TyChecker, TyVar, TypeScheme};
 use boron_hir::{Function, GenericParamKind, Generics, Param, ParamKind};
+use boron_resolver::DefId;
 use boron_source::span::Span;
 
 impl TyChecker<'_> {
@@ -15,17 +18,20 @@ impl TyChecker<'_> {
       func.generics.clone()
     };
 
-    let generics = self.register_generics(&generics);
+    let ty_vars = self.register_generics(&generics);
+    let map = generics.params.iter()
+        .zip(&ty_vars)
+        .map(|(p, &v)| (p.def_id, v))
+        .collect();
 
-    let params = self.param_types(&func.params);
+    let params = self.param_types(&func.params, &map);
     let ret = self.lower_hir_ty(&func.return_type);
 
     let fn_ty = InferTy::Fn { params, ret: Box::new(ret), span: func.span };
-
-    TypeScheme { vars: generics, ty: fn_ty }
+    TypeScheme { vars: ty_vars, ty: fn_ty, map }
   }
 
-  fn param_types(&self, params: &Vec<Param>) -> Vec<InferTy> {
+  fn param_types(&self, params: &Vec<Param>, vars: &DashMap<DefId, TyVar>) -> Vec<InferTy> {
     params
       .iter()
       .filter_map(|p| match &p.kind {
@@ -49,6 +55,10 @@ impl TyChecker<'_> {
       let strukt = entry.value();
 
       let generics = self.register_generics(&strukt.generics);
+      let map = strukt.generics.params.iter()
+          .zip(&generics)
+          .map(|(p, &v)| (p.def_id, v))
+          .collect();
 
       for field in &strukt.fields {
         let field_ty = self.lower_hir_ty(&field.ty);
@@ -61,7 +71,7 @@ impl TyChecker<'_> {
         span: strukt.span,
       };
 
-      self.table.record_def_type(def_id, TypeScheme { vars: generics, ty: struct_ty });
+      self.table.record_def_type(def_id, TypeScheme { vars: generics, ty: struct_ty, map });
     }
 
     for entry in &self.hir.enums {

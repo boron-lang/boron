@@ -1,11 +1,12 @@
+use std::collections::HashMap;
 use crate::errors::ArrayLenNotANumber;
 use crate::interpreter::values::ConstValue;
 use crate::interpreter::{InterpreterContext, InterpreterMode};
 use crate::ty::GenericId;
-use crate::{InferTy, TyChecker, TyVar, TypeEnv};
+use crate::{InferTy, TyChecker, TyVar, TyVarKind, TypeEnv};
 use boron_hir::ty::ArrayLen;
 use boron_hir::{GenericParamKind, Generics, Ty, TyKind};
-use boron_resolver::DefKind;
+use boron_resolver::{DefId, DefKind};
 
 impl TyChecker<'_> {
   pub fn lower_hir_ty(&self, ty: &Ty) -> InferTy {
@@ -14,12 +15,11 @@ impl TyChecker<'_> {
       TyKind::Primitive(p) => InferTy::Primitive(*p, ty.span),
       TyKind::Path { def_id, segments } => {
         if let Some(def) = self.resolver.get_definition(*def_id)
-          && def.kind == DefKind::TypeParam
+            && def.kind == DefKind::TypeParam
         {
           let var = self.infcx.get_or_create_type_param(*def_id);
           return InferTy::Var(var, ty.span);
         }
-
         self.check_path(*def_id, &TypeEnv::new());
 
         let infer_args = segments
@@ -92,4 +92,5 @@ impl TyChecker<'_> {
     }
     ty_vars
   }
+
 }

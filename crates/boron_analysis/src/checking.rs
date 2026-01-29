@@ -412,8 +412,15 @@ impl<'a> TyChecker<'a> {
       return InferTy::Err(expr.span);
     }
 
-    let def_ty =
-      self.table.def_types.get(def_id).expect("no def type found").value().clone().ty;
+    let scheme = self.table.def_type(*def_id).unwrap();
+    let def_ty = self.instantiate(&scheme);
+
+    let mut subst = HashMap::new();
+    if let InferTy::Adt { args, .. } = &def_ty {
+      for (scheme_var, instantiated_arg) in scheme.vars.iter().zip(args.iter()) {
+        subst.insert(*scheme_var, instantiated_arg.clone());
+      }
+    }
 
     if DefKind::Struct == def.kind {
       let strukt = self.hir.get_struct(def.id).unwrap().clone();
@@ -426,9 +433,11 @@ impl<'a> TyChecker<'a> {
             ty: self.format_type(&def_ty),
           });
         } else {
-          let field_ty = self.table.field_type(*def_id, &field.name.text()).unwrap();
+          let original_field_ty = self.table.field_type(*def_id, &field.name.text()).unwrap();
+          let field_ty = self.apply_subst(&original_field_ty, &subst);
+
           let arg_ty =
-            self.check_expr(&field.value, env, &Expectation::has_type(field_ty.clone()));
+              self.check_expr(&field.value, env, &Expectation::has_type(field_ty.clone()));
 
           let result = self.unify(&arg_ty, &field_ty);
 
@@ -654,7 +663,7 @@ impl<'a> TyChecker<'a> {
     for entry in self.infcx.substitution.iter() {
       let var = entry.key();
       let ty = entry.value();
-      eprintln!("  {:?} -> {:?}", var, ty);
+      eprintln!("  {:?} -> {:?}", var, self.format_type(ty));
     }
 
     eprintln!("\n=== Type Variable Kinds ===");
