@@ -17,6 +17,8 @@ boron_c_compiler = { workspace = true }
 fs-err = { workspace = true }
 boron_source = { workspace = true }
 boron_analysis = { workspace = true }
+boron_ir = { workspace = true }
+boron_codegen = { workspace = true }
 
 [lints]
 workspace = true

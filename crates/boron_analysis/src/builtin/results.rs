@@ -1,7 +1,7 @@
 use crate::interpreter::values::ConstValue;
-use dashmap::DashMap;
 use boron_hir::{Expr, HirId};
 use boron_parser::NodeId;
+use dashmap::DashMap;
 
 #[derive(Debug)]
 pub struct BuiltInResults(DashMap<HirId, ConstValue>);

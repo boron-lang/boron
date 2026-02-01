@@ -1,5 +1,5 @@
-use std::fmt;
 use boron_hir::SemanticTy;
+use std::fmt;
 
 #[derive(Debug, Clone)]
 pub enum ConstValue {

@@ -1,16 +1,17 @@
 use crate::prelude::{Colorize as _, CompilationUnit, FILE_EXTENSION};
-use anyhow::Result;
 use anyhow::bail;
+use anyhow::Result;
 use boron_diagnostics::DiagnosticWriter;
 use boron_source::prelude::Sources;
 use boron_utils::context::Context;
-use boron_utils::prelude::{ProjectConfig, Session, info};
+use boron_utils::prelude::{info, ProjectConfig, Session};
 use std::sync::Arc;
 
-pub fn check_project(
+pub fn compiler_entrypoint(
   config: &ProjectConfig,
   writer: DiagnosticWriter,
   is_test: bool,
+  check_only: bool,
 ) -> Result<Session> {
   let file = &config.entrypoint;
   info!("checking entrypoint: {} with {} mode", file.display(), config.mode);
@@ -35,7 +36,11 @@ pub fn check_project(
   let file_id = sources.add(contents, file.clone());
   let mut unit = CompilationUnit::new(file_id, context);
 
-  unit.check();
+  if check_only {
+    unit.check();
+  } else {
+    unit.build();
+  }
 
   Ok(sess)
 }

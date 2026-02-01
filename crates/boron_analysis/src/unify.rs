@@ -40,7 +40,7 @@ impl TyChecker<'_> {
       }
 
       (InferTy::Var(v, span), t) | (t, InferTy::Var(v, span)) => {
-        if t.has_vars() {
+        if t.has_params() {
           // TODO: Proper occurs check
         }
 

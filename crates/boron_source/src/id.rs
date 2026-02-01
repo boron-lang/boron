@@ -1,11 +1,9 @@
-use std::fmt::{Display, Formatter};
-
 #[macro_export]
 macro_rules! new_id {
   ($name:ident) => {
     $crate::paste::paste! {
       pub static [<LAST_ID_$name:upper>]: ::std::sync::atomic::AtomicUsize =
-                ::std::sync::atomic::AtomicUsize::new(1);
+        ::std::sync::atomic::AtomicUsize::new(1);
 
       #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
       pub struct $name(pub usize);
@@ -14,6 +12,11 @@ macro_rules! new_id {
         pub fn new() -> Self {
           use ::std::sync::atomic::Ordering;
           Self([<LAST_ID_$name:upper>].fetch_add(1, Ordering::Relaxed) + 1)
+        }
+
+        pub fn reset() {
+          use ::std::sync::atomic::Ordering;
+          [<LAST_ID_$name:upper>].store(0, Ordering::Relaxed);
         }
 
         pub fn dummy() -> Self {

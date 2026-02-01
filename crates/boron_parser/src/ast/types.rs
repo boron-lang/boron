@@ -1,8 +1,8 @@
 use crate::ast::NodeId;
 use crate::ast::expressions::Expr;
 use crate::ast::import::Path;
-use std::fmt::{Display, Formatter};
 use boron_utils::prelude::Span;
+use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone)]
 pub enum Type {

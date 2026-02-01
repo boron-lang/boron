@@ -10,7 +10,7 @@ use boron_parser::ast::expressions::{
 use boron_parser::ast::statements;
 use boron_parser::{IntBase, IntSuffix};
 use boron_source::prelude::Span;
-use boron_utils::prelude::{Identifier, debug};
+use boron_utils::prelude::{debug, Identifier};
 use expressions::Literal as AstLiteral;
 use itertools::Itertools as _;
 

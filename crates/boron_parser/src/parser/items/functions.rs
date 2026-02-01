@@ -1,9 +1,9 @@
 use crate::parser::Parser;
 use crate::parser::errors::{ExpectedParenToOpenList, FunctionCamelCase};
 use crate::{FunctionItem, NeverType, NodeId, TokenType, Type, UnitType};
-use stringcase::camel_case;
 use boron_source::prelude::Span;
 use boron_utils::ident_table::Identifier;
+use stringcase::camel_case;
 
 impl Parser<'_> {
   pub(crate) fn parse_function(

@@ -1,8 +1,8 @@
 use crate::{Path, TokenType};
-use std::fmt;
-use std::fmt::{Display, Formatter};
 use boron_diagnostic_macro::Diagnostic;
 use boron_source::span::Span;
+use std::fmt;
+use std::fmt::{Display, Formatter};
 
 #[derive(Diagnostic)]
 #[error("{expected} {context}, but found {found}")]

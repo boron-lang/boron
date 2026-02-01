@@ -1,29 +1,25 @@
-use std::collections::{HashMap, HashSet};
-
 use crate::functions::FinalComptimeArg;
-use crate::ty::{GenericId, InferTy, TyVar, TyVarKind, TypeScheme};
+use crate::monomorphizations::MonomorphizationEntry;
+use crate::ty::{InferTy, SubstitutionMap, TyVar, TyVarKind, TypeScheme};
 use boron_hir::HirId;
 use boron_resolver::DefId;
 use boron_utils::prelude::Span;
 use dashmap::DashMap;
-use parking_lot::RwLock;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
 pub struct TypeTable {
   /// Maps HIR nodes to their inferred types
   pub(crate) node_types: DashMap<HirId, InferTy>,
-
   /// Maps definitions to their type schemes
   pub(crate) def_types: DashMap<DefId, TypeScheme>,
-
   /// Maps struct fields to their types.
   pub(crate) field_types: DashMap<(DefId, String), InferTy>,
-
   /// Maps method signatures to thier type scheme.
   pub(crate) method_types: DashMap<(DefId, String), TypeScheme>,
-
   /// Maps comptime function call to it's arguments
   pub comptime_args: DashMap<HirId, Vec<FinalComptimeArg>>,
+  pub monomorphizations: DashMap<DefId, Vec<MonomorphizationEntry>>,
 }
 
 impl TypeTable {
@@ -34,6 +30,17 @@ impl TypeTable {
       field_types: DashMap::new(),
       method_types: DashMap::new(),
       comptime_args: DashMap::new(),
+      monomorphizations: DashMap::new(),
+    }
+  }
+
+  pub fn record_monomorphization(&self, def_id: DefId, type_args: SubstitutionMap) {
+    if let Some(mut r) = self.monomorphizations.get_mut(&def_id) {
+      let entry = MonomorphizationEntry { def_id, type_args };
+      r.push(entry);
+    } else {
+      let entry = MonomorphizationEntry { def_id, type_args };
+      self.monomorphizations.insert(def_id, vec![entry]);
     }
   }
 

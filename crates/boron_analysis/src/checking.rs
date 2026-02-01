@@ -1,4 +1,4 @@
-use crate::builtins::{BuiltInParam, get_builtin};
+use crate::builtins::{get_builtin, BuiltInParam};
 use crate::errors::{
   ArityMismatch, FieldInitMismatch, FuncArgMismatch, InvalidStructInit, NoFieldOnType,
   VarInitMismatch,
@@ -8,22 +8,22 @@ use crate::interpreter::{
   Interpreter, InterpreterCache, InterpreterContext, InterpreterMode,
 };
 use crate::table::{InferCtx, TypeEnv, TypeTable};
-use crate::ty::{InferTy, TyVar, TypeScheme};
+use crate::ty::{InferTy, SubstitutionMap, TyParam, TyVar, TypeScheme};
 use crate::unify::{Expectation, UnifyError, UnifyResult};
-use std::collections::HashMap;
 use boron_diagnostics::DiagnosticCtx;
 use boron_hir::expr::{ComptimeArg, FieldInit, PathExpr};
 use boron_hir::{
   Block, Const, Expr, ExprKind, Function, Hir, Literal, ParamKind, Pat, PatKind, Stmt,
   StmtKind,
 };
-use boron_parser::Mutability;
 use boron_parser::ast::types::PrimitiveKind;
+use boron_parser::Mutability;
 use boron_resolver::prelude::BuiltInKind;
 use boron_resolver::{DefId, DefKind, Resolver};
 use boron_utils::context::Context;
 use boron_utils::ident_table::Identifier;
-use boron_utils::prelude::{Span, warn};
+use boron_utils::prelude::{warn, Span};
+use std::collections::HashMap;
 
 pub fn typeck_hir(hir: &Hir, ctx: &Context, resolver: &Resolver) -> TypeTable {
   let mut checker = TyChecker::new(hir, ctx, resolver);
@@ -43,7 +43,6 @@ pub fn typeck_hir(hir: &Hir, ctx: &Context, resolver: &Resolver) -> TypeTable {
   }
 
   checker.finalize_types();
-  checker.debug_print_resolved_types();
   checker.table
 }
 
@@ -102,19 +101,24 @@ impl<'a> TyChecker<'a> {
     let mut env = TypeEnv::new();
 
     for param in &func.params {
-      match &param.kind {
+      let ty = match &param.kind {
         ParamKind::Regular { ty, .. } => {
           let param_ty = self.lower_hir_ty(ty);
-          env.bind(param.def_id, param_ty);
+          env.bind(param.def_id, param_ty.clone());
+          param_ty
         }
         ParamKind::Variadic { ty, .. } => {
-          let param_ty = self.lower_hir_ty(ty);
-          env.bind(param.def_id, InferTy::Slice(Box::new(param_ty), param.span));
+          let param_ty = InferTy::Slice(Box::new(self.lower_hir_ty(ty)), param.span);
+          env.bind(param.def_id, param_ty.clone());
+          param_ty
         }
         ParamKind::SelfParam { .. } => {
           // TODO: Bind self parameter
+          todo!()
         }
-      }
+      };
+
+      self.table.record_node_type(param.hir_id, ty);
     }
 
     if let Some(body) = &func.body {
@@ -398,66 +402,6 @@ impl<'a> TyChecker<'a> {
     ty
   }
 
-  fn check_struct_init(
-    &mut self,
-    def_id: &DefId,
-    fields: &Vec<FieldInit>,
-    env: &mut TypeEnv,
-    expr: &Expr,
-  ) -> InferTy {
-    let def = self.resolver.get_definition(*def_id).unwrap();
-
-    if !matches!(def.kind, DefKind::Struct | DefKind::Variant) {
-      self.dcx().emit(InvalidStructInit { span: expr.span, found: def.kind.to_string() });
-      return InferTy::Err(expr.span);
-    }
-
-    let scheme = self.table.def_type(*def_id).unwrap();
-    let def_ty = self.instantiate(&scheme);
-
-    let mut subst = HashMap::new();
-    if let InferTy::Adt { args, .. } = &def_ty {
-      for (scheme_var, instantiated_arg) in scheme.vars.iter().zip(args.iter()) {
-        subst.insert(*scheme_var, instantiated_arg.clone());
-      }
-    }
-
-    if DefKind::Struct == def.kind {
-      let strukt = self.hir.get_struct(def.id).unwrap().clone();
-
-      for field in fields {
-        if !strukt.has_field(field.name) {
-          self.dcx().emit(NoFieldOnType {
-            span: field.span,
-            field: field.name,
-            ty: self.format_type(&def_ty),
-          });
-        } else {
-          let original_field_ty = self.table.field_type(*def_id, &field.name.text()).unwrap();
-          let field_ty = self.apply_subst(&original_field_ty, &subst);
-
-          let arg_ty =
-              self.check_expr(&field.value, env, &Expectation::has_type(field_ty.clone()));
-
-          let result = self.unify(&arg_ty, &field_ty);
-
-          if let UnifyResult::Err(err) = &result {
-            match err {
-              UnifyError::Mismatch { .. } => self.dcx().emit(FieldInitMismatch {
-                expected: self.format_type(&field_ty),
-                found: self.format_type(&arg_ty),
-                span: field.span,
-              }),
-              _ => self.handle_unify_result(result),
-            }
-          }
-        }
-      }
-    }
-
-    def_ty
-  }
-
   fn check_literal_with_span(&self, lit: &Literal, span: Span) -> InferTy {
     match lit {
       Literal::Int { suffix, .. } => {
@@ -497,29 +441,30 @@ impl<'a> TyChecker<'a> {
     }
 
     if let Some(scheme) = self.table.def_type(id) {
-      return self.instantiate(&scheme);
+      return self.instantiate(&scheme).0;
     }
 
     InferTy::Err(Default::default())
   }
 
-  fn instantiate(&self, scheme: &TypeScheme) -> InferTy {
+  fn instantiate(&self, scheme: &TypeScheme) -> (InferTy, SubstitutionMap) {
     if scheme.vars.is_empty() {
-      return scheme.ty.clone();
+      return (scheme.ty.clone(), SubstitutionMap::new());
     }
 
-    let mut subst: HashMap<TyVar, InferTy> = HashMap::new();
+    let mut subst: SubstitutionMap = SubstitutionMap::new();
     for &var in &scheme.vars {
-      subst.insert(var, self.infcx.fresh(scheme.ty.span()));
+      subst.add(var, self.infcx.fresh(scheme.ty.span()));
     }
 
-    self.apply_subst(&scheme.ty, &subst)
+    (self.apply_subst(&scheme.ty, &subst), subst)
   }
 
-  fn apply_subst(&self, ty: &InferTy, subst: &HashMap<TyVar, InferTy>) -> InferTy {
+  fn apply_subst(&self, ty: &InferTy, subst: &SubstitutionMap) -> InferTy {
     match ty {
-      InferTy::Var(var, span) => {
-        if let Some(replacement) = subst.get(var) {
+      InferTy::Var(var, span) => ty.clone(),
+      InferTy::Param(p) => {
+        if let Some(replacement) = subst.get(p.def_id) {
           replacement.clone()
         } else {
           ty.clone()
@@ -558,6 +503,63 @@ impl<'a> TyChecker<'a> {
     }
   }
 
+  fn check_struct_init(
+    &mut self,
+    def_id: &DefId,
+    fields: &Vec<FieldInit>,
+    env: &mut TypeEnv,
+    expr: &Expr,
+  ) -> InferTy {
+    let def = self.resolver.get_definition(*def_id).unwrap();
+
+    if !matches!(def.kind, DefKind::Struct | DefKind::Variant) {
+      self.dcx().emit(InvalidStructInit { span: expr.span, found: def.kind.to_string() });
+      return InferTy::Err(expr.span);
+    }
+
+    let scheme = self.table.def_type(*def_id).unwrap();
+    let (def_ty, subst) = self.instantiate(&scheme);
+
+    if DefKind::Struct == def.kind {
+      let strukt = self.hir.get_struct(def.id).unwrap().clone();
+
+      for field in fields {
+        if !strukt.has_field(field.name) {
+          self.dcx().emit(NoFieldOnType {
+            span: field.span,
+            field: field.name,
+            ty: self.format_type(&def_ty),
+          });
+        } else {
+          let field_ty = self.apply_subst(
+            &self.table.field_type(*def_id, &field.name.text()).unwrap(),
+            &subst,
+          );
+          let arg_ty =
+            self.check_expr(&field.value, env, &Expectation::has_type(field_ty.clone()));
+
+          let result = self.unify(&arg_ty, &field_ty);
+          if let UnifyResult::Err(err) = &result {
+            match err {
+              UnifyError::Mismatch { .. } => self.dcx().emit(FieldInitMismatch {
+                expected: self.format_type(&field_ty),
+                found: self.format_type(&arg_ty),
+                span: field.span,
+              }),
+              _ => self.handle_unify_result(result),
+            }
+          }
+        }
+      }
+
+      if !scheme.vars.is_empty() {
+        self.table.record_monomorphization(*def_id, subst);
+      }
+    }
+
+    def_ty
+  }
+
   fn check_call(
     &mut self,
     callee: &Expr,
@@ -576,7 +578,9 @@ impl<'a> TyChecker<'a> {
         for (arg, param_ty) in args.iter().zip(params.iter()) {
           let arg_ty =
             self.check_expr(arg, env, &Expectation::has_type(param_ty.clone()));
-          self.unify(param_ty, &arg_ty);
+          let result = self.unify(param_ty, &arg_ty);
+
+          warn!("{:#?}", result)
         }
         *ret
       }
@@ -684,6 +688,14 @@ impl<'a> TyChecker<'a> {
     for entry in self.table.def_types.iter() {
       let def_id = entry.key();
       let scheme = entry.value();
+      eprintln!("  {:?} => {:?}", def_id, scheme);
+    }
+    eprintln!();
+
+    eprintln!("\n=== Monomorphizations ===");
+    for mono in self.table.monomorphizations.iter() {
+      let def_id = mono.key();
+      let scheme = mono.value();
       eprintln!("  {:?} => {:?}", def_id, scheme);
     }
     eprintln!();

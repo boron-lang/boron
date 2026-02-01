@@ -3,7 +3,11 @@ use crate::parser::errors::{
   ConstAloneInType, ExpectedIdentifierInGeneric, ExpectedType, ExpectedTypePathForBound,
   TrailingPlusInTypeBound,
 };
-use crate::{ArrayType, FunctionType, GenericParam, GenericParams, Mutability, NodeId, OptionalType, PathParsingContext, PointerType, PrimitiveKind, PrimitiveType, TokenType, TupleType, Type, TypeBound, UnitType};
+use crate::{
+  ArrayType, FunctionType, GenericParam, GenericParams, Mutability, NodeId, OptionalType,
+  PathParsingContext, PointerType, PrimitiveKind, PrimitiveType, TokenType, TupleType,
+  Type, TypeBound, UnitType,
+};
 use boron_source::span::Span;
 
 impl Parser<'_> {

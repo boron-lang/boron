@@ -1,7 +1,7 @@
 use crate::def::DefId;
 use crate::scope::ScopeId;
-use dashmap::DashMap;
 use boron_parser::ast::NodeId;
+use dashmap::DashMap;
 
 #[derive(Debug, Clone)]
 pub struct Symbol {

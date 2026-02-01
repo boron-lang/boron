@@ -1,0 +1,19 @@
+[package]
+name = "boron_ir"
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+
+[dependencies]
+boron_analysis = { workspace = true }
+boron_utils = { workspace = true }
+boron_hir = { workspace = true }
+boron_parser = { workspace = true }
+dashmap = { workspace = true }
+boron_resolver = { workspace = true }
+itertools = { workspace = true }
+boron_source = { workspace = true }
+
+[lints]
+workspace = true

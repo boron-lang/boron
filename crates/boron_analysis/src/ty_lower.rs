@@ -1,12 +1,13 @@
-use std::collections::HashMap;
 use crate::errors::ArrayLenNotANumber;
 use crate::interpreter::values::ConstValue;
 use crate::interpreter::{InterpreterContext, InterpreterMode};
-use crate::ty::GenericId;
-use crate::{InferTy, TyChecker, TyVar, TyVarKind, TypeEnv};
+use crate::ty::TyParam;
+use crate::{InferTy, TyChecker, TypeEnv};
 use boron_hir::ty::ArrayLen;
 use boron_hir::{GenericParamKind, Generics, Ty, TyKind};
-use boron_resolver::{DefId, DefKind};
+use boron_resolver::DefKind;
+use boron_source::prelude::Span;
+use boron_utils::prelude::Identifier;
 
 impl TyChecker<'_> {
   pub fn lower_hir_ty(&self, ty: &Ty) -> InferTy {
@@ -15,10 +16,13 @@ impl TyChecker<'_> {
       TyKind::Primitive(p) => InferTy::Primitive(*p, ty.span),
       TyKind::Path { def_id, segments } => {
         if let Some(def) = self.resolver.get_definition(*def_id)
-            && def.kind == DefKind::TypeParam
+          && def.kind == DefKind::TypeParam
         {
-          let var = self.infcx.get_or_create_type_param(*def_id);
-          return InferTy::Var(var, ty.span);
+          return InferTy::Param(TyParam {
+            def_id: *def_id,
+            span: Span::dummy(), // todo: span
+            name: Identifier::new(&def.name, Span::dummy())
+          })
         }
         self.check_path(*def_id, &TypeEnv::new());
 
@@ -80,17 +84,20 @@ impl TyChecker<'_> {
     }
   }
 
-  pub fn register_generics(&self, generics: &Generics) -> Vec<TyVar> {
+  pub fn register_generics(&self, generics: &Generics) -> Vec<TyParam> {
     self.infcx.clear_type_params();
 
-    let mut ty_vars = Vec::new();
+    let mut ty_params = Vec::new();
     for param in &generics.params {
       if matches!(param.kind, GenericParamKind::Type { .. }) {
-        let var = self.infcx.get_or_create_type_param(param.def_id);
-        ty_vars.push(var);
+        ty_params.push(TyParam {
+          name: param.name,
+          def_id: param.def_id,
+          span: param.span,
+        });
       }
     }
-    ty_vars
-  }
 
+    ty_params
+  }
 }

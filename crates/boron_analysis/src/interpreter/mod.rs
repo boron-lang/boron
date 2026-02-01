@@ -10,13 +10,13 @@ use crate::interpreter::stack::Stack;
 use crate::interpreter::utils::InterpreterLimits;
 use crate::interpreter::values::ConstValue;
 use crate::literals::int::construct_i128;
-use dashmap::DashMap;
-use std::cmp::PartialEq;
 use boron_diagnostics::DiagnosticCtx;
 use boron_hir::{Const, Expr, ExprKind, Hir, HirId, Literal};
 use boron_parser::{BinaryOp, UnaryOp};
 use boron_resolver::Resolver;
 use boron_utils::prelude::Span;
+use dashmap::DashMap;
+use std::cmp::PartialEq;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum InterpreterMode {

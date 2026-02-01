@@ -9,6 +9,8 @@ pub mod types;
 use crate::ast::expressions::Expr;
 use crate::ast::import::ImportDecl;
 use crate::ast::items::Item;
+use boron_source::new_id;
+use boron_utils::prelude::{Identifier, Span};
 pub use expressions::*;
 pub use generics::*;
 pub use import::*;
@@ -16,8 +18,6 @@ pub use items::*;
 pub use params::*;
 pub use statements::*;
 pub use types::*;
-use boron_source::new_id;
-use boron_utils::prelude::{Identifier, Span};
 
 new_id!(NodeId);
 

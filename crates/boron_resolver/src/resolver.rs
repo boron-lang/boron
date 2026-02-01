@@ -4,11 +4,11 @@ use crate::import_order::ImportGraph;
 use crate::ribs::Rib;
 use crate::scope::{ScopeId, ScopeKind, Scopes};
 use crate::symbol::SymbolTable;
-use dashmap::DashMap;
-use parking_lot::RwLock;
 use boron_parser::module::Modules;
 use boron_parser::{NodeId, Path};
 use boron_source::prelude::SourceFileId;
+use dashmap::DashMap;
+use parking_lot::RwLock;
 
 /// The main resolver structure.
 /// This struct contains all shared state for name resolution.

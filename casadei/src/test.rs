@@ -1,11 +1,11 @@
 use crate::directives::{Directive, parse_directive};
+use boron_core::prelude::fs::read_to_string;
+use boron_core::prelude::strip_same_root;
+use boron_source::new_id;
 use color_eyre::Result;
 use itertools::Itertools;
 use std::env;
 use std::path::PathBuf;
-use boron_core::prelude::fs::read_to_string;
-use boron_core::prelude::strip_same_root;
-use boron_source::new_id;
 
 new_id!(TestId);
 

@@ -2,11 +2,11 @@ use crate::app::AppState;
 use crate::directives::{Directive, LineDirection};
 use crate::output::{FailureType, TestResult, TestStatus};
 use crate::test::Test;
+use boron_core::prelude::*;
 use itertools::Itertools;
 use parking_lot::Mutex;
 use std::io::Cursor;
 use std::sync::Arc;
-use boron_core::prelude::*;
 
 pub struct TestRunner<'tests> {
   pub tests: &'tests Vec<Test>,
@@ -41,7 +41,7 @@ impl<'tests> TestRunner<'tests> {
       .unwrap_or(PackageType::Binary);
 
     let output = Arc::new(Mutex::new(Cursor::new(vec![])));
-    let result = check_project(
+    let result = compiler_entrypoint(
       &ProjectConfig {
         entrypoint: test.path.clone(),
         project_type,
@@ -55,6 +55,7 @@ impl<'tests> TestRunner<'tests> {
         color: true,
       },
       output.clone(),
+      true,
       true,
     );
 

@@ -1,10 +1,10 @@
 use crate::InferTy;
-use once_cell::sync::Lazy;
-use std::collections::HashMap;
 use boron_hir::expr::ComptimeArg;
 use boron_parser::PrimitiveKind;
 use boron_resolver::prelude::BuiltInKind;
 use boron_utils::prelude::Span;
+use once_cell::sync::Lazy;
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct BuiltInFunction {

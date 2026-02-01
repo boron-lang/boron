@@ -1,15 +1,17 @@
 use crate::prelude::*;
 use boron_analysis::results::BuiltInResults;
 use boron_analysis::validator::validate_comptime;
-use boron_analysis::{TypeTable, expand_builtins, typeck_hir};
+use boron_analysis::{expand_builtins, typeck_hir, TypeTable};
 use boron_hir::hir::Hir;
 use boron_hir::lower::lower_to_hir;
+use boron_ir::{Ir, IrLowerer};
 use boron_parser::module::{Module, Modules};
 use boron_parser::parser::errors::ModuleNotFound;
 use boron_parser::parser::parse;
 use boron_resolver::{ResolveVisitor, Resolver};
 use boron_source::source_file::SourceFileId;
 use std::process::exit;
+use boron_codegen::run_codegen;
 
 pub struct CompilationUnit<'ctx> {
   pub entry_point: SourceFileId,
@@ -19,6 +21,7 @@ pub struct CompilationUnit<'ctx> {
   pub hir: Option<Hir>,
   pub typeck: Option<TypeTable>,
   pub builtin_results: Option<BuiltInResults>,
+  pub ir: Option<Ir>,
 }
 
 impl<'ctx> CompilationUnit<'ctx> {
@@ -31,6 +34,7 @@ impl<'ctx> CompilationUnit<'ctx> {
       hir: None,
       typeck: None,
       builtin_results: None,
+      ir: None,
     }
   }
 
@@ -46,6 +50,29 @@ impl<'ctx> CompilationUnit<'ctx> {
 
     self.typeck();
     self.expand_builtins();
+
+    self.lower_to_ir();
+    
+    let Some(ir) = &self.ir else {
+      return;
+    };
+    run_codegen(self.ctx, ir);
+  }
+
+  pub fn build(&mut self) {
+    self.check();
+    if self.sess().create_output_dir().is_none() {
+      self.sess().dcx().bug("failed to create output directory");
+    };
+  }
+
+  fn lower_to_ir(&mut self) {
+    let Some(hir) = &self.hir else { return };
+    let Some(typeck) = &self.typeck else {
+      return;
+    };
+
+    self.ir = Some(IrLowerer::new(hir, typeck).lower())
   }
 
   fn expand_builtins(&mut self) {

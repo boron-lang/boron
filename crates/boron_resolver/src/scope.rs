@@ -1,7 +1,7 @@
 use crate::def::DefId;
-use dashmap::DashMap;
 use boron_source::new_id;
 use boron_source::prelude::SourceFileId;
+use dashmap::DashMap;
 
 new_id!(ScopeId);
 

@@ -1,0 +1,15 @@
+[package]
+name = "boron_codegen"
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+
+[dependencies]
+tamago = { workspace = true }
+boron_ir = { workspace = true }
+boron_utils = { workspace = true }
+inkwell = { version = "0.8.0", features = ["llvm16-0"] }
+
+[lints]
+workspace = true

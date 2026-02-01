@@ -1,7 +1,7 @@
 use crate::prelude::*;
-use std::sync::Arc;
 use boron_diagnostics::DiagnosticCtx;
 use boron_source::sources::Sources;
+use std::sync::Arc;
 
 pub struct Context<'ctx> {
   pub session: &'ctx Session,

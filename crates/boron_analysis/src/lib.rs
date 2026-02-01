@@ -5,15 +5,16 @@ mod errors;
 mod formatter;
 pub mod interpreter;
 mod literals;
+mod monomorphizations;
 mod size_of;
 mod table;
-mod ty;
+pub mod ty;
 mod ty_lower;
 mod unify;
 pub mod validator;
 mod vars;
 
 pub use builtin::*;
-pub use checking::{TyChecker, typeck_hir};
+pub use checking::{typeck_hir, TyChecker};
 pub use table::{InferCtx, TypeEnv, TypeTable};
 pub use ty::{InferTy, TyVar, TyVarKind, TypeScheme};

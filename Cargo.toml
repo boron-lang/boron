@@ -48,6 +48,8 @@ boron_utils = { path = "crates/boron_utils" }
 boron_hir = { path = "crates/boron_hir" }
 boron_analysis = { path = "crates/boron_analysis" }
 boron_target = { path = "crates/boron_target" }
+boron_ir = { path = "crates/boron_ir" }
+boron_codegen = { path = "crates/boron_codegen" }
 
 [workspace.lints.rust]
 unsafe_code = "deny"

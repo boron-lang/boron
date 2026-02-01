@@ -24,11 +24,11 @@ pub mod prelude {
   pub use crate::enums::mode::*;
   pub use crate::enums::project_type::*;
   pub use crate::errors::*;
+  pub use boron_diagnostics::prelude::*;
   pub use std::{
     collections::{HashMap, HashSet},
     path::PathBuf,
   };
-  pub use boron_diagnostics::prelude::*;
 
   pub use boron_source::prelude::*;
 }

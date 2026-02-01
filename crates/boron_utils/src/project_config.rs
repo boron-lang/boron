@@ -1,7 +1,7 @@
 use crate::dependency::Dependency;
 use crate::prelude::{LibType, Mode, PackageType};
-use std::path::PathBuf;
 use boron_diagnostics::prelude::DiagnosticOutputType;
+use std::path::PathBuf;
 
 #[derive(Debug, Clone)]
 pub struct ProjectConfig {

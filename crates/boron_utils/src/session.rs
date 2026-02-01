@@ -1,3 +1,4 @@
+use crate::prelude::create_dir_all;
 use crate::project_config::ProjectConfig;
 use boron_diagnostics::{DiagnosticCtx, DiagnosticWriter};
 use boron_source::prelude::{SourceFileId, Sources};
@@ -72,6 +73,10 @@ impl Session {
       module_graph: ModuleGraph::new(),
       target: Target::host(),
     }
+  }
+
+  pub fn create_output_dir(&self) -> Option<()> {
+    create_dir_all(&self.config.output).ok()
   }
 
   pub fn target(&self) -> &Target {

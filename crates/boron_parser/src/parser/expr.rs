@@ -9,9 +9,9 @@ use crate::parser::errors::{
   RepeatSyntaxRequiredValue,
 };
 use crate::{IntBase, NodeId, Path, PathParsingContext, PathSegment, TokenType};
-use std::collections::HashMap;
 use boron_source::prelude::Span;
 use boron_utils::prelude::Identifier;
+use std::collections::HashMap;
 
 impl Parser<'_> {
   pub fn parse_expr(&mut self) -> Expr {

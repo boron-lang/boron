@@ -9,6 +9,8 @@ use crate::directives::LineDirection;
 use crate::output::{FailureType, TestStatus};
 use crate::runner::TestRunner;
 use crate::test::Test;
+use boron_core::prelude::{Colorize, canonicalize_with_strip};
+use boron_core::vars::FILE_EXTENSION;
 use color_eyre::owo_colors::OwoColorize;
 use glob::glob;
 use spinners::{Spinner, Spinners};
@@ -17,8 +19,6 @@ use std::io::{Write, stderr};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Instant;
-use boron_core::prelude::{Colorize, canonicalize_with_strip};
-use boron_core::vars::FILE_EXTENSION;
 
 fn main() -> color_eyre::Result<()> {
   color_eyre::install()?;

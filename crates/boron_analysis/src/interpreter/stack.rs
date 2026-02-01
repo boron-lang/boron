@@ -1,6 +1,6 @@
 use crate::interpreter::values::ConstValue;
-use dashmap::DashMap;
 use boron_hir::LocalId;
+use dashmap::DashMap;
 
 #[derive(Debug)]
 pub struct Frame {

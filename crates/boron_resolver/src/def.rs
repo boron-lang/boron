@@ -1,8 +1,8 @@
-use std::fmt::{Display, Formatter};
 use boron_parser::ast::NodeId;
 use boron_source::new_id;
 use boron_source::prelude::SourceFileId;
 use boron_utils::prelude::Span;
+use std::fmt::{Display, Formatter};
 
 new_id!(DefId);
 

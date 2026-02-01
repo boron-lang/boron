@@ -1,7 +1,7 @@
-use dashmap::DashMap;
-use num_bigint::BigInt;
 use boron_diagnostics::DiagnosticCtx;
 use boron_parser::NodeId;
+use dashmap::DashMap;
+use num_bigint::BigInt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FullLiteral {

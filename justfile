@@ -31,4 +31,7 @@ build-std args='':
     cargo run -p boron std/src/lib.zr {{ args }} --name std -o std/build --type library
 
 check-playground args='':
+    cargo run -p boron playground/src/index.zr {{ args }} --name std -o playground/build --type library --check-only
+
+build-playground args='':
     cargo run -p boron playground/src/index.zr {{ args }} --name std -o playground/build --type library

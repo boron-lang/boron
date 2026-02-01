@@ -3,10 +3,10 @@ use crate::expr::Block;
 use crate::generics::Generics;
 use crate::ids::HirId;
 use crate::ty::Ty;
-use std::collections::HashMap;
 use boron_parser::ast::items::Visibility;
 use boron_resolver::DefId;
 use boron_utils::prelude::{Identifier, Span};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct Function {
