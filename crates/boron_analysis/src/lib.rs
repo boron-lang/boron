@@ -1,5 +1,5 @@
 mod builtin;
-mod checking;
+mod checker;
 mod collector;
 mod errors;
 mod formatter;
@@ -15,6 +15,6 @@ pub mod validator;
 mod vars;
 
 pub use builtin::*;
-pub use checking::{typeck_hir, TyChecker};
+pub use checker::{typeck_hir, TyChecker};
 pub use table::{InferCtx, TypeEnv, TypeTable};
 pub use ty::{InferTy, TyVar, TyVarKind, TypeScheme};
