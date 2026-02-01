@@ -21,16 +21,17 @@ impl TyChecker<'_> {
           return InferTy::Param(TyParam {
             def_id: *def_id,
             span: Span::dummy(), // todo: span
-            name: Identifier::new(&def.name, Span::dummy())
-          })
+            name: Identifier::new(&def.name, Span::dummy()),
+          });
         }
-        self.check_path(*def_id, &TypeEnv::new());
 
-        let infer_args = segments
+        let infer_args: Vec<InferTy> = segments
           .iter()
           .flat_map(|seg| seg.args.iter())
           .map(|t| self.lower_hir_ty(t))
           .collect();
+
+        self.check_path(*def_id, &TypeEnv::new(), Some(&infer_args));
 
         InferTy::Adt { def_id: *def_id, args: infer_args, span: ty.span }
       }
