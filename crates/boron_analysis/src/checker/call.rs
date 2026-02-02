@@ -65,29 +65,28 @@ impl TyChecker<'_> {
                 for (var, arg) in scheme.vars.iter().zip(explicit_type_args.iter()) {
                   subst.add(*var, self.infcx.resolve(arg));
                 }
-              } else {
-                if let InferTy::Fn { params: inst_params, ret: inst_ret, .. } = &callee_ty
+              } else if let InferTy::Fn { params: inst_params, ret: inst_ret, .. } =
+                &callee_ty
+              {
+                if let InferTy::Fn { params: scheme_params, ret: scheme_ret, .. } =
+                  &scheme.ty
                 {
-                  if let InferTy::Fn { params: scheme_params, ret: scheme_ret, .. } =
-                    &scheme.ty
+                  for (scheme_param, inst_param) in
+                    scheme_params.iter().zip(inst_params.iter())
                   {
-                    for (scheme_param, inst_param) in
-                      scheme_params.iter().zip(inst_params.iter())
-                    {
-                      self.collect_param_substitutions(
-                        scheme_param,
-                        &self.infcx.resolve(inst_param),
-                        &scheme.vars,
-                        &mut subst,
-                      );
-                    }
                     self.collect_param_substitutions(
-                      scheme_ret,
-                      &self.infcx.resolve(inst_ret),
+                      scheme_param,
+                      &self.infcx.resolve(inst_param),
                       &scheme.vars,
                       &mut subst,
                     );
                   }
+                  self.collect_param_substitutions(
+                    scheme_ret,
+                    &self.infcx.resolve(inst_ret),
+                    &scheme.vars,
+                    &mut subst,
+                  );
                 }
               }
               self.table.record_monomorphization(def_id, subst);

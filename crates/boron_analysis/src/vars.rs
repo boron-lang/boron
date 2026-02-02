@@ -1,7 +1,7 @@
 use crate::monomorphizations::MonomorphizationEntry;
+use crate::ty::SubstitutionMap;
 use crate::{InferTy, TyChecker, TyVar, TyVarKind};
 use boron_parser::PrimitiveKind;
-use crate::ty::SubstitutionMap;
 
 impl TyChecker<'_> {
   pub fn finalize_types(&mut self) {
@@ -41,12 +41,13 @@ impl TyChecker<'_> {
           let resolved_type_args = entry
             .type_args
             .map()
-            .into_iter()
+            .iter()
             .map(|(param_def_id, ty)| {
-              let resolved = self.infcx.resolve(&ty);
+              let resolved = self.infcx.resolve(ty);
               let defaulted = self.default_ty_vars(resolved);
               (*param_def_id, defaulted)
-            }).collect();
+            })
+            .collect();
           let resolved_type_args = SubstitutionMap::with_values(resolved_type_args);
           MonomorphizationEntry { def_id: entry.def_id, type_args: resolved_type_args }
         })

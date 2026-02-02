@@ -1,8 +1,8 @@
-use boron_cli::logger::setup_logger;
 use boron_cli::Cli;
+use boron_cli::logger::setup_logger;
 use boron_core::prelude::*;
 use clap::Parser as _;
-use std::io::{stderr, Cursor, Write as _};
+use std::io::{Cursor, Write as _, stderr};
 use std::sync::Arc;
 use std::time::Instant;
 

@@ -41,11 +41,11 @@ impl Parser<'_> {
           let (span, generics) = self.parse_generic_arguments();
 
           if ctx == PathParsingContext::Normal {
-            self.emit(SuperOnlyInModOrImport { span: *identifier.span() })
+            self.emit(SuperOnlyInModOrImport { span: *identifier.span() });
           }
 
           if !generics.is_empty() {
-            self.emit(GenericsInImportOrMod { span })
+            self.emit(GenericsInImportOrMod { span });
           }
 
           segments.push(PathSegment { identifier, args: vec![] });
@@ -60,7 +60,7 @@ impl Parser<'_> {
           let (span, generics) = self.parse_generic_arguments();
 
           if !generics.is_empty() && ctx == PathParsingContext::ImportOrMod {
-            self.emit(GenericsInImportOrMod { span })
+            self.emit(GenericsInImportOrMod { span });
           }
 
           segments.push(PathSegment { identifier, args: generics });

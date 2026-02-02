@@ -99,7 +99,7 @@ impl<'a> SymbolMangler<'a> {
 
   fn mangle_with_type_args(&self, base_name: &str, type_args: &[SemanticTy]) -> String {
     if type_args.is_empty() {
-      return base_name.to_string();
+      return base_name.to_owned();
     }
 
     let type_suffix: Vec<String> =
@@ -156,7 +156,7 @@ impl<'a> SymbolMangler<'a> {
 
       SemanticTy::Tuple(tys) => {
         if tys.is_empty() {
-          "t0".to_string()
+          "t0".to_owned()
         } else {
           let ty_strs: Vec<String> = tys.iter().map(|t| self.mangle_type(t)).collect();
           format!("t{}${}", tys.len(), ty_strs.join("$"))
@@ -170,30 +170,30 @@ impl<'a> SymbolMangler<'a> {
         format!("f${}${}", param_strs.join("$"), ret_str)
       }
 
-      SemanticTy::Unit => "u".to_string(),
-      SemanticTy::Never => "n".to_string(),
-      SemanticTy::Error => "err".to_string(),
+      SemanticTy::Unit => "u".to_owned(),
+      SemanticTy::Never => "n".to_owned(),
+      SemanticTy::Error => "err".to_owned(),
     }
   }
 
   fn mangle_primitive(&self, kind: PrimitiveKind) -> String {
     match kind {
-      PrimitiveKind::I8 => "i8".to_string(),
-      PrimitiveKind::I16 => "i16".to_string(),
-      PrimitiveKind::I32 => "i32".to_string(),
-      PrimitiveKind::I64 => "i64".to_string(),
-      PrimitiveKind::I128 => "i128".to_string(),
-      PrimitiveKind::ISize => "isize".to_string(),
-      PrimitiveKind::U8 => "u8".to_string(),
-      PrimitiveKind::U16 => "u16".to_string(),
-      PrimitiveKind::U32 => "u32".to_string(),
-      PrimitiveKind::U64 => "u64".to_string(),
-      PrimitiveKind::U128 => "u128".to_string(),
-      PrimitiveKind::USize => "usize".to_string(),
-      PrimitiveKind::F32 => "f32".to_string(),
-      PrimitiveKind::F64 => "f64".to_string(),
-      PrimitiveKind::Bool => "bool".to_string(),
-      PrimitiveKind::Char => "char".to_string(),
+      PrimitiveKind::I8 => "i8".to_owned(),
+      PrimitiveKind::I16 => "i16".to_owned(),
+      PrimitiveKind::I32 => "i32".to_owned(),
+      PrimitiveKind::I64 => "i64".to_owned(),
+      PrimitiveKind::I128 => "i128".to_owned(),
+      PrimitiveKind::ISize => "isize".to_owned(),
+      PrimitiveKind::U8 => "u8".to_owned(),
+      PrimitiveKind::U16 => "u16".to_owned(),
+      PrimitiveKind::U32 => "u32".to_owned(),
+      PrimitiveKind::U64 => "u64".to_owned(),
+      PrimitiveKind::U128 => "u128".to_owned(),
+      PrimitiveKind::USize => "usize".to_owned(),
+      PrimitiveKind::F32 => "f32".to_owned(),
+      PrimitiveKind::F64 => "f64".to_owned(),
+      PrimitiveKind::Bool => "bool".to_owned(),
+      PrimitiveKind::Char => "char".to_owned(),
     }
   }
 }

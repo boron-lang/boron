@@ -56,8 +56,8 @@ pub enum PointerWidth {
 impl PointerWidth {
   pub fn size_bytes(&self) -> usize {
     match self {
-      PointerWidth::Bits64 => 8,
-      PointerWidth::Bits32 => 4,
+      Self::Bits64 => 8,
+      Self::Bits32 => 4,
     }
   }
 }
@@ -108,7 +108,7 @@ pub struct DataLayout {
 }
 
 impl DataLayout {
-  /// 64-bit little-endian data layout (x86_64, aarch64)
+  /// 64-bit little-endian data layout (`x86_64`, aarch64)
   pub fn new_64bit_little_endian() -> Self {
     Self {
       pointer_size: 8,

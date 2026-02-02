@@ -4,7 +4,6 @@ use crate::llvm::LLVMCodegen;
 use boron_ir::Ir;
 use boron_utils::context::Context;
 use inkwell::context::Context as LLVMContext;
-use std::io::Write;
 
 pub trait Codegen {
   fn backend_name(&self) -> &str;

@@ -1,6 +1,8 @@
 use crate::builtins::{BuiltInParam, get_builtin};
 use crate::checker::TyChecker;
-use crate::errors::{ArityMismatch, AssignTypeMismatch, FuncArgMismatch, IndexTypeMismatch, TypeMismatch};
+use crate::errors::{
+  ArityMismatch, AssignTypeMismatch, FuncArgMismatch, IndexTypeMismatch, TypeMismatch,
+};
 use crate::functions::FinalComptimeArg;
 use crate::table::TypeEnv;
 use crate::ty::InferTy;
@@ -54,7 +56,8 @@ impl TyChecker<'_> {
           env,
           &Expectation::has_type(InferTy::Primitive(PrimitiveKind::Bool, condition.span)),
         );
-        let cond_result = self.unify(&cond_ty, &InferTy::Primitive(PrimitiveKind::Bool, condition.span));
+        let cond_result =
+          self.unify(&cond_ty, &InferTy::Primitive(PrimitiveKind::Bool, condition.span));
         self.handle_unify_result(cond_result, condition.span);
 
         let (then_ty, then_span) = self.check_block(then_block, env, expect);
@@ -112,7 +115,8 @@ impl TyChecker<'_> {
         let idx_ty = self.check_expr(index, env, &Expectation::none());
 
         // Index must be usize until we support operator overloading
-        let result = self.unify(&idx_ty, &InferTy::Primitive(PrimitiveKind::USize, index.span));
+        let result =
+          self.unify(&idx_ty, &InferTy::Primitive(PrimitiveKind::USize, index.span));
         if let UnifyResult::Err(err) = &result {
           match err {
             UnifyError::Mismatch { found, .. } => {
@@ -207,8 +211,8 @@ impl TyChecker<'_> {
                 if let ComptimeArg::Expr(expr) = arg {
                   self.dcx().emit(FuncArgMismatch {
                     span: expr.span,
-                    expected: "a comptime type".to_string(),
-                    found: "an expression".to_string(),
+                    expected: "a comptime type".to_owned(),
+                    found: "an expression".to_owned(),
                   });
                 } else if let ComptimeArg::Type(ty) = arg {
                   final_args.push(FinalComptimeArg::Ty(self.lower_hir_ty(ty)));

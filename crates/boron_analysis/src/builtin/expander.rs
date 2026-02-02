@@ -1,7 +1,7 @@
 use crate::TypeTable;
 use crate::results::BuiltInResults;
 use boron_diagnostics::DiagnosticCtx;
-use boron_hir::{Block, Expr, ExprKind, Function, Hir, Param, ParamKind, StmtKind};
+use boron_hir::{Block, Expr, ExprKind, Function, Hir, ParamKind, StmtKind};
 use boron_resolver::Resolver;
 use boron_resolver::prelude::BuiltInKind;
 use boron_utils::context::Context;
@@ -33,7 +33,7 @@ impl<'a> BuiltInExpander<'a> {
       if let ParamKind::Regular { default, .. } = &param.kind
         && let Some(default) = default
       {
-        self.walk_expr(&default);
+        self.walk_expr(default);
       }
     }
 
@@ -87,7 +87,7 @@ impl<'a> BuiltInExpander<'a> {
             _ => todo!(),
           };
 
-          self.results.insert(expr.hir_id, result)
+          self.results.insert(expr.hir_id, result);
         }
       }
 
@@ -167,7 +167,7 @@ impl<'a> BuiltInExpander<'a> {
       match &stmt.kind {
         StmtKind::Local(l) => {
           if let Some(init) = &l.init {
-            self.walk_expr(&init);
+            self.walk_expr(init);
           }
         }
         StmtKind::Expr(expr) | StmtKind::Semi(expr) => self.walk_expr(expr),

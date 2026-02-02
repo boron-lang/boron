@@ -310,7 +310,7 @@ impl<'a> ResolveVisitor<'a> {
       let (name, id, span) = match param {
         Param::Regular(reg) => (reg.name.text(), reg.id, reg.span),
         Param::Variadic(var) => (var.name.text(), var.id, var.span),
-        Param::SelfParam(s) => ("self".to_string(), s.id, s.span),
+        Param::SelfParam(s) => ("self".to_owned(), s.id, s.span),
       };
 
       let def =

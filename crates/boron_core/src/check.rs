@@ -1,10 +1,10 @@
 use crate::prelude::{Colorize as _, CompilationUnit, FILE_EXTENSION};
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use boron_diagnostics::DiagnosticWriter;
 use boron_source::prelude::Sources;
 use boron_utils::context::Context;
-use boron_utils::prelude::{info, ProjectConfig, Session};
+use boron_utils::prelude::{ProjectConfig, Session, info};
 use std::sync::Arc;
 
 pub fn compiler_entrypoint(

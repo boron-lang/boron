@@ -26,7 +26,7 @@ impl<'a> IrLowerer<'a> {
     }
 
     for strukt in &self.hir.structs {
-      self.lower_struct(strukt.value())
+      self.lower_struct(strukt.value());
     }
 
     self.ir.clone()

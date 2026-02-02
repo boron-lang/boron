@@ -175,7 +175,7 @@ impl<'a> TyChecker<'a> {
         match err {
           UnifyError::Mismatch { .. } => {
             self.dcx().emit(ReturnTypeMismatch {
-              expected_span: func.return_type.span.clone(),
+              expected_span: func.return_type.span,
               expected: self.format_type(&expected_ret),
               body_span: ret_span,
               found: self.format_type(&body_ty),

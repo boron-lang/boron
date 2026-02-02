@@ -4,7 +4,12 @@ use crate::ty::InferTy;
 use boron_hir::{Pat, PatKind};
 
 impl TyChecker<'_> {
-  pub(crate) fn check_pattern(&mut self, pat: &Pat, expected: &InferTy, env: &mut TypeEnv) {
+  pub(crate) fn check_pattern(
+    &mut self,
+    pat: &Pat,
+    expected: &InferTy,
+    env: &mut TypeEnv,
+  ) {
     match &pat.kind {
       PatKind::Binding { def_id, .. } => {
         env.bind(*def_id, expected.clone());

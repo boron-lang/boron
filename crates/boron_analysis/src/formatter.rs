@@ -13,24 +13,22 @@ impl TyChecker<'_> {
 
   fn _format_into(&self, f: &mut String, ty: &InferTy) -> Result<(), std::fmt::Error> {
     match ty {
-      InferTy::Var(var, _) => {
-        match self.infcx.var_kinds.get(var).map(|k| k.value().clone()) {
-          Some(TyVarKind::Integer) => write!(f, "integer")?,
-          Some(TyVarKind::Float) => write!(f, "float")?,
-          Some(TyVarKind::General) => {
-            if let Some(subst) = self.infcx.substitution.get(var) {
-              debug_assert!(
-                !matches!(*subst, InferTy::Var(v, _) if v == *var),
-                "self-referential substitution for {var}"
-              );
-              self._format_into(f, subst.value())?;
-            } else {
-              write!(f, "_")?;
-            }
+      InferTy::Var(var, _) => match self.infcx.var_kinds.get(var).map(|k| *k.value()) {
+        Some(TyVarKind::Integer) => write!(f, "integer")?,
+        Some(TyVarKind::Float) => write!(f, "float")?,
+        Some(TyVarKind::General) => {
+          if let Some(subst) = self.infcx.substitution.get(var) {
+            debug_assert!(
+              !matches!(*subst, InferTy::Var(v, _) if v == *var),
+              "self-referential substitution for {var}"
+            );
+            self._format_into(f, subst.value())?;
+          } else {
+            write!(f, "_")?;
           }
-          None => write!(f, "_")?,
         }
-      }
+        None => write!(f, "_")?,
+      },
 
       InferTy::Param(param) => {
         write!(f, "{}", param.name)?;
@@ -60,7 +58,7 @@ impl TyChecker<'_> {
       }
 
       InferTy::Ptr { mutability, ty, .. } => {
-        write!(f, "*{} ", mutability)?;
+        write!(f, "*{mutability} ")?;
         self._format_into(f, ty)?;
       }
 

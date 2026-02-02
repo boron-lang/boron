@@ -19,7 +19,7 @@ pub fn expand_builtins<'a>(
   let expander = BuiltInExpander::new(ctx, resolver, type_table, hir);
 
   for func in &hir.functions {
-    expander.expand_function(&func)
+    expander.expand_function(&func);
   }
 
   expander.results

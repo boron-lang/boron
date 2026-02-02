@@ -121,7 +121,7 @@ impl InferCtx {
   }
 
   pub fn lookup_type_param(&self, def_id: DefId) -> Option<TyVar> {
-    self.type_params.get(&def_id).map(|w| w.value().clone())
+    self.type_params.get(&def_id).map(|w| *w.value())
   }
 
   pub fn fresh_var(&self, kind: TyVarKind) -> TyVar {

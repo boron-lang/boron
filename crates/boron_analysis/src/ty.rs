@@ -4,7 +4,6 @@ use boron_source::new_id;
 use boron_utils::ident_table::Identifier;
 use boron_utils::prelude::Span;
 use std::collections::HashMap;
-use std::fmt::Display;
 
 new_id!(TyVar);
 

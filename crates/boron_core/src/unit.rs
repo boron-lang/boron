@@ -1,7 +1,8 @@
 use crate::prelude::*;
 use boron_analysis::results::BuiltInResults;
 use boron_analysis::validator::validate_comptime;
-use boron_analysis::{expand_builtins, typeck_hir, TypeTable};
+use boron_analysis::{TypeTable, expand_builtins, typeck_hir};
+use boron_codegen::run_codegen;
 use boron_hir::hir::Hir;
 use boron_hir::lower::lower_to_hir;
 use boron_ir::{Ir, IrLowerer};
@@ -11,7 +12,6 @@ use boron_parser::parser::parse;
 use boron_resolver::{ResolveVisitor, Resolver};
 use boron_source::source_file::SourceFileId;
 use std::process::exit;
-use boron_codegen::run_codegen;
 
 pub struct CompilationUnit<'ctx> {
   pub entry_point: SourceFileId,
@@ -52,7 +52,7 @@ impl<'ctx> CompilationUnit<'ctx> {
     self.expand_builtins();
 
     self.lower_to_ir();
-    
+
     let Some(ir) = &self.ir else {
       return;
     };
@@ -63,7 +63,7 @@ impl<'ctx> CompilationUnit<'ctx> {
     self.check();
     if self.sess().create_output_dir().is_none() {
       self.sess().dcx().bug("failed to create output directory");
-    };
+    }
   }
 
   fn lower_to_ir(&mut self) {
@@ -72,7 +72,7 @@ impl<'ctx> CompilationUnit<'ctx> {
       return;
     };
 
-    self.ir = Some(IrLowerer::new(hir, typeck).lower())
+    self.ir = Some(IrLowerer::new(hir, typeck).lower());
   }
 
   fn expand_builtins(&mut self) {

@@ -47,7 +47,7 @@ impl Hir {
   }
 
   pub fn hir_to_node(&self, hir: &HirId) -> Option<NodeId> {
-    self.node_to_hir.iter().find(|r| r.value() == hir).map(|r| r.key().clone())
+    self.node_to_hir.iter().find(|r| r.value() == hir).map(|r| *r.key())
   }
 
   pub fn is_struct_child(&self, id: &DefId) -> Option<RefMulti<'_, DefId, Struct>> {

@@ -1,5 +1,5 @@
 use crate::InferTy;
-use boron_hir::{Hir, Struct};
+use boron_hir::Hir;
 use boron_resolver::{DefId, DefKind, Resolver};
 use boron_utils::context::Context;
 
@@ -16,7 +16,7 @@ pub fn size_of_ty<'a>(sz: &'a SizeOfContext<'a>, ty: &InferTy) -> usize {
     InferTy::Primitive(p, _) => target.size_of(*p),
     InferTy::Ptr { .. } => target.pointer_width.size_bytes(),
     InferTy::Array { ty, len, .. } => size_of_ty(sz, ty) * len,
-    InferTy::Adt { def_id, args, .. } => {
+    InferTy::Adt { def_id, .. } => {
       let def = sz.resolver.get_definition(*def_id).unwrap();
 
       match def.kind {

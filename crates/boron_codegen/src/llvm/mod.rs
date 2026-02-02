@@ -15,14 +15,14 @@ pub struct LLVMCodegen<'a> {
   pub builder: Builder<'a>,
 }
 
-impl<'a> Codegen for LLVMCodegen<'a> {
-  fn backend_name(&self) -> &str {
+impl Codegen for LLVMCodegen<'_> {
+  fn backend_name(&self) -> &'static str {
     "LLVM"
   }
 
   fn generate(&self, ir: &Ir) {
     for strukt in &ir.structs {
-      self.generate_struct(&strukt);
+      self.generate_struct(strukt);
     }
 
     self.output_ir();

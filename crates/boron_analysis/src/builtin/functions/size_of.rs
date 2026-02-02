@@ -3,7 +3,7 @@ use crate::expander::BuiltInExpander;
 use crate::interpreter::values::ConstValue;
 use crate::size_of::{SizeOfContext, size_of_ty};
 
-impl<'a> BuiltInExpander<'a> {
+impl BuiltInExpander<'_> {
   pub fn size_of(&self, ty: InferTy) -> ConstValue {
     let ctx = SizeOfContext { ctx: self.ctx, hir: self.hir, resolver: self.resolver };
 

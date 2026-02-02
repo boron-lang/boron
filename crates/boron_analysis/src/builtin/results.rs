@@ -1,6 +1,5 @@
 use crate::interpreter::values::ConstValue;
-use boron_hir::{Expr, HirId};
-use boron_parser::NodeId;
+use boron_hir::HirId;
 use dashmap::DashMap;
 
 #[derive(Debug)]

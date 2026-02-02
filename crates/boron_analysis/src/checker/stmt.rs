@@ -66,7 +66,11 @@ impl TyChecker<'_> {
       StmtKind::Expr(expr) => {
         let ty = self.check_expr(expr, env, &Expectation::none());
 
-        if let ExprKind::Return { .. } = &expr.kind { ty } else { InferTy::Unit(expr.span) }
+        if let ExprKind::Return { .. } = &expr.kind {
+          ty
+        } else {
+          InferTy::Unit(expr.span)
+        }
       }
       StmtKind::Semi(expr) => self.check_expr(expr, env, &Expectation::none()),
     }
