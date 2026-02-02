@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use quote::quote;
 use std::collections::{BTreeSet, HashMap};
-use syn::{parse_macro_input, spanned::Spanned, DeriveInput, Expr};
+use syn::{DeriveInput, Expr, parse_macro_input, spanned::Spanned};
 use thiserror::Error;
 
 #[derive(Debug, Error)]

@@ -62,12 +62,7 @@ impl Session {
     is_test: bool,
   ) -> Self {
     Self {
-      dcx: DiagnosticCtx::new(
-        sources,
-        config.color,
-        &config.diagnostic_output_type,
-        w,
-      ),
+      dcx: DiagnosticCtx::new(sources, config.color, &config.diagnostic_output_type, w),
       config,
       is_test,
       module_graph: ModuleGraph::new(),

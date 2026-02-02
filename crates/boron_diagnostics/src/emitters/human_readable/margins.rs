@@ -1,5 +1,5 @@
 use crate::emitters::human_readable::label::{LabelInfo, LineLabel};
-use crate::emitters::human_readable::{HumanReadableEmitter, CROSS_GAPS};
+use crate::emitters::human_readable::{CROSS_GAPS, HumanReadableEmitter};
 use crate::fmt::Fmt as _;
 use boron_source::prelude::SourceFile;
 use boron_source::span::Span;
@@ -240,9 +240,9 @@ impl<'a> HumanReadableEmitter {
         state.vbar = state.vbar.or_else(|| Some(label).filter(|_| !is_parent));
       }
     } else {
-      state.vbar = state
-        .vbar
-        .or_else(|| Some(label).filter(|_| !is_parent && (is_start ^ (report_row < label_row))));
+      state.vbar = state.vbar.or_else(|| {
+        Some(label).filter(|_| !is_parent && (is_start ^ (report_row < label_row)))
+      });
     }
   }
 

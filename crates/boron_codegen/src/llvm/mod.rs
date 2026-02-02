@@ -1,3 +1,4 @@
+mod function;
 mod output;
 mod structs;
 
@@ -23,6 +24,10 @@ impl Codegen for LLVMCodegen<'_> {
   fn generate(&self, ir: &Ir) {
     for strukt in &ir.structs {
       self.generate_struct(strukt);
+    }
+
+    for func in &ir.functions {
+      self.generate_function(&func);
     }
 
     self.output_ir();

@@ -46,9 +46,7 @@ impl<'a> IrLowerer<'a> {
         let type_args: Vec<SemanticTy> = scheme
           .vars
           .iter()
-          .filter_map(|param| {
-            mono.type_args.get(param.def_id).map(Self::lower_type)
-          })
+          .filter_map(|param| mono.type_args.get(param.def_id).map(Self::lower_type))
           .collect();
 
         let mangled_name = self.mangler.mangle_struct(strukt.def_id, &type_args);
@@ -81,8 +79,10 @@ impl<'a> IrLowerer<'a> {
       .fields
       .iter()
       .map(|f| {
-        let original_ty =
-          self.type_table.field_type(strukt.def_id, &f.name.text()).unwrap();
+        let original_ty = self
+          .type_table
+          .field_type(strukt.def_id, &f.name.text())
+          .expect("should be known");
         let substituted_ty = Self::apply_subst_by_def_id(&original_ty, type_args);
         (f.name.text(), Self::lower_type(&substituted_ty))
       })

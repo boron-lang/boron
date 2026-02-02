@@ -1,5 +1,5 @@
-use crate::items::IrFunction;
 use crate::IrStruct;
+use crate::items::IrFunction;
 use boron_source::new_id;
 
 #[derive(Debug, Default, Clone)]

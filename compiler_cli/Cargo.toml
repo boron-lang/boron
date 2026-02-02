@@ -3,7 +3,7 @@ name = "boron"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "boron Compiler"
+description = "Boron compiler"
 
 [dependencies]
 clap = { workspace = true }
@@ -13,8 +13,3 @@ boron_core = { workspace = true }
 [lints]
 workspace = true
 
-[profile.release]
-panic = "abort"
-
-[profile.dev]
-panic = "abort"

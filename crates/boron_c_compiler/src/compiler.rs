@@ -136,8 +136,7 @@ impl Compiler {
 
     let version_arg = match self.kind {
       CompilerKind::Msvc => "/version",
-      CompilerKind::Gcc => "--version",
-      CompilerKind::Clang => "--version",
+      CompilerKind::Gcc | CompilerKind::Clang => "--version",
     };
 
     let output = Command::new(&self.path)
@@ -148,7 +147,7 @@ impl Compiler {
     let output_str = String::from_utf8_lossy(&output.stdout);
     self.version = self.parse_version(&output_str);
 
-    if let Some(ref version) = self.version {
+    if let Some(version) = &self.version {
       debug!("Detected compiler version: {version}");
     }
 
@@ -161,7 +160,7 @@ impl Compiler {
         for line in output.lines() {
           if line.contains("gcc") {
             if let Some(version_part) = line.split_whitespace().last() {
-              return self.parse_version_string(version_part, output);
+              return Self::parse_version_string(version_part, output);
             }
           }
         }
@@ -171,7 +170,7 @@ impl Compiler {
           if line.contains("clang version") {
             if let Some(version_part) = line.split("version ").nth(1) {
               let version_only = version_part.split_whitespace().next().unwrap_or("");
-              return self.parse_version_string(version_only, output);
+              return Self::parse_version_string(version_only, output);
             }
           }
         }
@@ -184,7 +183,6 @@ impl Compiler {
   }
 
   fn parse_version_string(
-    &self,
     version_str: &str,
     raw_output: &str,
   ) -> Option<CompilerVersion> {

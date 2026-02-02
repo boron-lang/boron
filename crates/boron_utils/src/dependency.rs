@@ -31,18 +31,12 @@ impl FromStr for Dependency {
   type Err = anyhow::Error;
 
   fn from_str(s: &str) -> anyhow::Result<Self, Self::Err> {
-    let (name, rest) = match s.split_once(':') {
-      Some((n, r)) => (n, r),
-      None => {
-        bail!("Invalid dependency format. Expected 'name:root=entrypoint', got '{}'", s)
-      }
+    let Some((name, rest)) = s.split_once(':') else {
+      bail!("Invalid dependency format. Expected 'name:root=entrypoint', got '{}'", s)
     };
 
-    let (root, entrypoint) = match rest.split_once('=') {
-      Some((r, e)) => (r, e),
-      None => {
-        bail!("Invalid dependency format. Expected 'name:root=entrypoint', got '{}'", s)
-      }
+    let Some((root, entrypoint)) = rest.split_once('=') else {
+      bail!("Invalid dependency format. Expected 'name:root=entrypoint', got '{}'", s)
     };
 
     Ok(Self {

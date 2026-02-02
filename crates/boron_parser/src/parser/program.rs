@@ -1,6 +1,6 @@
 use crate::items::Item;
-use crate::parser::items::ITEM_TOKENS;
 use crate::parser::Parser;
+use crate::parser::items::ITEM_TOKENS;
 use crate::{NodeId, ProgramNode, TokenType};
 
 impl Parser<'_> {

@@ -51,6 +51,12 @@ boron_target = { path = "crates/boron_target" }
 boron_ir = { path = "crates/boron_ir" }
 boron_codegen = { path = "crates/boron_codegen" }
 
+[profile.release]
+panic = "abort"
+
+[profile.dev]
+panic = "abort"
+
 [workspace.lints.rust]
 unsafe_code = "deny"
 
@@ -77,6 +83,7 @@ broken_intra_doc_links = "warn"
 
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }
+
 
 allow_attributes = "warn"
 as_ptr_cast_mut = "warn"
@@ -170,8 +177,6 @@ mem_forget = "warn"
 mismatching_type_param_order = "warn"
 missing_assert_message = "warn"
 missing_enforced_import_renames = "warn"
-missing_errors_doc = "warn"
-missing_safety_doc = "warn"
 mixed_attributes_style = "warn"
 mut_mut = "warn"
 mutex_integer = "warn"

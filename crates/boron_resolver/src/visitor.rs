@@ -1,3 +1,4 @@
+use crate::DefId;
 use crate::builtin_kind::BuiltInKind;
 use crate::def::{DefKind, Definition};
 use crate::errors::{
@@ -8,7 +9,7 @@ use crate::module_resolver::ModuleResolver;
 use crate::resolver::Resolver;
 use crate::scope::ScopeKind;
 use crate::symbol::{Symbol, SymbolKind};
-use crate::DefId;
+use boron_parser::ast::ProgramNode;
 use boron_parser::ast::expressions::{Expr, ExprKind};
 use boron_parser::ast::items::{
   ConstItem, EnumItem, FunctionItem, Item, ItemKind, ModItem, StructItem, Visibility,
@@ -16,7 +17,6 @@ use boron_parser::ast::items::{
 use boron_parser::ast::params::Param;
 use boron_parser::ast::statements::{Block, Statement};
 use boron_parser::ast::types::Type;
-use boron_parser::ast::ProgramNode;
 use boron_parser::import::ImportDecl;
 use boron_parser::module::Modules;
 use boron_parser::{
@@ -25,7 +25,7 @@ use boron_parser::{
 };
 use boron_source::prelude::{SourceFileId, Span};
 use boron_utils::context::Context;
-use boron_utils::prelude::{debug, Identifier};
+use boron_utils::prelude::{Identifier, debug};
 
 pub struct ResolveVisitor<'a> {
   pub module_resolver: ModuleResolver<'a>,
@@ -771,7 +771,9 @@ impl<'a> ResolveVisitor<'a> {
         DefKind::Enum | DefKind::Struct => {
           break;
         }
-        _ => {break;}
+        _ => {
+          break;
+        }
       }
     }
 

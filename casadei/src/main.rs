@@ -9,15 +9,16 @@ use crate::directives::LineDirection;
 use crate::output::{FailureType, TestStatus};
 use crate::runner::TestRunner;
 use crate::test::Test;
-use boron_core::prelude::{canonicalize_with_strip, Colorize};
+use boron_core::prelude::{Colorize, canonicalize_with_strip};
 use boron_core::vars::FILE_EXTENSION;
 use color_eyre::owo_colors::OwoColorize;
 use glob::glob;
 use spinners::{Spinner, Spinners};
 use std::env;
-use std::io::{stderr, Write};
+use std::io::{Write, stderr};
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::thread::Builder;
 use std::time::Instant;
 
 fn main() -> color_eyre::Result<()> {
@@ -31,7 +32,9 @@ fn main() -> color_eyre::Result<()> {
 
   let state = AppState::new(tests.len() as u64);
   let app = App::new(state.clone());
-  let ui_handle = std::thread::spawn(move || app.run());
+  let ui_handle = Builder::new()
+    .name("UI thread for test runner".to_string())
+    .spawn(move || app.run())?;
 
   let mut runner = TestRunner::new(&tests, state.clone());
   runner.run_with_progress()?;
