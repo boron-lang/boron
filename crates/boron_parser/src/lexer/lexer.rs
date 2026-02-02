@@ -29,10 +29,6 @@ impl<'ctx> Lexer<'ctx> {
     Lexer { source, chars, file_id: sf.file_id, pos: 0, offset: 0, current, dcx }
   }
 
-  pub(crate) fn current_position(&self) -> usize {
-    self.pos
-  }
-
   pub fn dcx(&self) -> &DiagnosticCtx {
     self.dcx
   }

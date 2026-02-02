@@ -3,13 +3,13 @@ mod label;
 mod margins;
 mod source_groups;
 
-use crate::Diag;
-use crate::emitters::Emitter;
-use crate::emitters::human_readable::chars::{Characters, ascii};
+use crate::emitters::human_readable::chars::{ascii, Characters};
 use crate::emitters::human_readable::label::{LabelInfo, LabelKind, LineLabel};
 use crate::emitters::human_readable::source_groups::SourceGroup;
+use crate::emitters::Emitter;
 use crate::fmt::Fmt as _;
 use crate::show::Show;
+use crate::Diag;
 use boron_source::line::Line;
 use boron_source::prelude::{SourceFile, Sources, Span};
 use std::io::Write;
@@ -18,7 +18,7 @@ use std::sync::Arc;
 use unicode_width::UnicodeWidthChar as _;
 use yansi::Color;
 
-pub const CONTEXT_LINES: usize = 0;
+pub const CONTEXT_LINES: usize = 3;
 pub const TAB_WIDTH: usize = 4;
 pub const MULTILINE_ARROWS: bool = true;
 pub const CROSS_GAPS: bool = true;
@@ -36,17 +36,11 @@ impl HumanReadableEmitter {
     Self { characters: ascii(), color, sources }
   }
 
-  fn advice_color(&self) -> Option<Color> {
-    Some(Color::Fixed(147)).filter(|_| self.color)
-  }
   fn margin_color(&self) -> Option<Color> {
     Some(Color::Fixed(246)).filter(|_| self.color)
   }
   fn skipped_margin_color(&self) -> Option<Color> {
     Some(Color::Fixed(240)).filter(|_| self.color)
-  }
-  fn unimportant_color(&self) -> Option<Color> {
-    Some(Color::Fixed(249)).filter(|_| self.color)
   }
   fn note_color(&self) -> Option<Color> {
     Some(Color::Fixed(115)).filter(|_| self.color)
@@ -91,7 +85,7 @@ impl<'a> HumanReadableEmitter {
     Ok(())
   }
 
-  fn calculate_line_number_width(&self, groups: &[SourceGroup]) -> usize {
+  fn calculate_line_number_width(&self, groups: &[SourceGroup<'a>]) -> usize {
     groups
       .iter()
       .filter_map(|SourceGroup { char_span, src_id, .. }| {
@@ -112,7 +106,7 @@ impl<'a> HumanReadableEmitter {
   fn write_source_sections(
     &self,
     diag: &Diag,
-    groups: &[SourceGroup],
+    groups: &[SourceGroup<'a>],
     line_no_width: usize,
     w: &mut dyn Write,
   ) -> anyhow::Result<()> {
@@ -126,7 +120,7 @@ impl<'a> HumanReadableEmitter {
   fn write_source_group(
     &self,
     diag: &Diag,
-    group: &SourceGroup,
+    group: &SourceGroup<'a>,
     group_idx: usize,
     groups_len: usize,
     line_no_width: usize,
@@ -426,8 +420,8 @@ impl<'a> HumanReadableEmitter {
     &self,
     idx: usize,
     line: &Line,
-    line_labels: Vec<LineLabel>,
-    margin_label: &Option<LineLabel>,
+    line_labels: Vec<LineLabel<'a>>,
+    margin_label: &Option<LineLabel<'a>>,
     is_ellipsis: bool,
     line_no_width: usize,
     multi_labels_with_message: &[&LabelInfo<'a>],
@@ -483,15 +477,14 @@ impl<'a> HumanReadableEmitter {
     &self,
     idx: usize,
     line: &Line,
-    line_labels: &[LineLabel],
-    margin_label: &Option<LineLabel>,
+    line_labels: &[LineLabel<'a>],
+    margin_label: &Option<LineLabel<'a>>,
     is_ellipsis: bool,
     line_no_width: usize,
     multi_labels_with_message: &[&LabelInfo<'a>],
     src: &SourceFile,
     w: &mut dyn Write,
   ) -> anyhow::Result<()> {
-    let draw = &self.characters;
     let arrow_end_space = 2;
     let arrow_len = line_labels.iter().fold(0, |l, ll| {
       if ll.multi {
@@ -546,10 +539,10 @@ impl<'a> HumanReadableEmitter {
     &self,
     idx: usize,
     line: &Line,
-    line_labels: &[LineLabel],
+    line_labels: &[LineLabel<'a>],
     row: usize,
     arrow_len: usize,
-    margin_label: &Option<LineLabel>,
+    margin_label: &Option<LineLabel<'a>>,
     is_ellipsis: bool,
     line_no_width: usize,
     multi_labels_with_message: &[&LabelInfo<'a>],
@@ -614,11 +607,11 @@ impl<'a> HumanReadableEmitter {
     &self,
     idx: usize,
     line: &Line,
-    line_label: &LineLabel,
-    line_labels: &[LineLabel],
+    line_label: &LineLabel<'a>,
+    line_labels: &[LineLabel<'a>],
     row: usize,
     arrow_len: usize,
-    margin_label: &Option<LineLabel>,
+    margin_label: &Option<LineLabel<'a>>,
     is_ellipsis: bool,
     line_no_width: usize,
     multi_labels_with_message: &[&LabelInfo<'a>],

@@ -7,7 +7,7 @@ use boron_hir::{Expr, ExprKind, HirId};
 use boron_utils::prelude::Span;
 
 impl TyChecker<'_> {
-  pub(crate) fn check_call(
+  pub fn check_call(
     &mut self,
     callee: &Expr,
     args: &[Expr],
@@ -74,14 +74,14 @@ impl TyChecker<'_> {
                   for (scheme_param, inst_param) in
                     scheme_params.iter().zip(inst_params.iter())
                   {
-                    self.collect_param_substitutions(
+                    Self::collect_param_substitutions(
                       scheme_param,
                       &self.infcx.resolve(inst_param),
                       &scheme.vars,
                       &mut subst,
                     );
                   }
-                  self.collect_param_substitutions(
+                  Self::collect_param_substitutions(
                     scheme_ret,
                     &self.infcx.resolve(inst_ret),
                     &scheme.vars,
@@ -113,8 +113,7 @@ impl TyChecker<'_> {
     }
   }
 
-  pub(crate) fn collect_param_substitutions(
-    &self,
+  pub fn collect_param_substitutions(
     scheme_ty: &InferTy,
     resolved_ty: &InferTy,
     vars: &[TyParam],
@@ -126,21 +125,15 @@ impl TyChecker<'_> {
           subst.add(*param, resolved.clone());
         }
       }
-      (InferTy::Ptr { ty: s_ty, .. }, InferTy::Ptr { ty: r_ty, .. }) => {
-        self.collect_param_substitutions(s_ty, r_ty, vars, subst);
-      }
-      (InferTy::Optional(s_ty, _), InferTy::Optional(r_ty, _)) => {
-        self.collect_param_substitutions(s_ty, r_ty, vars, subst);
-      }
-      (InferTy::Array { ty: s_ty, .. }, InferTy::Array { ty: r_ty, .. }) => {
-        self.collect_param_substitutions(s_ty, r_ty, vars, subst);
-      }
-      (InferTy::Slice(s_ty, _), InferTy::Slice(r_ty, _)) => {
-        self.collect_param_substitutions(s_ty, r_ty, vars, subst);
+      (InferTy::Ptr { ty: s_ty, .. }, InferTy::Ptr { ty: r_ty, .. })
+      | (InferTy::Optional(s_ty, _), InferTy::Optional(r_ty, _))
+      | (InferTy::Array { ty: s_ty, .. }, InferTy::Array { ty: r_ty, .. })
+      | (InferTy::Slice(s_ty, _), InferTy::Slice(r_ty, _)) => {
+        Self::collect_param_substitutions(s_ty, r_ty, vars, subst);
       }
       (InferTy::Tuple(s_tys, _), InferTy::Tuple(r_tys, _)) => {
         for (s, r) in s_tys.iter().zip(r_tys.iter()) {
-          self.collect_param_substitutions(s, r, vars, subst);
+          Self::collect_param_substitutions(s, r, vars, subst);
         }
       }
       (
@@ -148,13 +141,13 @@ impl TyChecker<'_> {
         InferTy::Fn { params: r_params, ret: r_ret, .. },
       ) => {
         for (s, r) in s_params.iter().zip(r_params.iter()) {
-          self.collect_param_substitutions(s, r, vars, subst);
+          Self::collect_param_substitutions(s, r, vars, subst);
         }
-        self.collect_param_substitutions(s_ret, r_ret, vars, subst);
+        Self::collect_param_substitutions(s_ret, r_ret, vars, subst);
       }
       (InferTy::Adt { args: s_args, .. }, InferTy::Adt { args: r_args, .. }) => {
         for (s, r) in s_args.iter().zip(r_args.iter()) {
-          self.collect_param_substitutions(s, r, vars, subst);
+          Self::collect_param_substitutions(s, r, vars, subst);
         }
       }
       _ => {}

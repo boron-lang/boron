@@ -22,12 +22,13 @@ impl TyChecker<'_> {
     TypeScheme { vars: ty_vars, ty: fn_ty }
   }
 
-  fn param_types(&self, params: &Vec<Param>) -> Vec<InferTy> {
+  fn param_types(&self, params: &[Param]) -> Vec<InferTy> {
     params
       .iter()
       .filter_map(|p| match &p.kind {
-        ParamKind::Regular { ty, .. } => Some(self.lower_hir_ty(ty)),
-        ParamKind::Variadic { ty, .. } => Some(self.lower_hir_ty(ty)),
+        ParamKind::Regular { ty, .. } | ParamKind::Variadic { ty, .. } => {
+          Some(self.lower_hir_ty(ty))
+        }
         ParamKind::SelfParam { .. } => None,
       })
       .collect()

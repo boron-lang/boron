@@ -1,4 +1,3 @@
-use crate::DefId;
 use crate::builtin_kind::BuiltInKind;
 use crate::def::{DefKind, Definition};
 use crate::errors::{
@@ -9,7 +8,7 @@ use crate::module_resolver::ModuleResolver;
 use crate::resolver::Resolver;
 use crate::scope::ScopeKind;
 use crate::symbol::{Symbol, SymbolKind};
-use boron_parser::ast::ProgramNode;
+use crate::DefId;
 use boron_parser::ast::expressions::{Expr, ExprKind};
 use boron_parser::ast::items::{
   ConstItem, EnumItem, FunctionItem, Item, ItemKind, ModItem, StructItem, Visibility,
@@ -17,6 +16,7 @@ use boron_parser::ast::items::{
 use boron_parser::ast::params::Param;
 use boron_parser::ast::statements::{Block, Statement};
 use boron_parser::ast::types::Type;
+use boron_parser::ast::ProgramNode;
 use boron_parser::import::ImportDecl;
 use boron_parser::module::Modules;
 use boron_parser::{
@@ -25,7 +25,7 @@ use boron_parser::{
 };
 use boron_source::prelude::{SourceFileId, Span};
 use boron_utils::context::Context;
-use boron_utils::prelude::{Identifier, debug};
+use boron_utils::prelude::{debug, Identifier};
 
 pub struct ResolveVisitor<'a> {
   pub module_resolver: ModuleResolver<'a>,
@@ -89,7 +89,7 @@ impl<'a> ResolveVisitor<'a> {
     self.module_resolver.save_module_rib();
   }
 
-  fn collect_import(&mut self, import: &ImportDecl) {
+  fn collect_import(&self, import: &ImportDecl) {
     let sess = self.ctx.session;
 
     let current = sess.dcx().sources().get_unchecked(self.current_file());
@@ -583,10 +583,7 @@ impl<'a> ResolveVisitor<'a> {
           VariantPayload::Tuple(fields) => {
             for field in fields {
               match field {
-                VariantField::Named { ty, .. } => {
-                  self.resolve_type(ty);
-                }
-                VariantField::Unnamed(ty) => {
+                VariantField::Named { ty, .. } | VariantField::Unnamed(ty) => {
                   self.resolve_type(ty);
                 }
               }
@@ -792,10 +789,6 @@ impl<'a> ResolveVisitor<'a> {
         self.resolve_expr(right);
       }
 
-      ExprKind::Unary { operand, .. } => {
-        self.resolve_expr(operand);
-      }
-
       ExprKind::Assign { target, value, .. } => {
         self.resolve_expr(target);
         self.resolve_expr(value);
@@ -828,7 +821,7 @@ impl<'a> ResolveVisitor<'a> {
         self.resolve_expr(index);
       }
 
-      ExprKind::AddrOf { operand, .. } => {
+      ExprKind::AddrOf { operand, .. } | ExprKind::Unary { operand, .. } => {
         self.resolve_expr(operand);
       }
 

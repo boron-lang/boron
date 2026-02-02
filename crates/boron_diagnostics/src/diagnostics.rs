@@ -8,7 +8,7 @@ use crate::{DiagnosticCode, ToDiagnostic};
 
 new_id!(DiagnosticId);
 
-/// A diagnostic panics on drop when not emitted or cancelled
+/// A diagnostic panics on drop when not emitted or canceled
 #[derive(Clone, Debug)]
 pub struct Diagnostic {
   pub id: DiagnosticId,

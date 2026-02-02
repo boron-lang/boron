@@ -20,7 +20,7 @@ use boron_resolver::{DefId, Resolver};
 use boron_utils::context::Context;
 use boron_utils::prelude::Span;
 
-pub fn typeck_hir(hir: &Hir, ctx: &Context, resolver: &Resolver) -> TypeTable {
+pub fn typeck_hir(hir: &Hir, ctx: &Context<'_>, resolver: &Resolver) -> TypeTable {
   let mut checker = TyChecker::new(hir, ctx, resolver);
 
   checker.collect_signatures();

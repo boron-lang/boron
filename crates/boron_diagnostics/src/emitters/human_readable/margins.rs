@@ -1,5 +1,5 @@
 use crate::emitters::human_readable::label::{LabelInfo, LineLabel};
-use crate::emitters::human_readable::{CROSS_GAPS, HumanReadableEmitter};
+use crate::emitters::human_readable::{HumanReadableEmitter, CROSS_GAPS};
 use crate::fmt::Fmt as _;
 use boron_source::prelude::SourceFile;
 use boron_source::span::Span;
@@ -108,7 +108,6 @@ impl<'a> HumanReadableEmitter {
     multi_labels_with_message: &[&LabelInfo<'a>],
     src: &SourceFile,
   ) -> (String, String) {
-    let draw = &self.characters;
     let multi_label = multi_labels_with_message.get(col);
     let line_span = src.line(idx).unwrap().span();
 
@@ -149,7 +148,7 @@ impl<'a> HumanReadableEmitter {
     });
 
     self.render_margin_chars(
-      state,
+      &state,
       multi_label,
       col,
       is_line,
@@ -185,7 +184,7 @@ impl<'a> HumanReadableEmitter {
     if let Some(margin) = margin.filter(|_| is_line) {
       state.margin_ptr = Some((margin, is_start));
     } else if !is_start && (!is_end || is_line) {
-      state.vbar = state.vbar.or(Some(label).filter(|_| !is_parent));
+      state.vbar = state.vbar.or_else(|| Some(label).filter(|_| !is_parent));
     } else if let Some((report_row, is_arrow)) = report_row {
       self.handle_report_row(
         state,
@@ -246,7 +245,7 @@ impl<'a> HumanReadableEmitter {
 
   fn render_margin_chars(
     &self,
-    state: MarginState<'a>,
+    state: &MarginState<'a>,
     multi_label: Option<&&LabelInfo<'a>>,
     col: usize,
     is_line: bool,

@@ -162,7 +162,7 @@ pub struct Stmt {
 
 #[derive(Debug, Clone)]
 pub enum StmtKind {
-  Local(Local),
+  Local(Box<Local>),
   Expr(Expr),
   /// Expression without semicolon (only valid as last stmt in block)
   Semi(Expr),

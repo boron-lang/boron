@@ -1,10 +1,10 @@
 use crate::prelude::{Colorize as _, CompilationUnit, FILE_EXTENSION};
-use anyhow::Result;
 use anyhow::bail;
+use anyhow::Result;
 use boron_diagnostics::DiagnosticWriter;
 use boron_source::prelude::Sources;
 use boron_utils::context::Context;
-use boron_utils::prelude::{ProjectConfig, Session, info};
+use boron_utils::prelude::{info, ProjectConfig, Session};
 use std::sync::Arc;
 
 pub fn compiler_entrypoint(
@@ -27,8 +27,8 @@ pub fn compiler_entrypoint(
   }
   let sources = Arc::new(Sources::new());
 
-  let sess = Session::new(config.clone(), sources.clone(), writer, is_test);
-  let context = &mut Context::new(&sess, sources.clone());
+  let sess = Session::new(config.clone(), &sources, writer, is_test);
+  let context = &mut Context::new(&sess, Arc::clone(&sources));
 
   let file = sess.config().root.join(file);
   let contents = fs_err::read_to_string(file.clone())?;

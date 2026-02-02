@@ -3,7 +3,7 @@ use boron_diagnostics::DiagnosticCtx;
 use boron_parser::IntBase;
 use std::num::ParseIntError;
 
-pub fn construct_i128(dcx: &DiagnosticCtx, base: IntBase, value: String) -> i128 {
+pub fn construct_i128(dcx: &DiagnosticCtx, base: IntBase, value: &str) -> i128 {
   let radix = base.radix();
 
   match i128::from_str_radix(&value, radix) {

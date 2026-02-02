@@ -4,7 +4,7 @@ use crate::{InferTy, TyChecker, TyVar, TyVarKind};
 use boron_parser::PrimitiveKind;
 
 impl TyChecker<'_> {
-  pub fn finalize_types(&mut self) {
+  pub fn finalize_types(&self) {
     let node_entries: Vec<_> =
       self.table.node_types.iter().map(|e| (*e.key(), e.value().clone())).collect();
 
@@ -113,22 +113,6 @@ impl TyChecker<'_> {
       | InferTy::Never(_)
       | InferTy::Param { .. }
       | InferTy::Err(_) => ty,
-    }
-  }
-
-  pub fn has_unresolved_generics(&self, ty: &InferTy) -> bool {
-    match ty {
-      InferTy::Adt { args, .. } => args.iter().any(|t| self.has_unresolved_generics(t)),
-      InferTy::Ptr { ty, .. } => self.has_unresolved_generics(ty),
-      InferTy::Optional(ty, _) => self.has_unresolved_generics(ty),
-      InferTy::Array { ty, .. } => self.has_unresolved_generics(ty),
-      InferTy::Slice(ty, _) => self.has_unresolved_generics(ty),
-      InferTy::Tuple(tys, _) => tys.iter().any(|t| self.has_unresolved_generics(t)),
-      InferTy::Fn { params, ret, .. } => {
-        params.iter().any(|t| self.has_unresolved_generics(t))
-          || self.has_unresolved_generics(ret)
-      }
-      _ => false,
     }
   }
 }

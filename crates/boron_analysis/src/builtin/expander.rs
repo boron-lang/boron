@@ -1,9 +1,9 @@
-use crate::TypeTable;
 use crate::results::BuiltInResults;
+use crate::TypeTable;
 use boron_diagnostics::DiagnosticCtx;
 use boron_hir::{Block, Expr, ExprKind, Function, Hir, ParamKind, StmtKind};
-use boron_resolver::Resolver;
 use boron_resolver::prelude::BuiltInKind;
+use boron_resolver::Resolver;
 use boron_utils::context::Context;
 
 pub struct BuiltInExpander<'a> {
@@ -44,10 +44,6 @@ impl<'a> BuiltInExpander<'a> {
 
   fn walk_expr(&self, expr: &Expr) {
     match &expr.kind {
-      ExprKind::Literal(_) => {}
-
-      ExprKind::Path(_) => {}
-
       ExprKind::Binary { lhs, rhs, .. } => {
         self.walk_expr(lhs);
         self.walk_expr(rhs);
@@ -144,21 +140,13 @@ impl<'a> BuiltInExpander<'a> {
         self.walk_block(body);
       }
 
-      ExprKind::Break { value } => {
+      ExprKind::Break { value } | ExprKind::Return { value } => {
         if let Some(v) = value {
           self.walk_expr(v);
         }
       }
 
-      ExprKind::Return { value } => {
-        if let Some(v) = value {
-          self.walk_expr(v);
-        }
-      }
-
-      ExprKind::Continue => {}
-
-      ExprKind::Err => {}
+      ExprKind::Literal(_) | ExprKind::Path(_) | ExprKind::Continue | ExprKind::Err => {}
     }
   }
 

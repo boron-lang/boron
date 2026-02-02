@@ -36,7 +36,7 @@ impl TyChecker<'_> {
             ty: self.format_type(&def_ty),
           });
         } else {
-          let field_ty = self.apply_subst(
+          let field_ty = Self::apply_subst(
             &self.table.field_type(*def_id, &field.name.text()).unwrap(),
             &subst,
           );
@@ -62,7 +62,7 @@ impl TyChecker<'_> {
         if let InferTy::Adt { args: scheme_args, .. } = &scheme.ty {
           if let InferTy::Adt { args: inst_args, .. } = &def_ty {
             for (scheme_arg, inst_arg) in scheme_args.iter().zip(inst_args.iter()) {
-              self.collect_param_substitutions(
+              Self::collect_param_substitutions(
                 scheme_arg,
                 &self.infcx.resolve(inst_arg),
                 &scheme.vars,

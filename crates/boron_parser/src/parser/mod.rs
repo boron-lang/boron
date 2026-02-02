@@ -14,7 +14,7 @@ use crate::ast::ProgramNode;
 use crate::lexer::Token;
 use boron_diagnostics::DiagnosticCtx;
 
-pub fn parse(tokens: Vec<Token>, dcx: &DiagnosticCtx) -> Option<ProgramNode> {
+pub fn parse(tokens: Vec<Token>, dcx: &DiagnosticCtx) -> ProgramNode {
   let mut parser = Parser::new(tokens, dcx);
   parser.parse_program()
 }

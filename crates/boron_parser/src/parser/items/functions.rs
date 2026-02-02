@@ -1,5 +1,5 @@
-use crate::parser::Parser;
 use crate::parser::errors::{ExpectedParenToOpenList, FunctionCamelCase};
+use crate::parser::Parser;
 use crate::{FunctionItem, NeverType, NodeId, TokenType, Type, UnitType};
 use boron_source::prelude::Span;
 use boron_utils::ident_table::Identifier;
@@ -61,7 +61,7 @@ impl Parser<'_> {
     })
   }
 
-  fn validate_function_name(&mut self, name: Identifier) {
+  fn validate_function_name(&self, name: Identifier) {
     if name.text() != camel_case(&name.text()) {
       self.emit(FunctionCamelCase { span: *name.span() });
     }

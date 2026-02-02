@@ -110,7 +110,7 @@ impl<'a> SymbolMangler<'a> {
 
   fn mangle_type(&self, ty: &SemanticTy) -> String {
     match ty {
-      SemanticTy::Primitive(kind) => self.mangle_primitive(*kind),
+      SemanticTy::Primitive(kind) => Self::mangle_primitive(*kind),
 
       SemanticTy::Struct { def_id, fields } => {
         let base = self
@@ -176,7 +176,7 @@ impl<'a> SymbolMangler<'a> {
     }
   }
 
-  fn mangle_primitive(&self, kind: PrimitiveKind) -> String {
+  fn mangle_primitive(kind: PrimitiveKind) -> String {
     match kind {
       PrimitiveKind::I8 => "i8".to_owned(),
       PrimitiveKind::I16 => "i16".to_owned(),

@@ -14,7 +14,7 @@ pub fn try_cli() -> Result<()> {
   let project_config = ProjectConfig::try_from(cli)?;
 
   let output = Arc::new(Mutex::new(Cursor::new(vec![])));
-  compiler_entrypoint(&project_config, output.clone(), false, check_only)?;
+  compiler_entrypoint(&project_config, Arc::clone(&output), false, check_only)?;
   stderr().write_all(output.lock().get_ref())?;
 
   info!("finished in {:.2?}", instant.elapsed());

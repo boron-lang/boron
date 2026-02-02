@@ -24,8 +24,4 @@ impl Lexer<'_> {
       }
     }
   }
-
-  pub(crate) fn is_ascii_whitespace(ch: char) -> bool {
-    matches!(ch, ' ' | '\t' | '\n' | '\r' | '\x0B' | '\x0C')
-  }
 }

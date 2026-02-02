@@ -10,9 +10,9 @@ pub enum FinalComptimeArg {
 }
 
 impl FinalComptimeArg {
-  pub fn as_ty(&self) -> InferTy {
+  pub fn as_ty(&self) -> &InferTy {
     match self {
-      Self::Ty(ty) => ty.clone(),
+      Self::Ty(ty) => ty,
       _ => unreachable!(),
     }
   }

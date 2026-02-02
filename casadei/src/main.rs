@@ -9,13 +9,13 @@ use crate::directives::LineDirection;
 use crate::output::{FailureType, TestStatus};
 use crate::runner::TestRunner;
 use crate::test::Test;
-use boron_core::prelude::{Colorize, canonicalize_with_strip};
+use boron_core::prelude::{canonicalize_with_strip, Colorize};
 use boron_core::vars::FILE_EXTENSION;
 use color_eyre::owo_colors::OwoColorize;
 use glob::glob;
 use spinners::{Spinner, Spinners};
 use std::env;
-use std::io::{Write, stderr};
+use std::io::{stderr, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Instant;
@@ -90,7 +90,7 @@ fn main() -> color_eyre::Result<()> {
           failed += 1;
         }
 
-        stderr().write(&result.output)?;
+        stderr().write_all(&result.output)?;
       }
     }
   }

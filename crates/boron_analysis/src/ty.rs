@@ -66,36 +66,36 @@ pub enum InferTy {
 impl InferTy {
   pub fn span(&self) -> Span {
     match self {
-      Self::Var(_, span) => *span,
-      Self::Primitive(_, span) => *span,
-      Self::Adt { span, .. } => *span,
-      Self::Ptr { span, .. } => *span,
-      Self::Optional(_, span) => *span,
-      Self::Array { span, .. } => *span,
-      Self::Slice(_, span) => *span,
-      Self::Tuple(_, span) => *span,
-      Self::Fn { span, .. } => *span,
-      Self::Unit(span) => *span,
-      Self::Never(span) => *span,
+      Self::Var(_, span)
+      | Self::Primitive(_, span)
+      | Self::Adt { span, .. }
+      | Self::Ptr { span, .. }
+      | Self::Optional(_, span)
+      | Self::Array { span, .. }
+      | Self::Slice(_, span)
+      | Self::Tuple(_, span)
+      | Self::Fn { span, .. }
+      | Self::Unit(span)
+      | Self::Never(span)
+      | Self::Err(span) => *span,
+
       Self::Param(param) => param.span,
-      Self::Err(span) => *span,
     }
   }
 
   pub fn has_params(&self) -> bool {
     match self {
       Self::Var(_, _) | Self::Param { .. } => true,
-      Self::Primitive(_, _) => false,
       Self::Adt { args, .. } => args.iter().any(|t| t.has_params()),
-      Self::Ptr { ty, .. } => ty.has_params(),
-      Self::Optional(ty, _) => ty.has_params(),
-      Self::Array { ty, .. } => ty.has_params(),
-      Self::Slice(ty, _) => ty.has_params(),
+      Self::Ptr { ty, .. }
+      | Self::Slice(ty, _)
+      | Self::Optional(ty, _)
+      | Self::Array { ty, .. } => ty.has_params(),
       Self::Tuple(tys, _) => tys.iter().any(|t| t.has_params()),
       Self::Fn { params, ret, .. } => {
         params.iter().any(|t| t.has_params()) || ret.has_params()
       }
-      Self::Unit(_) | Self::Never(_) | Self::Err(_) => false,
+      Self::Primitive(_, _) | Self::Unit(_) | Self::Never(_) | Self::Err(_) => false,
     }
   }
 
@@ -147,9 +147,9 @@ impl InferTy {
   pub fn semantically_eq(&self, other: &Self) -> bool {
     match (self, other) {
       (Self::Primitive(k1, _), Self::Primitive(k2, _)) => k1 == k2,
-      (Self::Unit(_), Self::Unit(_)) => true,
-      (Self::Never(_), Self::Never(_)) => true,
-      (Self::Err(_), Self::Err(_)) => true,
+      (Self::Unit(_), Self::Unit(_))
+      | (Self::Never(_), Self::Never(_))
+      | (Self::Err(_), Self::Err(_)) => true,
       (Self::Var(v1, _), Self::Var(v2, _)) => v1 == v2,
       (Self::Param(p1), Self::Param(p2)) => p1.def_id == p2.def_id,
       (
@@ -164,11 +164,11 @@ impl InferTy {
         Self::Ptr { mutability: m1, ty: t1, .. },
         Self::Ptr { mutability: m2, ty: t2, .. },
       ) => m1 == m2 && t1.semantically_eq(t2),
-      (Self::Optional(t1, _), Self::Optional(t2, _)) => t1.semantically_eq(t2),
+      (Self::Optional(t1, _), Self::Optional(t2, _))
+      | (Self::Slice(t1, _), Self::Slice(t2, _)) => t1.semantically_eq(t2),
       (Self::Array { ty: t1, len: l1, .. }, Self::Array { ty: t2, len: l2, .. }) => {
         l1 == l2 && t1.semantically_eq(t2)
       }
-      (Self::Slice(t1, _), Self::Slice(t2, _)) => t1.semantically_eq(t2),
       (Self::Tuple(ts1, _), Self::Tuple(ts2, _)) => {
         ts1.len() == ts2.len()
           && ts1.iter().zip(ts2.iter()).all(|(t1, t2)| t1.semantically_eq(t2))

@@ -1,6 +1,6 @@
 use crate::{Ir, IrId, IrStruct, SymbolMangler};
 use boron_analysis::ty::SubstitutionMap;
-use boron_analysis::{InferTy, TypeScheme, TypeTable};
+use boron_analysis::{InferTy, TypeTable};
 use boron_hir::{Function, Hir, SemanticTy, Struct};
 
 #[derive(Debug)]
@@ -42,12 +42,12 @@ impl<'a> IrLowerer<'a> {
           continue;
         }
 
-        let fields = self.lower_struct_fields(strukt, &mono.type_args, &scheme);
+        let fields = self.lower_struct_fields(strukt, &mono.type_args);
         let type_args: Vec<SemanticTy> = scheme
           .vars
           .iter()
           .filter_map(|param| {
-            mono.type_args.get(param.def_id).map(|ty| self.lower_type(ty))
+            mono.type_args.get(param.def_id).map(Self::lower_type)
           })
           .collect();
 
@@ -61,7 +61,7 @@ impl<'a> IrLowerer<'a> {
         });
       }
     } else {
-      let fields = self.lower_struct_fields(strukt, &SubstitutionMap::new(), &scheme);
+      let fields = self.lower_struct_fields(strukt, &SubstitutionMap::new());
       let mangled_name = self.mangler.mangle_struct(strukt.def_id, &[]);
       self.ir.structs.push(IrStruct {
         name: mangled_name,
@@ -76,7 +76,6 @@ impl<'a> IrLowerer<'a> {
     &self,
     strukt: &Struct,
     type_args: &SubstitutionMap,
-    scheme: &TypeScheme,
   ) -> Vec<(String, SemanticTy)> {
     strukt
       .fields
@@ -84,43 +83,43 @@ impl<'a> IrLowerer<'a> {
       .map(|f| {
         let original_ty =
           self.type_table.field_type(strukt.def_id, &f.name.text()).unwrap();
-        let substituted_ty = self.apply_subst_by_def_id(&original_ty, type_args, scheme);
-        (f.name.text(), self.lower_type(&substituted_ty))
+        let substituted_ty = Self::apply_subst_by_def_id(&original_ty, type_args);
+        (f.name.text(), Self::lower_type(&substituted_ty))
       })
       .collect()
   }
 
-  fn lower_type(&self, ty: &InferTy) -> SemanticTy {
+  fn lower_type(ty: &InferTy) -> SemanticTy {
     match ty {
       InferTy::Primitive(kind, _) => SemanticTy::Primitive(*kind),
 
       InferTy::Adt { def_id, args, .. } => {
-        let fields = args.iter().map(|arg| self.lower_type(arg)).collect();
+        let fields = args.iter().map(Self::lower_type).collect();
         SemanticTy::Struct { def_id: *def_id, fields }
       }
 
       InferTy::Ptr { mutability, ty: inner, .. } => SemanticTy::Ptr {
         mutability: *mutability,
-        inner: Box::new(self.lower_type(inner)),
+        inner: Box::new(Self::lower_type(inner)),
       },
 
       InferTy::Optional(inner, _) => {
-        SemanticTy::Optional(Box::new(self.lower_type(inner)))
+        SemanticTy::Optional(Box::new(Self::lower_type(inner)))
       }
 
       InferTy::Array { ty: inner, len, .. } => {
-        SemanticTy::Array { elem: Box::new(self.lower_type(inner)), len: *len }
+        SemanticTy::Array { elem: Box::new(Self::lower_type(inner)), len: *len }
       }
 
-      InferTy::Slice(inner, _) => SemanticTy::Slice(Box::new(self.lower_type(inner))),
+      InferTy::Slice(inner, _) => SemanticTy::Slice(Box::new(Self::lower_type(inner))),
 
       InferTy::Tuple(tys, _) => {
-        SemanticTy::Tuple(tys.iter().map(|t| self.lower_type(t)).collect())
+        SemanticTy::Tuple(tys.iter().map(Self::lower_type).collect())
       }
 
       InferTy::Fn { params, ret, .. } => SemanticTy::Fn {
-        params: params.iter().map(|p| self.lower_type(p)).collect(),
-        ret: Box::new(self.lower_type(ret)),
+        params: params.iter().map(Self::lower_type).collect(),
+        ret: Box::new(Self::lower_type(ret)),
       },
 
       InferTy::Unit(_) => SemanticTy::Unit,
@@ -134,12 +133,7 @@ impl<'a> IrLowerer<'a> {
     }
   }
 
-  fn apply_subst_by_def_id(
-    &self,
-    ty: &InferTy,
-    type_args: &SubstitutionMap,
-    scheme: &TypeScheme,
-  ) -> InferTy {
+  fn apply_subst_by_def_id(ty: &InferTy, type_args: &SubstitutionMap) -> InferTy {
     match ty {
       InferTy::Var(_var, _span) => ty.clone(),
       InferTy::Param(param) => {
@@ -151,40 +145,35 @@ impl<'a> IrLowerer<'a> {
       }
       InferTy::Adt { def_id, args, span } => InferTy::Adt {
         def_id: *def_id,
-        args: args
-          .iter()
-          .map(|t| self.apply_subst_by_def_id(t, type_args, scheme))
-          .collect(),
+        args: args.iter().map(|t| Self::apply_subst_by_def_id(t, type_args)).collect(),
         span: *span,
       },
       InferTy::Ptr { mutability, ty: inner, span } => InferTy::Ptr {
         mutability: *mutability,
-        ty: Box::new(self.apply_subst_by_def_id(inner, type_args, scheme)),
+        ty: Box::new(Self::apply_subst_by_def_id(inner, type_args)),
         span: *span,
       },
-      InferTy::Optional(inner, span) => InferTy::Optional(
-        Box::new(self.apply_subst_by_def_id(inner, type_args, scheme)),
-        *span,
-      ),
+      InferTy::Optional(inner, span) => {
+        InferTy::Optional(Box::new(Self::apply_subst_by_def_id(inner, type_args)), *span)
+      }
       InferTy::Array { ty: inner, len, span } => InferTy::Array {
-        ty: Box::new(self.apply_subst_by_def_id(inner, type_args, scheme)),
+        ty: Box::new(Self::apply_subst_by_def_id(inner, type_args)),
         len: *len,
         span: *span,
       },
-      InferTy::Slice(inner, span) => InferTy::Slice(
-        Box::new(self.apply_subst_by_def_id(inner, type_args, scheme)),
-        *span,
-      ),
+      InferTy::Slice(inner, span) => {
+        InferTy::Slice(Box::new(Self::apply_subst_by_def_id(inner, type_args)), *span)
+      }
       InferTy::Tuple(tys, span) => InferTy::Tuple(
-        tys.iter().map(|t| self.apply_subst_by_def_id(t, type_args, scheme)).collect(),
+        tys.iter().map(|t| Self::apply_subst_by_def_id(t, type_args)).collect(),
         *span,
       ),
       InferTy::Fn { params, ret, span } => InferTy::Fn {
         params: params
           .iter()
-          .map(|t| self.apply_subst_by_def_id(t, type_args, scheme))
+          .map(|t| Self::apply_subst_by_def_id(t, type_args))
           .collect(),
-        ret: Box::new(self.apply_subst_by_def_id(ret, type_args, scheme)),
+        ret: Box::new(Self::apply_subst_by_def_id(ret, type_args)),
         span: *span,
       },
       _ => ty.clone(),

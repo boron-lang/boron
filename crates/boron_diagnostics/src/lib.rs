@@ -8,7 +8,6 @@ mod emitters;
 mod fmt;
 mod output_type;
 mod show;
-mod writer;
 
 pub use code::*;
 pub use ctx::*;

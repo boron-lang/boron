@@ -112,7 +112,7 @@ impl<'a> Interpreter<'a> {
     value
   }
 
-  fn const_value_type_name(&self, val: &ConstValue) -> &'static str {
+  fn const_value_type_name(val: &ConstValue) -> &'static str {
     match val {
       ConstValue::Int(_) => "int",
       ConstValue::Bool(_) => "bool",
@@ -127,7 +127,7 @@ impl<'a> Interpreter<'a> {
     }
   }
 
-  fn values_equal(&self, lval: &ConstValue, rval: &ConstValue) -> bool {
+  fn values_equal(lval: &ConstValue, rval: &ConstValue) -> bool {
     match (lval, rval) {
       (ConstValue::Int(l), ConstValue::Int(r)) => l == r,
       (ConstValue::Bool(l), ConstValue::Bool(r)) => l == r,
@@ -135,10 +135,12 @@ impl<'a> Interpreter<'a> {
       (ConstValue::String(l), ConstValue::String(r)) => l == r,
       (ConstValue::Unit, ConstValue::Unit) => true,
       (ConstValue::Array(l), ConstValue::Array(r)) => {
-        l.len() == r.len() && l.iter().zip(r.iter()).all(|(a, b)| self.values_equal(a, b))
+        l.len() == r.len()
+          && l.iter().zip(r.iter()).all(|(a, b)| Self::values_equal(a, b))
       }
       (ConstValue::Struct(l), ConstValue::Struct(r)) => {
-        l.len() == r.len() && l.iter().zip(r.iter()).all(|(a, b)| self.values_equal(a, b))
+        l.len() == r.len()
+          && l.iter().zip(r.iter()).all(|(a, b)| Self::values_equal(a, b))
       }
       (
         ConstValue::Enum { tag: t1, payload: p1 },
@@ -147,7 +149,7 @@ impl<'a> Interpreter<'a> {
         t1 == t2
           && match (p1, p2) {
             (None, None) => true,
-            (Some(a), Some(b)) => self.values_equal(a, b),
+            (Some(a), Some(b)) => Self::values_equal(a, b),
             _ => false,
           }
       }
@@ -169,8 +171,8 @@ impl<'a> Interpreter<'a> {
     self.dcx.emit(InvalidBinaryOp {
       span,
       op: op.to_owned(),
-      lhs: self.const_value_type_name(lval).to_owned(),
-      rhs: self.const_value_type_name(rval).to_owned(),
+      lhs: Self::const_value_type_name(lval).to_owned(),
+      rhs: Self::const_value_type_name(rval).to_owned(),
     });
   }
 
@@ -186,7 +188,7 @@ impl<'a> Interpreter<'a> {
           self.dcx.emit(InvalidUnaryOp {
             span: expr.span,
             op: "-".to_owned(),
-            ty: self.const_value_type_name(&val).to_owned(),
+            ty: Self::const_value_type_name(&val).to_owned(),
           });
           ConstValue::Poison
         }
@@ -198,7 +200,7 @@ impl<'a> Interpreter<'a> {
           self.dcx.emit(InvalidUnaryOp {
             span: expr.span,
             op: "!".to_owned(),
-            ty: self.const_value_type_name(&val).to_owned(),
+            ty: Self::const_value_type_name(&val).to_owned(),
           });
           ConstValue::Poison
         }
@@ -210,7 +212,7 @@ impl<'a> Interpreter<'a> {
           self.dcx.emit(InvalidUnaryOp {
             span: expr.span,
             op: "~".to_owned(),
-            ty: self.const_value_type_name(&val).to_owned(),
+            ty: Self::const_value_type_name(&val).to_owned(),
           });
           ConstValue::Poison
         }
@@ -298,8 +300,8 @@ impl<'a> Interpreter<'a> {
     use BinaryOp::{Eq, Ge, Gt, Le, Lt, Ne};
 
     match op {
-      Eq => ConstValue::Bool(self.values_equal(lval, rval)),
-      Ne => ConstValue::Bool(!self.values_equal(lval, rval)),
+      Eq => ConstValue::Bool(Self::values_equal(lval, rval)),
+      Ne => ConstValue::Bool(!Self::values_equal(lval, rval)),
       Lt => match (lval, rval) {
         (ConstValue::Int(l), ConstValue::Int(r)) => ConstValue::Bool(l < r),
         (ConstValue::Char(l), ConstValue::Char(r)) => ConstValue::Bool(l < r),
@@ -470,14 +472,14 @@ impl<'a> Interpreter<'a> {
     let value = match &expr.kind {
       ExprKind::Literal(lit) => match lit {
         Literal::Int { base, value, .. } => {
-          let value = construct_i128(self.dcx, *base, value.clone());
+          let value = construct_i128(self.dcx, *base, &value);
           ConstValue::Int(value)
         }
         Literal::Bool(bool) => ConstValue::Bool(*bool),
         Literal::Char(c) => ConstValue::Char(*c),
         Literal::Unit => ConstValue::Unit,
         Literal::String(s) => ConstValue::String(s.clone()),
-        _ => todo!(),
+        Literal::Float { .. } => todo!(),
       },
       ExprKind::Unary { op, operand } => self.eval_unary(expr, op, operand),
       ExprKind::Binary { op, lhs, rhs } => self.eval_binary(expr, op, lhs, rhs),

@@ -1,5 +1,5 @@
+use std::path::Path;
 use boron_core::prelude::PackageType;
-use std::path::PathBuf;
 
 #[derive(Clone, Debug)]
 pub enum Directive {
@@ -15,7 +15,7 @@ pub enum LineDirection {
   Down,
 }
 
-pub fn parse_directive(directive: String, line: usize, file: &PathBuf) -> Directive {
+pub fn parse_directive(directive: String, line: usize, file: &Path) -> Directive {
   let stripped = directive.strip_prefix("//#").unwrap_or(&directive);
 
   let (name_with_attrs, value) = match stripped.split_once(':') {

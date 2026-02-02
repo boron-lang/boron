@@ -28,14 +28,14 @@ pub trait ToDiagnostic {
 
 impl DiagnosticCtx {
   pub fn new(
-    sources: Arc<Sources>,
+    sources: &Arc<Sources>,
     color: bool,
-    diagnostic_output_type: DiagnosticOutputType,
+    diagnostic_output_type: &DiagnosticOutputType,
     writer: DiagnosticWriter,
   ) -> Self {
     let emitter: Box<dyn Emitter> = match diagnostic_output_type {
       DiagnosticOutputType::HumanReadable => {
-        Box::new(HumanReadableEmitter::new(sources.clone(), color))
+        Box::new(HumanReadableEmitter::new(Arc::clone(sources), color))
       }
       DiagnosticOutputType::JSON => unimplemented!(),
     };

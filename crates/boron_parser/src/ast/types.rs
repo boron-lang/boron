@@ -1,4 +1,3 @@
-use crate::ast::NodeId;
 use crate::ast::expressions::Expr;
 use crate::ast::import::Path;
 use boron_utils::prelude::Span;
@@ -38,6 +37,7 @@ pub struct PrimitiveType {
   pub span: Span,
 }
 
+use crate::ast::program::NodeId;
 pub use boron_target::primitive::PrimitiveKind;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

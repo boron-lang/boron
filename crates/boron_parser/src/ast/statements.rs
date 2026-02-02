@@ -1,5 +1,5 @@
-use crate::ast::NodeId;
 use crate::ast::expressions::Expr;
+use crate::ast::program::NodeId;
 use crate::ast::types::Type;
 use boron_utils::ident_table::Identifier;
 use boron_utils::prelude::Span;

@@ -3,13 +3,11 @@ use dashmap::DashMap;
 use dashmap::iter::Iter;
 use dashmap::mapref::one::Ref;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[derive(Debug, Default)]
 pub struct SourcesImpl {
   pub sources: DashMap<SourceFileId, SourceFile>,
   pub path_to_id: DashMap<PathBuf, SourceFileId>,
-  pub last_id: AtomicUsize,
 }
 
 /// This struct handles all sources (files) used in the compilation process.
@@ -28,7 +26,7 @@ impl Sources {
       return *existing_id.value();
     }
 
-    let id = SourceFileId(self.inner.last_id.fetch_add(1, Ordering::Relaxed) + 1);
+    let id = SourceFileId::new();
     self.inner.sources.insert(id, SourceFile::new(input, path.clone(), id));
     self.inner.path_to_id.insert(path, id);
     id

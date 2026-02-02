@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use boron_analysis::results::BuiltInResults;
 use boron_analysis::validator::validate_comptime;
-use boron_analysis::{TypeTable, expand_builtins, typeck_hir};
+use boron_analysis::{expand_builtins, typeck_hir, TypeTable};
 use boron_codegen::run_codegen;
 use boron_hir::hir::Hir;
 use boron_hir::lower::lower_to_hir;
@@ -85,7 +85,7 @@ impl<'ctx> CompilationUnit<'ctx> {
     self.emit_errors();
   }
 
-  fn validate_comptime(&mut self) {
+  fn validate_comptime(&self) {
     let Some(hir) = &self.hir else { return };
     let dcx = self.ctx.dcx();
 
@@ -101,7 +101,7 @@ impl<'ctx> CompilationUnit<'ctx> {
     self.typeck = Some(table);
   }
 
-  fn resolve_names(&mut self) {
+  fn resolve_names(&self) {
     ResolveVisitor::resolve_modules(&self.resolver, &self.modules, self.ctx);
     self.emit_errors();
   }
@@ -137,7 +137,6 @@ impl<'ctx> CompilationUnit<'ctx> {
     if self.emit_errors() {
       return None;
     }
-    let node = node.expect("handle correctly");
 
     let module = Module::new(id, node);
     self.modules.add(module);

@@ -4,7 +4,7 @@ mod types;
 use crate::validator::errors::ComptimeNoGenerics;
 use boron_hir::{Block, Expr, ExprKind, Function, Hir, Stmt, StmtKind};
 use boron_resolver::{DefId, Resolver};
-use boron_utils::prelude::{DiagnosticCtx, debug};
+use boron_utils::prelude::{debug, DiagnosticCtx};
 
 pub struct ComptimeValidator<'a> {
   pub hir: &'a Hir,
@@ -73,7 +73,7 @@ impl ComptimeValidator<'_> {
         self.validate_expr(index);
       }
 
-      ExprKind::Field { object, field } => {
+      ExprKind::Field { object, .. } => {
         self.validate_expr(object);
       }
 
@@ -82,13 +82,7 @@ impl ComptimeValidator<'_> {
         self.validate_expr(value);
       }
 
-      ExprKind::Return { value } => {
-        if let Some(val) = value {
-          self.validate_expr(val);
-        }
-      }
-
-      ExprKind::Break { value } => {
+      ExprKind::Return { value } | ExprKind::Break { value } => {
         if let Some(val) = value {
           self.validate_expr(val);
         }
@@ -96,7 +90,7 @@ impl ComptimeValidator<'_> {
 
       ExprKind::Continue | ExprKind::Path(..) | ExprKind::Literal(..) => {}
 
-      ExprKind::Comptime { callee, args } => {}
+      ExprKind::Comptime { .. } => {}
 
       ExprKind::Struct { fields, .. } => {
         for init in fields {
@@ -129,10 +123,7 @@ impl ComptimeValidator<'_> {
           self.validate_expr(init);
         }
       }
-      StmtKind::Expr(expr) => {
-        self.validate_expr(expr);
-      }
-      StmtKind::Semi(expr) => {
+      StmtKind::Expr(expr) | StmtKind::Semi(expr) => {
         self.validate_expr(expr);
       }
     }

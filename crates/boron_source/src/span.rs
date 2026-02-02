@@ -46,11 +46,11 @@ impl Span {
     self.start < other.end && other.start < self.end
   }
 
-  pub fn to_start(&self) -> Self {
+  pub fn to_start(self) -> Self {
     Self::new(self.start, self.start + 1, self.file_id)
   }
 
-  pub fn to_end(&self) -> Self {
+  pub fn to_end(self) -> Self {
     if self.end > 0 {
       Self::new(self.end - 1, self.end, self.file_id)
     } else {

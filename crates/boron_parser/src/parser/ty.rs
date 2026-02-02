@@ -53,7 +53,7 @@ impl Parser<'_> {
         self.advance();
         self.parse_array_type(start)
       }
-      TokenType::Identifier(name) => self.parse_identifier_type(start, name),
+      TokenType::Identifier(name) => self.parse_identifier_type(&name),
       TokenType::Package | TokenType::SelfValue | TokenType::Super => {
         self.parse_path_type()
       }
@@ -126,7 +126,7 @@ impl Parser<'_> {
     })
   }
 
-  fn parse_identifier_type(&mut self, start: Span, name: String) -> Type {
+  fn parse_identifier_type(&mut self, name: &str) -> Type {
     if let Some(kind) = Self::primitive_kind(&name) {
       let next = self.peek_ahead(1).map(|t| t.kind.clone());
 

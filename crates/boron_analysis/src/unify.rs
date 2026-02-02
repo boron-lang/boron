@@ -10,9 +10,10 @@ impl TyChecker<'_> {
     match (&a, &b) {
       _ if a.semantically_eq(&b) => UnifyResult::Ok,
 
-      (InferTy::Err(_), _) | (_, InferTy::Err(_)) => UnifyResult::Ok,
-
-      (InferTy::Never(_), _) | (_, InferTy::Never(_)) => UnifyResult::Ok,
+      (InferTy::Err(_), _)
+      | (_, InferTy::Err(_))
+      | (InferTy::Never(_), _)
+      | (_, InferTy::Never(_)) => UnifyResult::Ok,
 
       (InferTy::Var(v1, _), InferTy::Var(v2, _)) => {
         let k1 = self.infcx.var_kind(*v1);
@@ -70,8 +71,8 @@ impl TyChecker<'_> {
       }
 
       (
-        InferTy::Ptr { mutability: m1, ty: t1, span: span1 },
-        InferTy::Ptr { mutability: m2, ty: t2, span: span2 },
+        InferTy::Ptr { mutability: m1, ty: t1, .. },
+        InferTy::Ptr { mutability: m2, ty: t2, .. },
       ) => {
         if m1 != m2 {
           //todo: with span
@@ -83,11 +84,12 @@ impl TyChecker<'_> {
         self.unify(t1, t2)
       }
 
-      (InferTy::Optional(t1, _), InferTy::Optional(t2, _)) => self.unify(t1, t2),
+      (InferTy::Optional(t1, _), InferTy::Optional(t2, _))
+      | (InferTy::Slice(t1, _), InferTy::Slice(t2, _)) => self.unify(t1, t2),
 
       (
-        InferTy::Array { ty: t1, len: l1, span: span1 },
-        InferTy::Array { ty: t2, len: l2, span: span2 },
+        InferTy::Array { ty: t1, len: l1, .. },
+        InferTy::Array { ty: t2, len: l2, .. },
       ) => {
         if l1 != l2 {
           // todo: carry span
@@ -99,9 +101,7 @@ impl TyChecker<'_> {
         self.unify(t1, t2)
       }
 
-      (InferTy::Slice(t1, _), InferTy::Slice(t2, _)) => self.unify(t1, t2),
-
-      (InferTy::Tuple(ts1, span1), InferTy::Tuple(ts2, span2)) => {
+      (InferTy::Tuple(ts1, ..), InferTy::Tuple(ts2, ..)) => {
         if ts1.len() != ts2.len() {
           return UnifyResult::Err(UnifyError::ArityMismatch {
             expected: ts1.len(),
@@ -118,8 +118,8 @@ impl TyChecker<'_> {
       }
 
       (
-        InferTy::Fn { params: p1, ret: r1, span: span1 },
-        InferTy::Fn { params: p2, ret: r2, span: span2 },
+        InferTy::Fn { params: p1, ret: r1, .. },
+        InferTy::Fn { params: p2, ret: r2, .. },
       ) => {
         if p1.len() != p2.len() {
           return UnifyResult::Err(UnifyError::ArityMismatch {
@@ -137,8 +137,8 @@ impl TyChecker<'_> {
       }
 
       (
-        InferTy::Adt { def_id: d1, args: a1, span: span1 },
-        InferTy::Adt { def_id: d2, args: a2, span: span2 },
+        InferTy::Adt { def_id: d1, args: a1, .. },
+        InferTy::Adt { def_id: d2, args: a2, .. },
       ) => {
         if d1 != d2 {
           return UnifyResult::Err(UnifyError::Mismatch {

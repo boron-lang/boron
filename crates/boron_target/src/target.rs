@@ -14,6 +14,7 @@ pub enum Os {
   #[strum(serialize = "linux")]
   Linux,
   #[strum(serialize = "macos")]
+  #[expect(clippy::enum_variant_names)]
   MacOs,
 }
 
@@ -429,8 +430,7 @@ impl Target {
   ) -> Self {
     let linker = match os {
       Os::Windows => Linker::MsvcLink,
-      Os::Linux => Linker::Ld,
-      Os::MacOs => Linker::Ld,
+      Os::Linux | Os::MacOs => Linker::Ld,
     };
 
     let data_layout = match (os, arch, pointer_width, endian) {
@@ -515,7 +515,7 @@ impl Target {
     flags
   }
 
-  pub fn required_headers(&self) -> Vec<&'static str> {
+  pub fn required_headers() -> Vec<&'static str> {
     vec!["stdint.h", "stdbool.h", "stddef.h"]
   }
 

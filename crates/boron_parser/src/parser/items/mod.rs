@@ -1,13 +1,13 @@
 use crate::expressions::Expr;
 use crate::items::Item;
-use crate::parser::Parser;
 use crate::parser::errors::{
   ConstCannotBeUninitialized, ConstExpectedFuncOrIdent, ConstItemsNeedTypeAnnotation,
   ModStringLit,
 };
+use crate::parser::Parser;
 use crate::{
-  ConstItem, ItemKind, ModItem, NodeId, Path, PathParsingContext, TokenType, Type,
-  Visibility, log_parse_failure,
+  log_parse_failure, ConstItem, ItemKind, ModItem, NodeId, Path, PathParsingContext, TokenType,
+  Type, Visibility,
 };
 use boron_source::prelude::Span;
 use boron_utils::prelude::debug;

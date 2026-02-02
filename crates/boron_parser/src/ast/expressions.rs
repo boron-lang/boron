@@ -1,5 +1,5 @@
-use crate::ast::NodeId;
 use crate::ast::import::Path;
+use crate::ast::program::NodeId;
 use crate::ast::statements::Block;
 use crate::ast::types::{Mutability, Type};
 use crate::{IntBase, PrimitiveKind};

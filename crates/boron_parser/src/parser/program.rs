@@ -1,10 +1,10 @@
 use crate::items::Item;
-use crate::parser::Parser;
 use crate::parser::items::ITEM_TOKENS;
+use crate::parser::Parser;
 use crate::{NodeId, ProgramNode, TokenType};
 
 impl Parser<'_> {
-  pub fn parse_program(&mut self) -> Option<ProgramNode> {
+  pub fn parse_program(&mut self) -> ProgramNode {
     self.imports.clear();
     self.discovery_modules.clear();
     let mut items: Vec<Item> = vec![];
@@ -22,13 +22,13 @@ impl Parser<'_> {
       }
     }
 
-    Some(ProgramNode {
+    ProgramNode {
       id: NodeId::new(),
       attributes: vec![],
       imports: self.imports.clone(),
       discover_modules: self.discovery_modules.clone(),
       items,
-    })
+    }
   }
 
   pub fn check_possible_comment(&mut self) {

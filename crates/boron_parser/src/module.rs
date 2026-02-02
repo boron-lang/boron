@@ -1,8 +1,8 @@
-use crate::ProgramNode;
 use boron_source::prelude::SourceFileId;
 use dashmap::DashMap;
 use dashmap::iter::Iter;
 use dashmap::mapref::one::Ref;
+use crate::ProgramNode;
 
 /// This is what we get after parsing.
 #[derive(Debug)]

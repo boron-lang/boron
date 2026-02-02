@@ -286,7 +286,7 @@ impl LoweringContext<'_> {
           span: var.span,
         };
 
-        (StmtKind::Local(local), var.span)
+        (StmtKind::Local(Box::new(local)), var.span)
       }
 
       statements::Statement::ConstDecl(c) => {
@@ -305,7 +305,7 @@ impl LoweringContext<'_> {
           span: c.span,
         };
 
-        (StmtKind::Local(local), c.span)
+        (StmtKind::Local(Box::new(local)), c.span)
       }
 
       statements::Statement::Expr(expr_stmt) => {

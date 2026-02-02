@@ -27,14 +27,12 @@ impl AppState {
 
 #[derive(Debug)]
 pub struct App {
-  multi: MultiProgress,
   overall: ProgressBar,
   state: Arc<Mutex<AppState>>,
 }
 
 impl App {
   pub fn new(state: Arc<Mutex<AppState>>) -> Self {
-    let multi = MultiProgress::new();
     let total_tests = state.lock().total_tests;
 
     let overall_style = ProgressStyle::with_template(
@@ -44,12 +42,12 @@ impl App {
     .progress_chars("█▉▊▋▌▍▎▏ ")
     .tick_chars("⠋⠙⠚⠞⠖⠦⠴⠲⠳⠓");
 
-    let overall = multi.add(ProgressBar::new(total_tests));
+    let overall = MultiProgress::new().add(ProgressBar::new(total_tests));
     overall.set_style(overall_style);
     overall.set_message("Overall");
     overall.enable_steady_tick(Duration::from_millis(100));
 
-    Self { multi, overall, state }
+    Self { overall, state }
   }
 
   pub fn run(self) -> color_eyre::Result<()> {

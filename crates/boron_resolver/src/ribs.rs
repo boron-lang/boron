@@ -44,9 +44,6 @@ pub enum RibKind {
 
 impl RibKind {
   pub fn allows_value_lookup(&self) -> bool {
-    match self {
-      Self::Const => false,
-      _ => true,
-    }
+    !matches!(self, Self::Const)
   }
 }

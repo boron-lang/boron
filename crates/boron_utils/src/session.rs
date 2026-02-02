@@ -57,15 +57,15 @@ pub struct Session {
 impl Session {
   pub fn new(
     config: ProjectConfig,
-    sources: Arc<Sources>,
+    sources: &Arc<Sources>,
     w: DiagnosticWriter,
     is_test: bool,
   ) -> Self {
     Self {
       dcx: DiagnosticCtx::new(
-        sources.clone(),
+        sources,
         config.color,
-        config.diagnostic_output_type.clone(),
+        &config.diagnostic_output_type,
         w,
       ),
       config,

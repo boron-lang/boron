@@ -35,11 +35,10 @@ impl TypeTable {
   }
 
   pub fn record_monomorphization(&self, def_id: DefId, type_args: SubstitutionMap) {
+    let entry = MonomorphizationEntry { def_id, type_args };
     if let Some(mut r) = self.monomorphizations.get_mut(&def_id) {
-      let entry = MonomorphizationEntry { def_id, type_args };
       r.push(entry);
     } else {
-      let entry = MonomorphizationEntry { def_id, type_args };
       self.monomorphizations.insert(def_id, vec![entry]);
     }
   }
@@ -166,7 +165,7 @@ impl InferCtx {
 
   fn resolve_with_seen(&self, ty: &InferTy, seen: &mut HashSet<TyVar>) -> InferTy {
     match ty {
-      InferTy::Var(var, span) => {
+      InferTy::Var(var, _) => {
         if seen.contains(var) {
           return ty.clone();
         }
