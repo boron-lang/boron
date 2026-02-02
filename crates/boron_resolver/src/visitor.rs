@@ -486,7 +486,7 @@ impl<'a> ResolveVisitor<'a> {
         let name = param.name.text();
         let span = *param.name.span();
         let def = Definition::new(
-          func.name.text(),
+          name.clone(),
           param.id,
           self.current_file(),
           DefKind::TypeParam,

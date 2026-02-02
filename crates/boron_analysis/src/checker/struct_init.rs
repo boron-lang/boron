@@ -51,7 +51,7 @@ impl TyChecker<'_> {
                 found: self.format_type(&arg_ty),
                 span: field.span,
               }),
-              _ => self.handle_unify_result(result),
+              _ => self.handle_unify_result(result, field.span),
             }
           }
         }

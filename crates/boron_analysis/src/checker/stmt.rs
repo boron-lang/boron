@@ -4,7 +4,8 @@ use crate::table::TypeEnv;
 use crate::ty::InferTy;
 use crate::unify::Expectation;
 use crate::unify::{UnifyError, UnifyResult};
-use boron_hir::{Block, Stmt, StmtKind};
+use boron_hir::{Block, ExprKind, Stmt, StmtKind};
+use boron_source::span::Span;
 
 impl TyChecker<'_> {
   pub(crate) fn check_block(
@@ -12,21 +13,23 @@ impl TyChecker<'_> {
     block: &Block,
     env: &mut TypeEnv,
     expect: &Expectation,
-  ) -> InferTy {
+  ) -> (InferTy, Span) {
     env.push_scope();
 
-    let mut last_ty = InferTy::Unit(block.span);
+    let (mut last_ty, mut span) = (InferTy::Unit(block.span), Span::default());
 
     for stmt in &block.stmts {
       last_ty = self.check_stmt(stmt, env);
+      span = stmt.span;
     }
 
     if let Some(expr) = &block.expr {
       last_ty = self.check_expr(expr, env, expect);
+      span = expr.span;
     }
 
     env.pop_scope();
-    last_ty
+    (last_ty, span)
   }
 
   pub(crate) fn check_stmt(&mut self, stmt: &Stmt, env: &mut TypeEnv) -> InferTy {
@@ -51,7 +54,7 @@ impl TyChecker<'_> {
                   span: local.span,
                 });
               }
-              _ => self.handle_unify_result(result),
+              _ => self.handle_unify_result(result, local.span),
             }
           }
         }
@@ -61,13 +64,11 @@ impl TyChecker<'_> {
         InferTy::Unit(local.span)
       }
       StmtKind::Expr(expr) => {
-        self.check_expr(expr, env, &Expectation::none());
-        InferTy::Unit(expr.span)
+        let ty = self.check_expr(expr, env, &Expectation::none());
+
+        if let ExprKind::Return { .. } = &expr.kind { ty } else { InferTy::Unit(expr.span) }
       }
-      StmtKind::Semi(expr) => {
-        self.check_expr(expr, env, &Expectation::none());
-        InferTy::Unit(expr.span)
-      }
+      StmtKind::Semi(expr) => self.check_expr(expr, env, &Expectation::none()),
     }
   }
 }

@@ -144,6 +144,44 @@ impl InferTy {
   pub fn bool(span: Span) -> Self {
     Self::Primitive(PrimitiveKind::Bool, span)
   }
+
+  pub fn semantically_eq(&self, other: &Self) -> bool {
+    match (self, other) {
+      (Self::Primitive(k1, _), Self::Primitive(k2, _)) => k1 == k2,
+      (Self::Unit(_), Self::Unit(_)) => true,
+      (Self::Never(_), Self::Never(_)) => true,
+      (Self::Err(_), Self::Err(_)) => true,
+      (Self::Var(v1, _), Self::Var(v2, _)) => v1 == v2,
+      (Self::Param(p1), Self::Param(p2)) => p1.def_id == p2.def_id,
+      (
+        Self::Adt { def_id: d1, args: a1, .. },
+        Self::Adt { def_id: d2, args: a2, .. },
+      ) => {
+        d1 == d2
+          && a1.len() == a2.len()
+          && a1.iter().zip(a2.iter()).all(|(t1, t2)| t1.semantically_eq(t2))
+      }
+      (
+        Self::Ptr { mutability: m1, ty: t1, .. },
+        Self::Ptr { mutability: m2, ty: t2, .. },
+      ) => m1 == m2 && t1.semantically_eq(t2),
+      (Self::Optional(t1, _), Self::Optional(t2, _)) => t1.semantically_eq(t2),
+      (Self::Array { ty: t1, len: l1, .. }, Self::Array { ty: t2, len: l2, .. }) => {
+        l1 == l2 && t1.semantically_eq(t2)
+      }
+      (Self::Slice(t1, _), Self::Slice(t2, _)) => t1.semantically_eq(t2),
+      (Self::Tuple(ts1, _), Self::Tuple(ts2, _)) => {
+        ts1.len() == ts2.len()
+          && ts1.iter().zip(ts2.iter()).all(|(t1, t2)| t1.semantically_eq(t2))
+      }
+      (Self::Fn { params: p1, ret: r1, .. }, Self::Fn { params: p2, ret: r2, .. }) => {
+        p1.len() == p2.len()
+          && p1.iter().zip(p2.iter()).all(|(t1, t2)| t1.semantically_eq(t2))
+          && r1.semantically_eq(r2)
+      }
+      _ => false,
+    }
+  }
 }
 
 #[derive(Debug, Clone)]

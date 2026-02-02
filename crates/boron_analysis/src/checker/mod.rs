@@ -7,18 +7,18 @@ mod pattern;
 mod stmt;
 mod struct_init;
 
+use crate::errors::{ConstInitMismatch, ReturnTypeMismatch};
 use crate::interpreter::Interpreter;
 use crate::interpreter::{InterpreterCache, InterpreterContext, InterpreterMode};
 use crate::table::{InferCtx, TypeEnv, TypeTable};
-use crate::unify::UnifyResult;
+use crate::ty::InferTy;
+use crate::unify::Expectation;
+use crate::unify::{UnifyError, UnifyResult};
 use boron_diagnostics::DiagnosticCtx;
 use boron_hir::{Const, Function, Hir, ParamKind};
 use boron_resolver::{DefId, Resolver};
 use boron_utils::context::Context;
-use boron_utils::prelude::warn;
-
-use crate::ty::InferTy;
-use crate::unify::Expectation;
+use boron_utils::prelude::Span;
 
 pub fn typeck_hir(hir: &Hir, ctx: &Context, resolver: &Resolver) -> TypeTable {
   let mut checker = TyChecker::new(hir, ctx, resolver);
@@ -86,10 +86,58 @@ impl<'a> TyChecker<'a> {
     )
   }
 
-  pub(crate) fn handle_unify_result(&self, result: UnifyResult) {
-    match &result {
+  pub(crate) fn handle_unify_result(&self, result: UnifyResult, span: Span) {
+    match result {
       UnifyResult::Ok => {}
-      UnifyResult::Err(_err) => warn!("{result:#?}"),
+      UnifyResult::Err(err) => self.emit_unify_error(err, span),
+    }
+  }
+
+  fn emit_unify_error(&self, err: UnifyError, span: Span) {
+    use crate::errors::*;
+    match err {
+      UnifyError::Mismatch { expected, found } => {
+        self.dcx().emit(TypeMismatch {
+          expected_span: expected.span(),
+          expected: self.format_type(&expected),
+          found_span: found.span(),
+          found: self.format_type(&found),
+        });
+      }
+      UnifyError::OccursCheck { var, ty } => {
+        self.dcx().emit(OccursCheck {
+          var_span: span,
+          var,
+          ty_span: ty.span(),
+          ty: self.format_type(&ty),
+        });
+      }
+      UnifyError::ArityMismatch { expected, found } => {
+        self.dcx().emit(TupleArityMismatch { span, expected, found });
+      }
+      UnifyError::NotAnInteger { ty } => {
+        self.dcx().emit(NotAnInteger { span: ty.span(), found: self.format_type(&ty) });
+      }
+      UnifyError::NotAFloat { ty } => {
+        self.dcx().emit(NotAFloat { span: ty.span(), found: self.format_type(&ty) });
+      }
+      UnifyError::MutabilityMismatch { expected, found } => {
+        self.dcx().emit(MutabilityMismatch {
+          span,
+          expected: format!("{expected:?}").to_lowercase(),
+          found: format!("{found:?}").to_lowercase(),
+        });
+      }
+      UnifyError::ArrayLenMismatch { expected, found } => {
+        self.dcx().emit(ArrayLenMismatch { span, expected, found });
+      }
+      UnifyError::IncompatibleKinds { kind1, kind2 } => {
+        self.dcx().emit(IncompatibleKinds {
+          span,
+          kind1: format!("{kind1:?}"),
+          kind2: format!("{kind2:?}"),
+        });
+      }
     }
   }
 
@@ -119,10 +167,23 @@ impl<'a> TyChecker<'a> {
 
     if let Some(body) = &func.body {
       let expected_ret = self.lower_hir_ty(&func.return_type);
-      let body_ty =
+      let (body_ty, ret_span) =
         self.check_block(body, &mut env, &Expectation::has_type(expected_ret.clone()));
 
-      self.unify(&body_ty, &expected_ret);
+      let result = self.unify(&body_ty, &expected_ret);
+      if let UnifyResult::Err(err) = &result {
+        match err {
+          UnifyError::Mismatch { .. } => {
+            self.dcx().emit(ReturnTypeMismatch {
+              expected_span: func.return_type.span.clone(),
+              expected: self.format_type(&expected_ret),
+              body_span: ret_span,
+              found: self.format_type(&body_ty),
+            });
+          }
+          _ => self.handle_unify_result(result, body.span),
+        }
+      }
     }
   }
 
@@ -132,6 +193,19 @@ impl<'a> TyChecker<'a> {
 
     let init_ty =
       self.check_expr(&konst.value, &mut env, &Expectation::has_type(expected.clone()));
-    self.unify(&init_ty, &expected);
+    let result = self.unify(&init_ty, &expected);
+    if let UnifyResult::Err(err) = &result {
+      match err {
+        UnifyError::Mismatch { expected, found } => {
+          self.dcx().emit(ConstInitMismatch {
+            expected_span: konst.ty.span,
+            expected: self.format_type(expected),
+            value_span: konst.value.span,
+            found: self.format_type(found),
+          });
+        }
+        _ => self.handle_unify_result(result, konst.value.span),
+      }
+    }
   }
 }

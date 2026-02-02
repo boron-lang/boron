@@ -1,6 +1,6 @@
 use crate::builtins::{BuiltInParam, get_builtin};
 use crate::checker::TyChecker;
-use crate::errors::{ArityMismatch, FuncArgMismatch};
+use crate::errors::{ArityMismatch, AssignTypeMismatch, FuncArgMismatch, IndexTypeMismatch, TypeMismatch};
 use crate::functions::FinalComptimeArg;
 use crate::table::TypeEnv;
 use crate::ty::InferTy;
@@ -35,7 +35,7 @@ impl TyChecker<'_> {
         let lhs_ty = self.check_expr(lhs, env, &Expectation::none());
         let rhs_ty = self.check_expr(rhs, env, &Expectation::none());
         let x = self.unify(&lhs_ty, &rhs_ty);
-        self.handle_unify_result(x);
+        self.handle_unify_result(x, expr.span);
         lhs_ty
       }
 
@@ -54,20 +54,34 @@ impl TyChecker<'_> {
           env,
           &Expectation::has_type(InferTy::Primitive(PrimitiveKind::Bool, condition.span)),
         );
-        self.unify(&cond_ty, &InferTy::Primitive(PrimitiveKind::Bool, condition.span));
+        let cond_result = self.unify(&cond_ty, &InferTy::Primitive(PrimitiveKind::Bool, condition.span));
+        self.handle_unify_result(cond_result, condition.span);
 
-        let then_ty = self.check_block(then_block, env, expect);
+        let (then_ty, then_span) = self.check_block(then_block, env, expect);
 
         if let Some(else_expr) = else_branch {
           let else_ty = self.check_expr(else_expr, env, expect);
-          self.unify(&then_ty, &else_ty);
+          let result = self.unify(&then_ty, &else_ty);
+          if let UnifyResult::Err(err) = &result {
+            match err {
+              UnifyError::Mismatch { .. } => {
+                self.dcx().emit(TypeMismatch {
+                  expected_span: then_span,
+                  expected: self.format_type(&then_ty),
+                  found_span: else_expr.span,
+                  found: self.format_type(&else_ty),
+                });
+              }
+              _ => self.handle_unify_result(result, else_expr.span),
+            }
+          }
           then_ty
         } else {
           InferTy::Unit(expr.span)
         }
       }
 
-      ExprKind::Block(block) => self.check_block(block, env, expect),
+      ExprKind::Block(block) => self.check_block(block, env, expect).0,
 
       ExprKind::Tuple(exprs) => {
         let tys: Vec<InferTy> =
@@ -86,7 +100,8 @@ impl TyChecker<'_> {
           let elem_ty = self.check_expr(&exprs[0], env, &Expectation::none());
           for e in exprs.iter().skip(1) {
             let ty = self.check_expr(e, env, &Expectation::has_type(elem_ty.clone()));
-            self.unify(&ty, &elem_ty);
+            let result = self.unify(&ty, &elem_ty);
+            self.handle_unify_result(result, e.span);
           }
           InferTy::Array { ty: Box::new(elem_ty), len: exprs.len(), span: expr.span }
         }
@@ -97,7 +112,18 @@ impl TyChecker<'_> {
         let idx_ty = self.check_expr(index, env, &Expectation::none());
 
         // Index must be usize until we support operator overloading
-        self.unify(&idx_ty, &InferTy::Primitive(PrimitiveKind::USize, index.span));
+        let result = self.unify(&idx_ty, &InferTy::Primitive(PrimitiveKind::USize, index.span));
+        if let UnifyResult::Err(err) = &result {
+          match err {
+            UnifyError::Mismatch { found, .. } => {
+              self.dcx().emit(IndexTypeMismatch {
+                span: index.span,
+                found: self.format_type(found),
+              });
+            }
+            _ => self.handle_unify_result(result, index.span),
+          }
+        }
 
         match self.infcx.resolve(&obj_ty) {
           InferTy::Array { ty, .. } => *ty,
@@ -118,7 +144,20 @@ impl TyChecker<'_> {
         let target_ty = self.check_expr(target, env, &Expectation::none());
         let value_ty =
           self.check_expr(value, env, &Expectation::has_type(target_ty.clone()));
-        self.unify(&value_ty, &target_ty);
+        let result = self.unify(&value_ty, &target_ty);
+        if let UnifyResult::Err(err) = &result {
+          match err {
+            UnifyError::Mismatch { expected, found } => {
+              self.dcx().emit(AssignTypeMismatch {
+                target_span: target.span,
+                expected: self.format_type(expected),
+                value_span: value.span,
+                found: self.format_type(found),
+              });
+            }
+            _ => self.handle_unify_result(result, value.span),
+          }
+        }
         InferTy::Unit(expr.span)
       }
 
@@ -192,7 +231,7 @@ impl TyChecker<'_> {
                           found: self.format_type(&expr_ty),
                         });
                       } else {
-                        self.handle_unify_result(result);
+                        self.handle_unify_result(result, expr.span);
                       }
                     }
                     UnifyResult::Ok => {

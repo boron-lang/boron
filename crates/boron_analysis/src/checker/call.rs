@@ -1,9 +1,10 @@
 use crate::checker::TyChecker;
-use crate::ty::{InferTy, SubstitutionMap, TyParam};
+use crate::errors::FuncArgMismatch;
 use crate::table::TypeEnv;
-use crate::unify::Expectation;
+use crate::ty::{InferTy, SubstitutionMap, TyParam};
+use crate::unify::{Expectation, UnifyError, UnifyResult};
 use boron_hir::{Expr, ExprKind, HirId};
-use boron_utils::prelude::{Span, warn};
+use boron_utils::prelude::Span;
 
 impl TyChecker<'_> {
   pub(crate) fn check_call(
@@ -40,7 +41,18 @@ impl TyChecker<'_> {
             self.check_expr(arg, env, &Expectation::has_type(param_ty.clone()));
           let result = self.unify(param_ty, &arg_ty);
 
-          warn!("{:#?}", result)
+          if let UnifyResult::Err(err) = &result {
+            match err {
+              UnifyError::Mismatch { .. } => {
+                self.dcx().emit(FuncArgMismatch {
+                  span: arg.span,
+                  expected: self.format_type(param_ty),
+                  found: self.format_type(&arg_ty),
+                });
+              }
+              _ => self.handle_unify_result(result, arg.span),
+            }
+          }
         }
 
         if let Some(def_id) = callee_def_id {
@@ -91,7 +103,8 @@ impl TyChecker<'_> {
         let ret_ty = self.infcx.fresh(span);
         let expected_fn =
           InferTy::Fn { params: arg_tys, ret: Box::new(ret_ty.clone()), span };
-        self.unify(&callee_ty, &expected_fn);
+        let result = self.unify(&callee_ty, &expected_fn);
+        self.handle_unify_result(result, span);
         ret_ty
       }
       _ => {

@@ -160,3 +160,108 @@ pub struct CannotInferType {
   #[error("type must be known at this point")]
   pub span: Span,
 }
+
+#[derive(Diagnostic)]
+#[error("mismatched types: expected `{expected}`, found `{found}`")]
+#[code(TYPE_CHECKER_TYPE_MISMATCH)]
+pub struct TypeMismatch {
+  #[error("expected `{expected}`")]
+  pub expected_span: Span,
+  pub expected: String,
+  #[error("found `{found}`")]
+  pub found_span: Span,
+  pub found: String,
+}
+
+#[derive(Diagnostic)]
+#[error("expected an integer type, found `{found}`")]
+#[code(TYPE_CHECKER_NOT_AN_INTEGER)]
+pub struct NotAnInteger {
+  #[error("expected integer type")]
+  pub span: Span,
+  pub found: String,
+}
+
+#[derive(Diagnostic)]
+#[error("expected a float type, found `{found}`")]
+#[code(TYPE_CHECKER_NOT_A_FLOAT)]
+pub struct NotAFloat {
+  #[error("expected float type")]
+  pub span: Span,
+  pub found: String,
+}
+
+#[derive(Diagnostic)]
+#[error("mutability mismatch: expected `{expected}`, found `{found}`")]
+#[code(TYPE_CHECKER_MUTABILITY_MISMATCH)]
+pub struct MutabilityMismatch {
+  #[error("mismatched mutability")]
+  pub span: Span,
+  pub expected: String,
+  pub found: String,
+}
+
+#[derive(Diagnostic)]
+#[error("incompatible type variable kinds: `{kind1}` vs `{kind2}`")]
+#[code(TYPE_CHECKER_INCOMPATIBLE_KINDS)]
+pub struct IncompatibleKinds {
+  #[error("cannot unify these type variables")]
+  pub span: Span,
+  pub kind1: String,
+  pub kind2: String,
+}
+
+#[derive(Diagnostic)]
+#[error("tuple length mismatch: expected `{expected}` elements, found `{found}`")]
+#[code(TYPE_CHECKER_TUPLE_ARITY_MISMATCH)]
+pub struct TupleArityMismatch {
+  #[error("in this tuple")]
+  pub span: Span,
+  pub expected: usize,
+  pub found: usize,
+}
+
+#[derive(Diagnostic)]
+#[error("index must be of type `usize`, found `{found}`")]
+#[code(TYPE_CHECKER_INDEX_TYPE_MISMATCH)]
+pub struct IndexTypeMismatch {
+  #[error("in this index expression")]
+  pub span: Span,
+  pub found: String,
+}
+
+#[derive(Diagnostic)]
+#[error("cannot assign `{found}` to variable of type `{expected}`")]
+#[code(TYPE_CHECKER_ASSIGN_TYPE_MISMATCH)]
+pub struct AssignTypeMismatch {
+  #[error("expected `{expected}`")]
+  pub target_span: Span,
+  pub expected: String,
+  #[error("found `{found}`")]
+  pub value_span: Span,
+  pub found: String,
+}
+
+#[derive(Diagnostic)]
+#[error("function body returns `{found}`, but expected `{expected}`")]
+#[code(TYPE_CHECKER_RETURN_TYPE_MISMATCH)]
+pub struct ReturnTypeMismatch {
+  #[error("expected return type")]
+  pub expected_span: Span,
+  pub expected: String,
+  #[error("but body evaluates to `{found}`")]
+  pub body_span: Span,
+  pub found: String,
+}
+
+#[derive(Diagnostic)]
+#[error("constant initialized with `{found}`, but expected `{expected}`")]
+#[code(TYPE_CHECKER_CONST_INIT_MISMATCH)]
+pub struct ConstInitMismatch {
+  #[error("expected type")]
+  pub expected_span: Span,
+  pub expected: String,
+  #[error("but found `{found}`")]
+  pub value_span: Span,
+  pub found: String,
+}

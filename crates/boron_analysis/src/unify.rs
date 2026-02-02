@@ -8,7 +8,7 @@ impl TyChecker<'_> {
     let b = self.infcx.resolve(b);
 
     match (&a, &b) {
-      _ if a == b => UnifyResult::Ok,
+      _ if a.semantically_eq(&b) => UnifyResult::Ok,
 
       (InferTy::Err(_), _) | (_, InferTy::Err(_)) => UnifyResult::Ok,
 
