@@ -49,7 +49,7 @@ impl<'a> BuiltInExpander<'a> {
         self.walk_expr(rhs);
       }
 
-      ExprKind::Unary { operand, .. } => {
+      ExprKind::Unary { operand, .. } | ExprKind::AddrOf { operand, .. } => {
         self.walk_expr(operand);
       }
 
@@ -101,10 +101,6 @@ impl<'a> BuiltInExpander<'a> {
       ExprKind::Index { object, index } => {
         self.walk_expr(object);
         self.walk_expr(index);
-      }
-
-      ExprKind::AddrOf { operand, .. } => {
-        self.walk_expr(operand);
       }
 
       ExprKind::Struct { fields, .. } => {

@@ -42,7 +42,7 @@ impl LoweringContext<'_> {
           println!("{byte:#?}");
           ExprKind::Literal(byte_literal(byte.value))
         } else {
-          ExprKind::Literal(self.lower_literal(lit))
+          ExprKind::Literal(Self::lower_literal(lit))
         }
       }
 
@@ -333,7 +333,7 @@ impl LoweringContext<'_> {
     Stmt { hir_id: self.next_hir_id(), kind, span }
   }
 
-  pub fn lower_literal(&self, lit: &AstLiteral) -> Literal {
+  pub fn lower_literal(lit: &AstLiteral) -> Literal {
     match lit {
       AstLiteral::Int(i) => {
         Literal::Int { value: i.value.clone(), base: i.base, suffix: i.suffix }
@@ -347,7 +347,7 @@ impl LoweringContext<'_> {
     }
   }
 
-  pub fn get_literal_span(&self, lit: &AstLiteral) -> Span {
+  pub fn get_literal_span(lit: &AstLiteral) -> Span {
     match lit {
       AstLiteral::Int(i) => i.span,
       AstLiteral::Float(f) => f.span,

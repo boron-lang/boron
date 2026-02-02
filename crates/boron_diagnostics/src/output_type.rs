@@ -3,7 +3,7 @@ use std::fmt::Display;
 #[derive(Clone, Debug)]
 pub enum DiagnosticOutputType {
   HumanReadable,
-  JSON,
+  Json,
 }
 
 impl Display for DiagnosticOutputType {
@@ -12,7 +12,7 @@ impl Display for DiagnosticOutputType {
       f,
       "{:?}",
       match self {
-        Self::JSON => "json",
+        Self::Json => "json",
         Self::HumanReadable => "human readable",
       }
     )

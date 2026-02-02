@@ -34,7 +34,7 @@ impl<'a> LoweringContext<'a> {
     HirId::new(owner, local_id)
   }
 
-  pub fn owner_hir_id(&self, def_id: DefId) -> HirId {
+  pub fn owner_hir_id(def_id: DefId) -> HirId {
     HirId::make_owner(def_id)
   }
 

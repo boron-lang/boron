@@ -7,6 +7,6 @@ impl BuiltInExpander<'_> {
   pub fn size_of(&self, ty: &InferTy) -> ConstValue {
     let ctx = SizeOfContext { ctx: self.ctx, hir: self.hir, resolver: self.resolver };
 
-    ConstValue::Int(size_of_ty(&ctx, &ty) as i128)
+    ConstValue::Int(size_of_ty(&ctx, ty) as i128)
   }
 }

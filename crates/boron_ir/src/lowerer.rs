@@ -22,7 +22,7 @@ impl<'a> IrLowerer<'a> {
 
   pub fn lower(&mut self) -> Ir {
     for func in &self.hir.functions {
-      self.lower_function(func.value());
+      Self::lower_function(func.value());
     }
 
     for strukt in &self.hir.structs {
@@ -180,5 +180,5 @@ impl<'a> IrLowerer<'a> {
     }
   }
 
-  pub fn lower_function(&self, _func: &Function) {}
+  pub fn lower_function(_func: &Function) {}
 }

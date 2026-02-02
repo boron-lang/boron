@@ -7,6 +7,7 @@ use std::io;
 use std::io::Write;
 
 impl<'a> HumanReadableEmitter {
+  #[expect(clippy::too_many_arguments, clippy::fn_params_excessive_bools)]
   pub fn write_margin(
     &self,
     w: &mut dyn Write,
@@ -63,6 +64,7 @@ impl<'a> HumanReadableEmitter {
     write!(w, " {line_no_margin} ")
   }
 
+  #[expect(clippy::too_many_arguments)]
   fn write_multi_line_margins(
     &self,
     w: &mut dyn Write,
@@ -96,6 +98,7 @@ impl<'a> HumanReadableEmitter {
     Ok(())
   }
 
+  #[expect(clippy::too_many_arguments)]
   fn get_margin_chars(
     &self,
     col: usize,
@@ -109,7 +112,7 @@ impl<'a> HumanReadableEmitter {
     src: &SourceFile,
   ) -> (String, String) {
     let multi_label = multi_labels_with_message.get(col);
-    let line_span = src.line(idx).unwrap().span();
+    let line_span = src.line(idx).expect("line should exist").span();
 
     let mut state = MarginState::default();
 
@@ -119,7 +122,7 @@ impl<'a> HumanReadableEmitter {
       .iter()
       .enumerate()
     {
-      self.update_margin_state(
+      Self::update_margin_state(
         &mut state,
         label,
         i,
@@ -157,8 +160,8 @@ impl<'a> HumanReadableEmitter {
     )
   }
 
+  #[expect(clippy::too_many_arguments)]
   fn update_margin_state(
-    &self,
     state: &mut MarginState<'a>,
     label: &'a LabelInfo<'a>,
     i: usize,
@@ -186,7 +189,7 @@ impl<'a> HumanReadableEmitter {
     } else if !is_start && (!is_end || is_line) {
       state.vbar = state.vbar.or_else(|| Some(label).filter(|_| !is_parent));
     } else if let Some((report_row, is_arrow)) = report_row {
-      self.handle_report_row(
+      Self::handle_report_row(
         state,
         label,
         margin,
@@ -201,8 +204,8 @@ impl<'a> HumanReadableEmitter {
     }
   }
 
+  #[expect(clippy::too_many_arguments, clippy::fn_params_excessive_bools)]
   fn handle_report_row(
-    &self,
     state: &mut MarginState<'a>,
     label: &'a LabelInfo<'a>,
     margin: Option<&LineLabel<'a>>,
@@ -234,12 +237,12 @@ impl<'a> HumanReadableEmitter {
           state.corner = Some((label, is_start));
         }
       } else if !is_start {
-        state.vbar = state.vbar.or(Some(label).filter(|_| !is_parent));
+        state.vbar = state.vbar.or_else(|| Some(label).filter(|_| !is_parent));
       }
     } else {
       state.vbar = state
         .vbar
-        .or(Some(label).filter(|_| !is_parent && (is_start ^ (report_row < label_row))));
+        .or_else(|| Some(label).filter(|_| !is_parent && (is_start ^ (report_row < label_row))));
     }
   }
 

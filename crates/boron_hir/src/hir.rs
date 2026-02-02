@@ -4,9 +4,9 @@ use crate::item::{Const, Enum, Function, Struct};
 use boron_parser::NodeId;
 use boron_resolver::DefId;
 use boron_source::prelude::SourceFileId;
+use dashmap::DashMap;
 use dashmap::mapref::multiple::RefMulti;
 use dashmap::mapref::one::Ref;
-use dashmap::DashMap;
 
 #[derive(Debug, Default)]
 pub struct Hir {
@@ -87,7 +87,7 @@ impl HirMap {
     self.parents.get(&id).map(|r| *r)
   }
 
-  pub fn owner(self, id: HirId) -> DefId {
+  pub fn owner(id: HirId) -> DefId {
     id.owner
   }
 

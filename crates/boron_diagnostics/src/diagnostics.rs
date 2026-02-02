@@ -18,7 +18,7 @@ pub struct Diagnostic {
 }
 
 impl ToDiagnostic for Diagnostic {
-  fn to_diagnostic(&self) -> Diag {
+  fn to_diagnostic(self) -> Diag {
     *self.diag.clone()
   }
 }

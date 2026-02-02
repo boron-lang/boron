@@ -127,7 +127,7 @@ impl Parser<'_> {
   }
 
   fn parse_identifier_type(&mut self, name: &str) -> Type {
-    if let Some(kind) = Self::primitive_kind(&name) {
+    if let Some(kind) = Self::primitive_kind(name) {
       let next = self.peek_ahead(1).map(|t| t.kind.clone());
 
       if !matches!(next, Some(TokenType::ColonColon | TokenType::Lt)) {

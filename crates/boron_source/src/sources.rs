@@ -41,7 +41,7 @@ impl Sources {
   }
 
   pub fn get_unchecked(&self, id: SourceFileId) -> Ref<'_, SourceFileId, SourceFile> {
-    self.inner.sources.get(&id).unwrap()
+    self.inner.sources.get(&id).expect("source file should exist")
   }
 
   pub fn all(&self) -> Iter<'_, SourceFileId, SourceFile> {

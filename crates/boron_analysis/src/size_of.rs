@@ -25,7 +25,6 @@ pub fn size_of_ty<'a>(sz: &'a SizeOfContext<'a>, ty: &InferTy) -> usize {
         _ => unreachable!(),
       }
     }
-    InferTy::Unit(..) => 0,
 
     _ => 0,
   }

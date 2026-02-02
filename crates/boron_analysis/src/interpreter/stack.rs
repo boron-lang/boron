@@ -7,6 +7,12 @@ pub struct Frame {
   locals: DashMap<LocalId, ConstValue>,
 }
 
+impl Default for Frame {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
 impl Frame {
   pub fn new() -> Self {
     Self { locals: DashMap::new() }
@@ -24,6 +30,12 @@ impl Frame {
 #[derive(Debug)]
 pub struct Stack {
   frames: Vec<Frame>,
+}
+
+impl Default for Stack {
+  fn default() -> Self {
+    Self::new()
+  }
 }
 
 impl Stack {

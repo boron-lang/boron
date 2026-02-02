@@ -1,14 +1,14 @@
-use crate::emitters::Emitter;
 use crate::emitters::human_readable::HumanReadableEmitter;
+use crate::emitters::Emitter;
 use crate::output_type::DiagnosticOutputType;
 use crate::{Diag, Diagnostic, DiagnosticId, DiagnosticLevel};
 use boron_source::prelude::Sources;
-use dashmap::DashMap;
 use dashmap::mapref::one::{Ref, RefMut};
+use dashmap::DashMap;
 use derivative::Derivative;
 use log::debug;
 use parking_lot::Mutex;
-use std::io::{Cursor, Write as _, stderr};
+use std::io::{stderr, Cursor, Write as _};
 use std::sync::Arc;
 
 #[derive(Derivative)]
@@ -23,7 +23,7 @@ pub struct DiagnosticCtx {
 pub type DiagnosticWriter = Arc<Mutex<Cursor<Vec<u8>>>>;
 
 pub trait ToDiagnostic {
-  fn to_diagnostic(&self) -> Diag;
+  fn to_diagnostic(self) -> Diag;
 }
 
 impl DiagnosticCtx {
@@ -37,9 +37,10 @@ impl DiagnosticCtx {
       DiagnosticOutputType::HumanReadable => {
         Box::new(HumanReadableEmitter::new(Arc::clone(sources), color))
       }
-      DiagnosticOutputType::JSON => unimplemented!(),
+      DiagnosticOutputType::Json => {
+        unimplemented!("JSON output not yet implemented")
+      }
     };
-
     Self { diagnostics: Default::default(), emitter, stop_on_error: true, writer }
   }
 
@@ -77,9 +78,10 @@ impl DiagnosticCtx {
 
   pub fn emit(&self, diag: impl ToDiagnostic) {
     let diagnostic = diag.to_diagnostic();
-    let id = self.add(diagnostic.clone());
+    let level = diagnostic.level;
+    let id = self.add(diagnostic);
 
-    if diagnostic.level == DiagnosticLevel::Bug {
+    if level == DiagnosticLevel::Bug {
       self.emit_diag(id, &mut 0);
       self.flush_to_stderr();
       panic!("look at the emitted diagnostic")

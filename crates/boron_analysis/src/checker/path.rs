@@ -25,7 +25,7 @@ impl TyChecker<'_> {
     if let Some(scheme) = self.table.def_type(id) {
       if let Some(args) = explicit_args {
         if !args.is_empty() && args.len() == scheme.vars.len() {
-          return self.instantiate_with_args(&scheme, args).0;
+          return Self::instantiate_with_args(&scheme, args).0;
         }
       }
       return self.instantiate(&scheme).0;
@@ -48,7 +48,6 @@ impl TyChecker<'_> {
   }
 
   pub(crate) fn instantiate_with_args(
-    &self,
     scheme: &TypeScheme,
     args: &[InferTy],
   ) -> (InferTy, SubstitutionMap) {

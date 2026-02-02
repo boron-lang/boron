@@ -56,14 +56,14 @@ impl From<CliLibType> for enums::lib_type::LibType {
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
 pub enum DiagOutputType {
-  JSON,
+  Json,
   HumanReadable,
 }
 
 impl From<DiagOutputType> for DiagnosticOutputType {
   fn from(value: DiagOutputType) -> Self {
     match value {
-      DiagOutputType::JSON => Self::JSON,
+      DiagOutputType::Json => Self::Json,
       DiagOutputType::HumanReadable => Self::HumanReadable,
     }
   }

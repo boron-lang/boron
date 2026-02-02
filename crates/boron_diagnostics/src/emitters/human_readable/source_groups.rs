@@ -19,9 +19,7 @@ impl HumanReadableEmitter {
       let label_source = label.span.file_id;
 
       let src_display = self.sources.display(label_source);
-      let src = if let Some(src) = self.sources.get(label_source) {
-        src
-      } else {
+      let Some(src) = self.sources.get(label_source) else {
         eprintln!("Unable to fetch source '{}'", Show(src_display));
         continue;
       };
@@ -34,7 +32,7 @@ impl HumanReadableEmitter {
         else {
           continue;
         };
-        let line_text = src.get_line_text(start_line_obj).unwrap();
+        let line_text = src.get_line_text(start_line_obj).expect("line text should exist");
 
         let num_chars_before_start =
           line_text[..start_byte_col.min(line_text.len())].chars().count();
@@ -49,7 +47,7 @@ impl HumanReadableEmitter {
           else {
             continue;
           };
-          let end_line_text = src.get_line_text(end_line_obj).unwrap();
+          let end_line_text = src.get_line_text(end_line_obj).expect("line text should exist");
           // Have to add 1 back now, so we don't cut a char in two.
           let num_chars_before_end = end_line_text[..end_byte_col + 1].chars().count();
           let end_char_offset = end_line_obj.offset() + num_chars_before_end;

@@ -36,6 +36,12 @@ pub enum InterpreterContext {
 #[derive(Debug)]
 pub struct InterpreterCache(DashMap<HirId, ConstValue>);
 
+impl Default for InterpreterCache {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
 impl InterpreterCache {
   pub fn new() -> Self {
     Self(DashMap::new())
@@ -472,7 +478,7 @@ impl<'a> Interpreter<'a> {
     let value = match &expr.kind {
       ExprKind::Literal(lit) => match lit {
         Literal::Int { base, value, .. } => {
-          let value = construct_i128(self.dcx, *base, &value);
+          let value = construct_i128(self.dcx, *base, value);
           ConstValue::Int(value)
         }
         Literal::Bool(bool) => ConstValue::Bool(*bool),

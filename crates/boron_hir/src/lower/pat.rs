@@ -20,8 +20,8 @@ impl LoweringContext<'_> {
       }
 
       Pattern::Literal(lit) => {
-        let span = self.get_literal_span(lit);
-        (PatKind::Literal(self.lower_literal(lit)), span)
+        let span = Self::get_literal_span(lit);
+        (PatKind::Literal(Self::lower_literal(lit)), span)
       }
 
       Pattern::Tuple(tup) => (

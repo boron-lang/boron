@@ -5,6 +5,12 @@ use dashmap::DashMap;
 #[derive(Debug)]
 pub struct BuiltInResults(DashMap<HirId, ConstValue>);
 
+impl Default for BuiltInResults {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
 impl BuiltInResults {
   pub fn new() -> Self {
     Self(DashMap::new())

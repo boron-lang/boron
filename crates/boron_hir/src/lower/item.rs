@@ -50,7 +50,7 @@ impl LoweringContext<'_> {
     self.module_items.push(def_id);
 
     let hir_func = self.with_owner(def_id, |ctx| {
-      let hir_id = ctx.owner_hir_id(def_id);
+      let hir_id = LoweringContext::owner_hir_id(def_id);
       let generics = ctx.lower_generics(&func.generics);
       let params = func.params.iter().map(|p| ctx.lower_param(p)).collect();
       let return_type = ctx.lower_type(&func.return_type);
@@ -81,7 +81,7 @@ impl LoweringContext<'_> {
     self.module_items.push(def_id);
 
     let hir_struct = self.with_owner(def_id, |ctx| {
-      let hir_id = ctx.owner_hir_id(def_id);
+      let hir_id = LoweringContext::owner_hir_id(def_id);
       let generics = ctx.lower_generics(&s.generics);
 
       let mut fields = Vec::new();
@@ -136,7 +136,7 @@ impl LoweringContext<'_> {
     self.module_items.push(def_id);
 
     let hir_enum = self.with_owner(def_id, |ctx| {
-      let hir_id = ctx.owner_hir_id(def_id);
+      let hir_id = LoweringContext::owner_hir_id(def_id);
       let generics = ctx.lower_generics(&e.generics);
       let variants = e.variants.iter().map(|v| ctx.lower_variant(v)).collect();
 
@@ -180,7 +180,7 @@ impl LoweringContext<'_> {
     self.module_items.push(def_id);
 
     let hir_const = self.with_owner(def_id, |ctx| {
-      let hir_id = ctx.owner_hir_id(def_id);
+      let hir_id = LoweringContext::owner_hir_id(def_id);
 
       Const {
         hir_id,

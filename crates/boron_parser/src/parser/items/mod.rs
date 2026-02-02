@@ -1,13 +1,13 @@
 use crate::expressions::Expr;
 use crate::items::Item;
+use crate::parser::Parser;
 use crate::parser::errors::{
   ConstCannotBeUninitialized, ConstExpectedFuncOrIdent, ConstItemsNeedTypeAnnotation,
   ModStringLit,
 };
-use crate::parser::Parser;
 use crate::{
-  log_parse_failure, ConstItem, ItemKind, ModItem, NodeId, Path, PathParsingContext, TokenType,
-  Type, Visibility,
+  ConstItem, ItemKind, ModItem, NodeId, Path, PathParsingContext, TokenType, Type,
+  Visibility, log_parse_failure,
 };
 use boron_source::prelude::Span;
 use boron_utils::prelude::debug;
@@ -78,7 +78,7 @@ impl Parser<'_> {
           }))
         } else if self.is_module_discovery_beginning() {
           let path = self.parse_module_discovery();
-          let Some(path) = path else { return None };
+          let path = path?;
 
           self.discovery_modules.push(path);
           self.eat_semis();

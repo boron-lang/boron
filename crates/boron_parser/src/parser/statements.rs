@@ -28,9 +28,7 @@ impl Parser<'_> {
         if self.check(TokenType::RightBrace) {
           break;
         }
-      } else if self.check(TokenType::RightBrace) {
-        break;
-      } else if self.is_at_end() {
+      } else if self.check(TokenType::RightBrace) || self.is_at_end() {
         break;
       }
     }

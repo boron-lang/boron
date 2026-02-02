@@ -9,7 +9,7 @@ pub struct IdentTable {
 }
 
 #[derive(Clone, Copy, Eq)]
-pub struct Identifier(Spur, Span, bool);
+pub struct Identifier(Spur, Span);
 
 impl PartialEq for Identifier {
   fn eq(&self, other: &Self) -> bool {
@@ -25,7 +25,7 @@ impl Hash for Identifier {
 
 impl PartialOrd for Identifier {
   fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-    Some(self.0.cmp(&other.0))
+    Some(self.cmp(other))
   }
 }
 
@@ -47,7 +47,7 @@ impl Identifier {
   }
 
   pub fn new(text: &str, span: Span) -> Self {
-    get_or_intern(text, Some(span), false)
+    get_or_intern(text, Some(span))
   }
 
   pub fn text(&self) -> String {
@@ -55,7 +55,7 @@ impl Identifier {
   }
 
   pub fn dummy() -> Self {
-    get_or_intern("", None, true)
+    get_or_intern("", None)
   }
 }
 
@@ -89,8 +89,8 @@ pub static GLOBAL_TABLE: std::sync::LazyLock<Mutex<IdentTable>> =
   std::sync::LazyLock::new(|| Mutex::new(IdentTable::new()));
 
 #[inline]
-pub fn get_or_intern(name: &str, span: Option<Span>, dummy: bool) -> Identifier {
-  Identifier(GLOBAL_TABLE.lock().intern(name), span.unwrap_or_default(), dummy)
+pub fn get_or_intern(name: &str, span: Option<Span>) -> Identifier {
+  Identifier(GLOBAL_TABLE.lock().intern(name), span.unwrap_or_default())
 }
 
 #[inline]
@@ -100,5 +100,5 @@ pub fn resolve(sym: &Identifier) -> String {
 
 #[inline]
 pub fn default_ident() -> Identifier {
-  get_or_intern("__default_identifier__", None, true)
+  get_or_intern("__default_identifier__", None)
 }

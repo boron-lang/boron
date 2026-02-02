@@ -1,4 +1,5 @@
 #[derive(Debug, Clone)]
+#[expect(dead_code)]
 pub struct Characters {
   pub hbar: char,
   pub vbar: char,

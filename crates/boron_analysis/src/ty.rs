@@ -24,6 +24,12 @@ pub struct TyParam {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SubstitutionMap(HashMap<TyParam, InferTy>);
 
+impl Default for SubstitutionMap {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
 impl SubstitutionMap {
   pub fn new() -> Self {
     Self(HashMap::new())

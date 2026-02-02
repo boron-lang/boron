@@ -10,19 +10,14 @@ impl TyChecker<'_> {
     match (&a, &b) {
       _ if a.semantically_eq(&b) => UnifyResult::Ok,
 
-      (InferTy::Err(_), _)
-      | (_, InferTy::Err(_))
-      | (InferTy::Never(_), _)
-      | (_, InferTy::Never(_)) => UnifyResult::Ok,
+      (InferTy::Err(_) | InferTy::Never(_), _)
+      | (_, InferTy::Err(_) | InferTy::Never(_)) => UnifyResult::Ok,
 
       (InferTy::Var(v1, _), InferTy::Var(v2, _)) => {
         let k1 = self.infcx.var_kind(*v1);
         let k2 = self.infcx.var_kind(*v2);
 
         match (k1, k2) {
-          (TyVarKind::General, TyVarKind::Integer | TyVarKind::Float) => {
-            self.infcx.unify_var(*v1, b.clone());
-          }
           (TyVarKind::Integer | TyVarKind::Float, TyVarKind::General) => {
             self.infcx.unify_var(*v2, a.clone());
           }

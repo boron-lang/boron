@@ -88,9 +88,7 @@ impl ComptimeValidator<'_> {
         }
       }
 
-      ExprKind::Continue | ExprKind::Path(..) | ExprKind::Literal(..) => {}
-
-      ExprKind::Comptime { .. } => {}
+      ExprKind::Continue | ExprKind::Path(..) | ExprKind::Literal(..) | ExprKind::Comptime { .. } => {}
 
       ExprKind::Struct { fields, .. } => {
         for init in fields {

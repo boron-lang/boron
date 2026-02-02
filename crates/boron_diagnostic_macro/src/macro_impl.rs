@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use quote::quote;
 use std::collections::{BTreeSet, HashMap};
-use syn::{DeriveInput, Expr, parse_macro_input, spanned::Spanned};
+use syn::{parse_macro_input, spanned::Spanned, DeriveInput, Expr};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -578,7 +578,7 @@ fn impl_diagnostic_derive(ast: &DeriveInput) -> Result<TokenStream, MacroFunctio
   Ok(TokenStream::from(quote! {
       #[automatically_derived]
         impl boron_diagnostics::ToDiagnostic for #struct_name {
-          fn to_diagnostic(&self) -> boron_diagnostics::Diag {
+          fn to_diagnostic(self) -> boron_diagnostics::Diag {
             #message_impl
 
             boron_diagnostics::Diag {

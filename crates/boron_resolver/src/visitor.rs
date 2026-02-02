@@ -771,9 +771,7 @@ impl<'a> ResolveVisitor<'a> {
         DefKind::Enum | DefKind::Struct => {
           break;
         }
-        _ => {
-          break;
-        }
+        _ => {break;}
       }
     }
 

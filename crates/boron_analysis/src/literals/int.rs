@@ -6,7 +6,7 @@ use std::num::ParseIntError;
 pub fn construct_i128(dcx: &DiagnosticCtx, base: IntBase, value: &str) -> i128 {
   let radix = base.radix();
 
-  match i128::from_str_radix(&value, radix) {
+  match i128::from_str_radix(value, radix) {
     Ok(value) => value,
     Err(error) => {
       dcx.emit(IntLitFailedToConstruct { error });

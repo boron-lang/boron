@@ -179,7 +179,7 @@ impl fmt::Display for LexError {
 impl std::error::Error for LexError {}
 
 impl ToDiagnostic for LexError {
-  fn to_diagnostic(&self) -> Diag {
+  fn to_diagnostic(self) -> Diag {
     let mut helps = Vec::new();
     if let Some(help) = self.help() {
       helps.push(help);
