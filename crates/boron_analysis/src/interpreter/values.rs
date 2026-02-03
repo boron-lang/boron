@@ -1,9 +1,12 @@
 use boron_hir::SemanticTy;
 use std::fmt;
+use std::fmt::write;
+use rustc_apfloat::ieee::{Double, DoubleS, IeeeFloat};
 
 #[derive(Debug, Clone)]
 pub enum ConstValue {
   Int(i128),
+  Float(IeeeFloat<DoubleS>),
   Bool(bool),
   Char(char),
   String(String),
@@ -19,6 +22,7 @@ impl fmt::Display for ConstValue {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
       Self::Int(i) => write!(f, "{i}"),
+      Self::Float(d) => write!(f, "{d}"),
       Self::Bool(b) => write!(f, "{b}"),
       Self::Char(c) => write!(f, "'{c}'"),
       Self::String(s) => write!(f, "{s}"),

@@ -15,7 +15,9 @@ use crate::ty::InferTy;
 use crate::unify::Expectation;
 use crate::unify::{UnifyError, UnifyResult};
 use boron_diagnostics::DiagnosticCtx;
+use boron_hir::item::SelfKind;
 use boron_hir::{Const, Function, Hir, ParamKind};
+use boron_parser::Mutability;
 use boron_resolver::{DefId, Resolver};
 use boron_utils::context::Context;
 use boron_utils::prelude::Span;
@@ -38,7 +40,6 @@ pub fn typeck_hir(hir: &Hir, ctx: &Context<'_>, resolver: &Resolver) -> TypeTabl
   }
 
   checker.finalize_types();
-  checker.debug_print_resolved_types();
   checker.table
 }
 
@@ -156,9 +157,28 @@ impl<'a> TyChecker<'a> {
           env.bind(param.def_id, param_ty.clone());
           param_ty
         }
-        ParamKind::SelfParam { .. } => {
-          // TODO: Bind self parameter
-          todo!()
+        ParamKind::SelfParam { kind } => {
+          if let Some(parent) = self.hir.is_struct_child(&_def_id) {
+            let ty =
+              self.table.def_type(parent.def_id).expect("type scheme should exist").ty;
+
+            match kind {
+              SelfKind::Value => ty,
+              SelfKind::Ptr => InferTy::Ptr {
+                mutability: Mutability::Const,
+                span: param.span,
+                ty: Box::new(ty),
+              },
+              SelfKind::PtrMut => InferTy::Ptr {
+                mutability: Mutability::Mut,
+                span: param.span,
+                ty: Box::new(ty),
+              },
+              SelfKind::Mut => todo!(),
+            }
+          } else {
+            InferTy::Err(param.span)
+          }
         }
       };
 

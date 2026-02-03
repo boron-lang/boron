@@ -148,10 +148,7 @@ dependencies = [
  "boron_source",
  "boron_utils",
  "dashmap 7.0.0-rc2",
- "num-bigint",
- "num-traits",
- "once_cell",
- "parking_lot",
+ "rustc_apfloat",
 ]
 
 [[package]]
@@ -204,6 +201,7 @@ dependencies = [
  "boron_parser",
  "boron_resolver",
  "boron_source",
+ "boron_thir",
  "boron_utils",
  "fs-err",
 ]
@@ -305,6 +303,21 @@ name = "boron_target"
 version = "0.1.0"
 dependencies = [
  "strum 0.27.2",
+]
+
+[[package]]
+name = "boron_thir"
+version = "0.1.0"
+dependencies = [
+ "boron_analysis",
+ "boron_diagnostics",
+ "boron_hir",
+ "boron_parser",
+ "boron_resolver",
+ "boron_source",
+ "boron_utils",
+ "dashmap 7.0.0-rc2",
+ "itertools",
 ]
 
 [[package]]
@@ -859,34 +872,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "num-bigint"
-version = "0.4.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5e44f723f1133c9deac646763579fdb3ac745e418f2a7af9cd0c431da1f20b9"
-dependencies = [
- "num-integer",
- "num-traits",
-]
-
-[[package]]
-name = "num-integer"
-version = "0.1.46"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7969661fd2958a5cb096e56c8e1ad0444ac2bbcd0061bd28660485a44879858f"
-dependencies = [
- "num-traits",
-]
-
-[[package]]
-name = "num-traits"
-version = "0.2.19"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
-dependencies = [
- "autocfg",
-]
-
-[[package]]
 name = "object"
 version = "0.37.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1056,6 +1041,16 @@ name = "rustc-demangle"
 version = "0.1.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56f7d92ca342cea22a06f2121d944b4fd82af56988c270852495420f961d4ace"
+
+[[package]]
+name = "rustc_apfloat"
+version = "0.2.3+llvm-462a31f5a5ab"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "486c2179b4796f65bfe2ee33679acf0927ac83ecf583ad6c91c3b4570911b9ad"
+dependencies = [
+ "bitflags",
+ "smallvec",
+]
 
 [[package]]
 name = "rustix"

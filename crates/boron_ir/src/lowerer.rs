@@ -1,7 +1,7 @@
-use crate::{Ir, IrId, IrStruct, SymbolMangler};
+use crate::{Ir, IrFunction, IrId, IrStruct, SymbolMangler};
 use boron_analysis::ty::SubstitutionMap;
 use boron_analysis::{InferTy, TypeTable};
-use boron_hir::{Function, Hir, SemanticTy, Struct};
+use boron_hir::{Function, Hir, ParamKind, SemanticTy, Struct};
 
 #[derive(Debug)]
 pub struct IrLowerer<'a> {
@@ -22,7 +22,7 @@ impl<'a> IrLowerer<'a> {
 
   pub fn lower(&mut self) -> Ir {
     for func in &self.hir.functions {
-      Self::lower_function(func.value());
+      self.lower_function(func.value());
     }
 
     for strukt in &self.hir.structs {
@@ -30,6 +30,65 @@ impl<'a> IrLowerer<'a> {
     }
 
     self.ir.clone()
+  }
+
+  pub fn lower_function(&mut self, func: &Function) {
+    let scheme = self.type_table.def_type(func.def_id).unwrap();
+
+    if let Some(monomorphizations) = self.type_table.monomorphizations.get(&func.def_id) {
+      for mono in monomorphizations.iter() {
+        if mono.type_args.map().iter().any(|(_, ty)| ty.has_params()) {
+          continue;
+        }
+
+        let params = self.lower_function_params(func, &mono.type_args);
+        let type_args: Vec<SemanticTy> = scheme
+          .vars
+          .iter()
+          .filter_map(|param| mono.type_args.get(param.def_id).map(Self::lower_type))
+          .collect();
+
+        let mangled_name = self.mangler.mangle_function(func.def_id, &type_args);
+
+        self.ir.functions.push(IrFunction {
+          name: mangled_name,
+          params,
+          id: IrId::new(),
+          type_args,
+        });
+      }
+    } else {
+      let params = self.lower_function_params(func, &SubstitutionMap::new());
+      let mangled_name = self.mangler.mangle_function(func.def_id, &[]);
+      self.ir.functions.push(IrFunction {
+        name: mangled_name,
+        params,
+        id: IrId::new(),
+        type_args: vec![],
+      });
+    }
+  }
+
+  fn lower_function_params(
+    &self,
+    func: &Function,
+    type_args: &SubstitutionMap,
+  ) -> Vec<(String, SemanticTy)> {
+    func
+      .params
+      .iter()
+      .filter_map(|p| {
+        let name = match &p.kind {
+          ParamKind::Regular { name, .. } => name.text(),
+          ParamKind::Variadic { name, .. } => name.text(),
+          ParamKind::SelfParam { .. } => "self".to_string(),
+        };
+
+        let original_ty = self.type_table.node_type(p.hir_id)?;
+        let substituted_ty = Self::apply_subst_by_def_id(&original_ty, type_args);
+        Some((name, Self::lower_type(&substituted_ty)))
+      })
+      .collect()
   }
 
   pub fn lower_struct(&mut self, strukt: &Struct) {
@@ -179,6 +238,4 @@ impl<'a> IrLowerer<'a> {
       _ => ty.clone(),
     }
   }
-
-  pub fn lower_function(_func: &Function) {}
 }

@@ -17,6 +17,8 @@ use boron_resolver::Resolver;
 use boron_utils::prelude::Span;
 use dashmap::DashMap;
 use std::cmp::PartialEq;
+use std::str::FromStr;
+use crate::float::construct_float;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum InterpreterMode {
@@ -122,6 +124,7 @@ impl<'a> Interpreter<'a> {
     match val {
       ConstValue::Int(_) => "int",
       ConstValue::Bool(_) => "bool",
+      ConstValue::Float(_) => "float",
       ConstValue::Char(_) => "char",
       ConstValue::String(_) => "string",
       ConstValue::Array(_) => "array",
@@ -478,14 +481,17 @@ impl<'a> Interpreter<'a> {
     let value = match &expr.kind {
       ExprKind::Literal(lit) => match lit {
         Literal::Int { base, value, .. } => {
-          let value = construct_i128(self.dcx, *base, value);
+          let value = construct_i128(self.dcx, *base, value, expr.span);
           ConstValue::Int(value)
         }
         Literal::Bool(bool) => ConstValue::Bool(*bool),
         Literal::Char(c) => ConstValue::Char(*c),
         Literal::Unit => ConstValue::Unit,
         Literal::String(s) => ConstValue::String(s.clone()),
-        Literal::Float { .. } => todo!(),
+        Literal::Float { value, .. } => {
+          let value = construct_float(self.dcx, value, expr.span);
+          ConstValue::Float(value)
+        },
       },
       ExprKind::Unary { op, operand } => self.eval_unary(expr, op, operand),
       ExprKind::Binary { op, lhs, rhs } => self.eval_binary(expr, op, lhs, rhs),

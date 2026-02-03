@@ -1,24 +1,17 @@
 use boron_diagnostics::DiagnosticCtx;
 use boron_parser::NodeId;
 use dashmap::DashMap;
-use num_bigint::BigInt;
+use rustc_apfloat::ieee::{DoubleS, IeeeFloat};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum FullLiteral {
-  Int(BigInt),
-  Float(FloatLiteral),
+  Int(i128),
+  Float(IeeeFloat<DoubleS>),
   Bool(bool),
   Char(char),
   Byte(u8),
   String(String),
   Unit,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct FloatLiteral {
-  pub significand: BigInt,
-  pub exponent: i32,
-  pub negative: bool,
 }
 
 #[derive(Debug)]

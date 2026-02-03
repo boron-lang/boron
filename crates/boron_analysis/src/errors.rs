@@ -13,6 +13,15 @@ pub struct ArrayLenNotANumber {
 }
 
 #[derive(Diagnostic)]
+#[error("array repeat needs to be a number found `{found}`")]
+#[error(TYPE_CHECKER_ARRAY_REPEAT_NOT_A_NUMBER)]
+pub struct ArrayRepeatNotANumber {
+  #[error("in this expression")]
+  pub span: Span,
+  pub found: String,
+}
+
+#[derive(Diagnostic)]
 #[error("invalid unary operation")]
 #[code(CONST_EVAL_INVALID_UNARY_OP)]
 pub struct InvalidUnaryOp {
