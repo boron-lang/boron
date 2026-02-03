@@ -254,6 +254,7 @@ dependencies = [
  "boron_parser",
  "boron_resolver",
  "boron_source",
+ "boron_thir",
  "boron_utils",
  "dashmap 7.0.0-rc2",
  "itertools",

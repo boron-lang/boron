@@ -1,6 +1,6 @@
+use crate::Param;
 use crate::exprs::{Block, Expr, ExprKind, FieldInit, Local, MatchArm, Stmt, StmtKind};
 use crate::items::{Field, Function, Struct};
-use crate::Param;
 use boron_analysis::float::construct_float;
 use boron_analysis::int::construct_i128;
 use boron_analysis::interpreter::{
@@ -150,8 +150,9 @@ impl<'a> ThirLowerer<'a> {
   pub fn lower_block(&mut self, block: &HirBlock) -> Block {
     let stmts = block.stmts.iter().map(|s| self.lower_stmt(s)).collect();
     let expr = block.expr.as_ref().map(|e| Box::new(self.lower_expr(e)));
+    let ty = self.type_table.node_type(block.hir_id).unwrap_or(InferTy::Err(block.span));
 
-    Block { hir_id: block.hir_id, stmts, expr, span: block.span }
+    Block { hir_id: block.hir_id, ty, stmts, expr, span: block.span }
   }
 
   pub fn lower_stmt(&mut self, stmt: &HirStmt) -> Stmt {
@@ -165,7 +166,7 @@ impl<'a> ThirLowerer<'a> {
   }
 
   pub fn lower_local(&mut self, local: &HirLocal) -> Local {
-    let ty = self.type_table.node_type(local.hir_id);
+    let ty = self.type_table.node_type(local.hir_id).unwrap_or(InferTy::Err(local.span));
 
     Local {
       hir_id: local.hir_id,
@@ -210,7 +211,12 @@ impl<'a> ThirLowerer<'a> {
       HirExprKind::Err => ExprKind::Err,
     };
 
-    Expr { hir_id: expr.hir_id, kind, span: expr.span }
+    Expr {
+      hir_id: expr.hir_id,
+      ty: self.type_table.node_type(expr.hir_id).unwrap_or(InferTy::Err(expr.span)),
+      kind,
+      span: expr.span,
+    }
   }
 
   fn lower_literal(&self, lit: &Literal, span: Span) -> ExprKind {
@@ -409,9 +415,11 @@ impl<'a> ThirLowerer<'a> {
   }
 
   fn lower_field_init(&mut self, field: &HirFieldInit) -> FieldInit {
+    let ty = self.type_table.node_type(field.hir_id).unwrap_or(InferTy::Err(field.span));
     FieldInit {
       hir_id: field.hir_id,
       name: field.name,
+      ty,
       value: self.lower_expr(&field.value),
       span: field.span,
     }

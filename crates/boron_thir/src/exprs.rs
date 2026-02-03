@@ -9,6 +9,7 @@ use boron_utils::prelude::Span;
 #[derive(Debug, Clone)]
 pub struct Expr {
   pub hir_id: HirId,
+  pub ty: InferTy,
   pub kind: ExprKind,
   pub span: Span,
 }
@@ -113,6 +114,7 @@ pub enum ExprKind {
 pub struct FieldInit {
   pub hir_id: HirId,
   pub name: Identifier,
+  pub ty: InferTy,
   pub value: Expr,
   pub span: Span,
 }
@@ -120,6 +122,7 @@ pub struct FieldInit {
 #[derive(Debug, Clone)]
 pub struct Block {
   pub hir_id: HirId,
+  pub ty: InferTy,
   pub stmts: Vec<Stmt>,
   pub expr: Option<Box<Expr>>,
   pub span: Span,
@@ -145,7 +148,7 @@ pub struct Local {
   pub hir_id: HirId,
   pub def_id: DefId,
   pub pat: Pat,
-  pub ty: Option<InferTy>,
+  pub ty: InferTy,
   pub init: Option<Expr>,
   pub span: Span,
 }

@@ -1,19 +1,21 @@
 use crate::{Ir, IrFunction, IrId, IrStruct, SymbolMangler};
 use boron_analysis::ty::SubstitutionMap;
 use boron_analysis::{InferTy, TypeTable};
-use boron_hir::{Function, Hir, ParamKind, SemanticTy, Struct};
+use boron_hir::{Hir, ParamKind, SemanticTy};
+use boron_thir::{Function as ThirFunction, Struct as ThirStruct, Thir};
 
 #[derive(Debug)]
 pub struct IrLowerer<'a> {
   hir: &'a Hir,
+  thir: &'a Thir,
   type_table: &'a TypeTable,
   ir: Ir,
   mangler: SymbolMangler<'a>,
 }
 
 impl<'a> IrLowerer<'a> {
-  pub fn new(hir: &'a Hir, type_table: &'a TypeTable) -> Self {
-    Self { hir, type_table, ir: Ir::default(), mangler: SymbolMangler::new(hir) }
+  pub fn new(hir: &'a Hir, thir: &'a Thir, type_table: &'a TypeTable) -> Self {
+    Self { hir, thir, type_table, ir: Ir::default(), mangler: SymbolMangler::new(hir) }
   }
 
   pub fn mangler(&self) -> &SymbolMangler<'a> {
@@ -21,19 +23,20 @@ impl<'a> IrLowerer<'a> {
   }
 
   pub fn lower(&mut self) -> Ir {
-    for func in &self.hir.functions {
+    for func in &self.thir.functions {
       self.lower_function(func.value());
     }
 
-    for strukt in &self.hir.structs {
+    for strukt in &self.thir.structs {
       self.lower_struct(strukt.value());
     }
 
     self.ir.clone()
   }
 
-  pub fn lower_function(&mut self, func: &Function) {
+  pub fn lower_function(&mut self, func: &ThirFunction) {
     let scheme = self.type_table.def_type(func.def_id).unwrap();
+    let is_generic = !scheme.vars.is_empty();
 
     if let Some(monomorphizations) = self.type_table.monomorphizations.get(&func.def_id) {
       for mono in monomorphizations.iter() {
@@ -57,7 +60,7 @@ impl<'a> IrLowerer<'a> {
           type_args,
         });
       }
-    } else {
+    } else if !is_generic {
       let params = self.lower_function_params(func, &SubstitutionMap::new());
       let mangled_name = self.mangler.mangle_function(func.def_id, &[]);
       self.ir.functions.push(IrFunction {
@@ -71,28 +74,38 @@ impl<'a> IrLowerer<'a> {
 
   fn lower_function_params(
     &self,
-    func: &Function,
+    func: &ThirFunction,
     type_args: &SubstitutionMap,
   ) -> Vec<(String, SemanticTy)> {
     func
       .params
       .iter()
-      .filter_map(|p| {
-        let name = match &p.kind {
-          ParamKind::Regular { name, .. } => name.text(),
-          ParamKind::Variadic { name, .. } => name.text(),
-          ParamKind::SelfParam { .. } => "self".to_string(),
-        };
+      .map(|p| {
+        // Get param name from HIR (THIR params don't have names yet)
+        let name = self
+          .hir
+          .get_function(func.def_id)
+          .and_then(|hir_func| {
+            hir_func.params.iter().find(|hp| hp.hir_id == p.hir_id).map(|hp| {
+              match &hp.kind {
+                ParamKind::Regular { name, .. } => name.text(),
+                ParamKind::Variadic { name, .. } => name.text(),
+                ParamKind::SelfParam { .. } => "self".to_string(),
+              }
+            })
+          })
+          .unwrap_or_else(|| format!("param_{}", p.def_id.index()));
 
-        let original_ty = self.type_table.node_type(p.hir_id)?;
-        let substituted_ty = Self::apply_subst_by_def_id(&original_ty, type_args);
-        Some((name, Self::lower_type(&substituted_ty)))
+        // Use type directly from THIR param
+        let substituted_ty = Self::apply_subst_by_def_id(&p.ty, type_args);
+        (name, Self::lower_type(&substituted_ty))
       })
       .collect()
   }
 
-  pub fn lower_struct(&mut self, strukt: &Struct) {
+  pub fn lower_struct(&mut self, strukt: &ThirStruct) {
     let scheme = self.type_table.def_type(strukt.def_id).unwrap();
+    let is_generic = !scheme.vars.is_empty();
 
     if let Some(monomorphizations) = self.type_table.monomorphizations.get(&strukt.def_id)
     {
@@ -117,7 +130,7 @@ impl<'a> IrLowerer<'a> {
           type_args,
         });
       }
-    } else {
+    } else if !is_generic {
       let fields = self.lower_struct_fields(strukt, &SubstitutionMap::new());
       let mangled_name = self.mangler.mangle_struct(strukt.def_id, &[]);
       self.ir.structs.push(IrStruct {
@@ -131,18 +144,15 @@ impl<'a> IrLowerer<'a> {
 
   fn lower_struct_fields(
     &self,
-    strukt: &Struct,
+    strukt: &ThirStruct,
     type_args: &SubstitutionMap,
   ) -> Vec<(String, SemanticTy)> {
     strukt
       .fields
       .iter()
       .map(|f| {
-        let original_ty = self
-          .type_table
-          .field_type(strukt.def_id, &f.name.text())
-          .expect("should be known");
-        let substituted_ty = Self::apply_subst_by_def_id(&original_ty, type_args);
+        // Use type directly from THIR field
+        let substituted_ty = Self::apply_subst_by_def_id(&f.ty, type_args);
         (f.name.text(), Self::lower_type(&substituted_ty))
       })
       .collect()
@@ -184,9 +194,7 @@ impl<'a> IrLowerer<'a> {
       InferTy::Unit(_) => SemanticTy::Unit,
       InferTy::Never(_) => SemanticTy::Never,
 
-      InferTy::Var(_, _) | InferTy::Param(_) => {
-        panic!("Cannot lower unresolved type variable or param to SemanticTy")
-      }
+      InferTy::Var(_, _) | InferTy::Param(_) => SemanticTy::Error,
 
       InferTy::Err(_) => SemanticTy::Error,
     }
@@ -196,10 +204,11 @@ impl<'a> IrLowerer<'a> {
     match ty {
       InferTy::Var(_var, _span) => ty.clone(),
       InferTy::Param(param) => {
-        if let Some(ty) = type_args.get(param.def_id) {
-          ty.clone()
+        // If we have a substitution for this param, use it; otherwise keep the param
+        if let Some(subst_ty) = type_args.get(param.def_id) {
+          subst_ty.clone()
         } else {
-          panic!()
+          ty.clone()
         }
       }
       InferTy::Adt { def_id, args, span } => InferTy::Adt {

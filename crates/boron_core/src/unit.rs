@@ -55,7 +55,7 @@ impl<'ctx> CompilationUnit<'ctx> {
     self.expand_builtins();
     self.lower_to_thir();
 
-    // self.lower_to_ir();
+    self.lower_to_ir();
   }
 
   pub fn build(&mut self) {
@@ -64,10 +64,10 @@ impl<'ctx> CompilationUnit<'ctx> {
       self.sess().dcx().bug("failed to create output directory");
     }
 
-    // let Some(ir) = &self.ir else {
-    //   return;
-    // };
-    // run_codegen(self.ctx, ir);
+    let Some(ir) = &self.ir else {
+      return;
+    };
+    run_codegen(self.ctx, ir);
   }
 
   fn lower_to_thir(&mut self) {
@@ -78,16 +78,16 @@ impl<'ctx> CompilationUnit<'ctx> {
 
     self.thir =
       Some(ThirLowerer::new(hir, &self.resolver, self.ctx.dcx(), typeck).lower());
-    println!("{:#?}", self.thir);
   }
 
   fn lower_to_ir(&mut self) {
     let Some(hir) = &self.hir else { return };
+    let Some(thir) = &self.thir else { return };
     let Some(typeck) = &self.typeck else {
       return;
     };
 
-    self.ir = Some(IrLowerer::new(hir, typeck).lower());
+    self.ir = Some(IrLowerer::new(hir, thir, typeck).lower());
   }
 
   fn expand_builtins(&mut self) {
