@@ -16,8 +16,16 @@ pub use diagnostics::*;
 pub mod prelude {
   pub use crate::code::*;
   pub use crate::codes::*;
+  pub use crate::compiler_bug;
   pub use crate::ctx::*;
   pub use crate::diagnostics::*;
   pub use crate::output_type::*;
   pub use anyhow::Result;
+}
+
+#[macro_export]
+macro_rules! compiler_bug {
+  ($dcx:expr, $fmt:literal $(, $x:expr)* $(,)?) => {
+      $dcx.bug(format!($fmt $(, $x)*))
+  };
 }

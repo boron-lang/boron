@@ -18,9 +18,7 @@ pub struct Expr {
 pub enum ExprKind {
   Literal(FullLiteral),
 
-  /// Reference to a local variable or parameter
   LocalRef(DefId),
-
   Path(DefId),
 
   Binary {
@@ -40,7 +38,6 @@ pub enum ExprKind {
     value: Box<Expr>,
   },
 
-  /// Type cast: `x as i32`
   Cast {
     expr: Box<Expr>,
     ty: InferTy,
@@ -48,35 +45,31 @@ pub enum ExprKind {
 
   Call {
     callee: DefId,
+    type_args: Vec<InferTy>,
     args: Vec<Expr>,
   },
 
-  /// Field access: `obj.field`
   Field {
     object: Box<Expr>,
     field: Identifier,
   },
 
-  /// Index access: `arr[i]`
   Index {
     object: Box<Expr>,
     index: Box<Expr>,
   },
 
-  /// Address-of: `&x`, `&mut x`
   AddrOf {
     operand: Box<Expr>,
   },
 
   Struct {
     def_id: DefId,
+    type_args: Vec<InferTy>,
     fields: Vec<FieldInit>,
   },
 
-  /// Tuple: `(a, b, c)`
   Tuple(Vec<Expr>),
-
-  /// Array: `[1, 2, 3]`
   Array(Vec<Expr>),
 
   Block(Block),
@@ -92,12 +85,10 @@ pub enum ExprKind {
     arms: Vec<MatchArm>,
   },
 
-  /// Loop: `loop { }`
   Loop {
     body: Block,
   },
 
-  /// Break: `break` or `break value`
   Break {
     value: Option<Box<Expr>>,
   },

@@ -1,8 +1,9 @@
 use crate::llvm::LLVMCodegen;
 use boron_ir::SemanticTy;
 use boron_parser::PrimitiveKind;
-use inkwell::types::{BasicType, BasicTypeEnum};
+use boron_utils::prelude::warn;
 use inkwell::AddressSpace;
+use inkwell::types::{BasicType, BasicTypeEnum};
 
 impl<'ctx> LLVMCodegen<'ctx> {
   pub fn primitive_ty(&self, prim: &PrimitiveKind) -> BasicTypeEnum<'ctx> {
@@ -50,7 +51,10 @@ impl<'ctx> LLVMCodegen<'ctx> {
       }
       SemanticTy::Unit => panic!("unit has no value"),
 
-      _ => self.context.i8_type().into(),
+      _ => {
+        warn!("not handled: {:#?}", ty);
+        self.context.i8_type().into()
+      }
     }
   }
 }

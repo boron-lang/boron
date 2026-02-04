@@ -20,6 +20,7 @@ pub struct TypeTable {
   /// Maps comptime function call to it's arguments
   pub comptime_args: DashMap<HirId, Vec<FinalComptimeArg>>,
   pub monomorphizations: DashMap<DefId, Vec<MonomorphizationEntry>>,
+  pub expr_monomorphizations: DashMap<HirId, MonomorphizationEntry>,
 }
 
 impl TypeTable {
@@ -31,6 +32,7 @@ impl TypeTable {
       method_types: DashMap::new(),
       comptime_args: DashMap::new(),
       monomorphizations: DashMap::new(),
+      expr_monomorphizations: DashMap::new(),
     }
   }
 
@@ -41,6 +43,21 @@ impl TypeTable {
     } else {
       self.monomorphizations.insert(def_id, vec![entry]);
     }
+  }
+
+  pub fn record_expr_monomorphization(
+    &self,
+    expr_id: HirId,
+    def_id: DefId,
+    type_args: SubstitutionMap,
+  ) {
+    self
+      .expr_monomorphizations
+      .insert(expr_id, MonomorphizationEntry { def_id, type_args });
+  }
+
+  pub fn expr_monomorphization(&self, expr_id: HirId) -> Option<MonomorphizationEntry> {
+    self.expr_monomorphizations.get(&expr_id).map(|m| m.clone())
   }
 
   pub fn record_node_type(&self, hir_id: HirId, ty: InferTy) {

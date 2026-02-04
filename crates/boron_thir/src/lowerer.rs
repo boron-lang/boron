@@ -166,7 +166,8 @@ impl<'a> ThirLowerer<'a> {
   }
 
   pub fn lower_local(&mut self, local: &HirLocal) -> Local {
-    let ty = self.type_table.node_type(local.hir_id).unwrap_or(InferTy::Err(local.span));
+    let ty =
+      self.type_table.node_type(local.pat.hir_id).expect("TODO: implement pattern");
 
     Local {
       hir_id: local.hir_id,
@@ -186,7 +187,7 @@ impl<'a> ThirLowerer<'a> {
       HirExprKind::Unary { op, operand } => self.lower_unary(*op, operand, expr),
       HirExprKind::Assign { op, target, value } => self.lower_assign(*op, target, value),
       HirExprKind::Cast { expr: inner, ty: _ } => self.lower_cast(inner, expr.hir_id),
-      HirExprKind::Call { callee, args } => self.lower_call(callee, args),
+      HirExprKind::Call { callee, args } => self.lower_call(callee, args, expr.hir_id),
       HirExprKind::Comptime { callee, args } => self.lower_comptime(callee, args, expr),
       HirExprKind::MethodCall { receiver, method, args } => {
         self.lower_method_call(receiver, method, args)
@@ -196,7 +197,9 @@ impl<'a> ThirLowerer<'a> {
       HirExprKind::AddrOf { mutability, operand } => {
         self.lower_addr_of(*mutability, operand)
       }
-      HirExprKind::Struct { def_id, fields } => self.lower_struct_expr(*def_id, fields),
+      HirExprKind::Struct { def_id, fields } => {
+        self.lower_struct_expr(*def_id, fields, expr.hir_id)
+      }
       HirExprKind::Tuple(exprs) => self.lower_tuple(exprs),
       HirExprKind::Array(exprs, len) => self.lower_array(exprs, len.as_deref()),
       HirExprKind::Block(block) => self.lower_block_expr(block),
@@ -308,14 +311,44 @@ impl<'a> ThirLowerer<'a> {
     ExprKind::Cast { expr: Box::new(self.lower_expr(expr)), ty }
   }
 
-  fn lower_call(&mut self, callee: &HirExpr, args: &[HirExpr]) -> ExprKind {
+  fn lower_call(
+    &mut self,
+    callee: &HirExpr,
+    args: &[HirExpr],
+    call_hir_id: HirId,
+  ) -> ExprKind {
     let callee_def_id = match &callee.kind {
       HirExprKind::Path(path) => path.def_id,
       _ => todo!("handle correctly"),
     };
 
     let args = args.iter().map(|a| self.lower_expr(a)).collect();
-    ExprKind::Call { callee: callee_def_id, args }
+    let type_args = self.lower_call_type_args(call_hir_id, callee_def_id);
+    ExprKind::Call { callee: callee_def_id, type_args, args }
+  }
+
+  fn lower_call_type_args(
+    &self,
+    call_hir_id: HirId,
+    callee_def_id: DefId,
+  ) -> Vec<InferTy> {
+    let Some(mono) = self.type_table.expr_monomorphization(call_hir_id) else {
+      return vec![];
+    };
+
+    if mono.def_id != callee_def_id {
+      return vec![];
+    }
+
+    let Some(scheme) = self.type_table.def_type(callee_def_id) else {
+      return vec![];
+    };
+
+    scheme
+      .vars
+      .iter()
+      .filter_map(|param| mono.type_args.get(param.def_id).cloned())
+      .collect()
   }
 
   fn lower_comptime(
@@ -351,9 +384,39 @@ impl<'a> ThirLowerer<'a> {
     ExprKind::AddrOf { operand: Box::new(self.lower_expr(operand)) }
   }
 
-  fn lower_struct_expr(&mut self, def_id: DefId, fields: &[HirFieldInit]) -> ExprKind {
+  fn lower_struct_expr(
+    &mut self,
+    def_id: DefId,
+    fields: &[HirFieldInit],
+    init_hir_id: HirId,
+  ) -> ExprKind {
     let fields = fields.iter().map(|f| self.lower_field_init(f)).collect();
-    ExprKind::Struct { def_id, fields }
+    let type_args = self.lower_struct_init_type_args(init_hir_id, def_id);
+    ExprKind::Struct { def_id, type_args, fields }
+  }
+
+  fn lower_struct_init_type_args(
+    &self,
+    init_hir_id: HirId,
+    def_id: DefId,
+  ) -> Vec<InferTy> {
+    let Some(mono) = self.type_table.expr_monomorphization(init_hir_id) else {
+      return vec![];
+    };
+
+    if mono.def_id != def_id {
+      return vec![];
+    }
+
+    let Some(scheme) = self.type_table.def_type(def_id) else {
+      return vec![];
+    };
+
+    scheme
+      .vars
+      .iter()
+      .filter_map(|param| mono.type_args.get(param.def_id).cloned())
+      .collect()
   }
 
   fn lower_tuple(&mut self, exprs: &[HirExpr]) -> ExprKind {

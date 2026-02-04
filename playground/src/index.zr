@@ -3,5 +3,5 @@ func square(x: i32) -> i32 {
 }
 
 func main() {
-    var hello = square(5);
+    var hello = square(10);
 }

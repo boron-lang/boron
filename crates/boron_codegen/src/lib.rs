@@ -4,11 +4,11 @@ use crate::llvm::LLVMCodegen;
 use boron_ir::Ir;
 use boron_utils::context::Context;
 use dashmap::DashMap;
+use inkwell::OptimizationLevel;
 use inkwell::context::Context as LLVMContext;
 use inkwell::targets::{
-    CodeModel, InitializationConfig, RelocMode, Target, TargetTriple,
+  CodeModel, InitializationConfig, RelocMode, Target, TargetTriple,
 };
-use inkwell::OptimizationLevel;
 
 pub trait Codegen {
   fn backend_name(&self) -> &str;
@@ -48,6 +48,8 @@ pub fn run_codegen<'a>(ctx: &'a Context<'a>, ir: &Ir) {
     builder: llvm_ctx.create_builder(),
     target_data,
     structs: DashMap::new(),
+    funcs: DashMap::new(),
+    locals: DashMap::new(),
     ir,
   };
 

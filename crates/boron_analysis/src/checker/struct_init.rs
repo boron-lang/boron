@@ -57,8 +57,8 @@ impl TyChecker<'_> {
         }
       }
 
+      let mut resolved_subst = SubstitutionMap::new();
       if !scheme.vars.is_empty() {
-        let mut resolved_subst = SubstitutionMap::new();
         if let InferTy::Adt { args: scheme_args, .. } = &scheme.ty {
           if let InferTy::Adt { args: inst_args, .. } = &def_ty {
             for (scheme_arg, inst_arg) in scheme_args.iter().zip(inst_args.iter()) {
@@ -71,8 +71,10 @@ impl TyChecker<'_> {
             }
           }
         }
-        self.table.record_monomorphization(*def_id, resolved_subst);
+        self.table.record_monomorphization(*def_id, resolved_subst.clone());
       }
+
+      self.table.record_expr_monomorphization(expr.hir_id, *def_id, resolved_subst);
     }
 
     def_ty

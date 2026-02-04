@@ -20,4 +20,12 @@ impl Ir {
       .find(|s| &s.def_id == id && types == &s.type_args)
       .expect("all structs should be known")
   }
+  
+  pub fn find_function(&self, id: &DefId, types: &Vec<SemanticTy>) -> &IrFunction {
+    self
+        .functions
+        .iter()
+        .find(|s| &s.def_id == id && types == &s.type_args)
+        .expect("all functions should be known")
+  }
 }

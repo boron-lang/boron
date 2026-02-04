@@ -182,14 +182,17 @@ dependencies = [
 name = "boron_codegen"
 version = "0.1.0"
 dependencies = [
+ "boron_analysis",
  "boron_ir",
  "boron_parser",
+ "boron_resolver",
  "boron_target",
  "boron_thir",
  "boron_utils",
  "dashmap 7.0.0-rc2",
  "inkwell",
  "itertools",
+ "rustc_apfloat",
 ]
 
 [[package]]

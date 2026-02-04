@@ -1,5 +1,6 @@
 use crate::{
-  Ir, IrExpr, IrExprKind, IrFieldInit, IrFunction, IrId, IrLocal, IrStruct, SymbolMangler,
+  Ir, IrExpr, IrExprKind, IrFieldInit, IrFunction, IrId, IrLocal, IrParam, IrStruct,
+  SymbolMangler,
 };
 use boron_analysis::ty::SubstitutionMap;
 use boron_analysis::{InferTy, TypeTable};
@@ -96,7 +97,7 @@ impl<'a> IrLowerer<'a> {
     &self,
     func: &ThirFunction,
     type_args: &SubstitutionMap,
-  ) -> Vec<(String, SemanticTy)> {
+  ) -> Vec<IrParam> {
     func
       .params
       .iter()
@@ -116,7 +117,7 @@ impl<'a> IrLowerer<'a> {
           .unwrap_or_else(|| format!("param_{}", p.def_id.index()));
 
         let substituted_ty = Self::apply_subst_by_def_id(&p.ty, type_args);
-        (name, Self::lower_type(&substituted_ty))
+        IrParam { def_id: p.def_id, name, ty: Self::lower_type(&substituted_ty) }
       })
       .collect()
   }
@@ -225,10 +226,16 @@ impl<'a> IrLowerer<'a> {
         expr: Box::new(self.lower_expr(inner, type_args)),
         ty: self.lower_semantic_ty(ty, type_args),
       },
-      ThirExprKind::Call { callee, args } => IrExprKind::Call {
-        callee: *callee,
-        args: args.iter().map(|a| self.lower_expr(a, type_args)).collect(),
-      },
+      ThirExprKind::Call { callee, type_args: call_type_args, args } => {
+        IrExprKind::Call {
+          callee: *callee,
+          type_args: call_type_args
+            .iter()
+            .map(|ty| self.lower_semantic_ty(ty, type_args))
+            .collect(),
+          args: args.iter().map(|a| self.lower_expr(a, type_args)).collect(),
+        }
+      }
       ThirExprKind::Field { object, field } => IrExprKind::Field {
         object: Box::new(self.lower_expr(object, type_args)),
         field: *field,
@@ -240,10 +247,16 @@ impl<'a> IrLowerer<'a> {
       ThirExprKind::AddrOf { operand } => {
         IrExprKind::AddrOf { operand: Box::new(self.lower_expr(operand, type_args)) }
       }
-      ThirExprKind::Struct { def_id, fields } => IrExprKind::Struct {
-        def_id: *def_id,
-        fields: fields.iter().map(|f| self.lower_field_init(f, type_args)).collect(),
-      },
+      ThirExprKind::Struct { def_id, type_args: struct_type_args, fields } => {
+        IrExprKind::Struct {
+          def_id: *def_id,
+          type_args: struct_type_args
+            .iter()
+            .map(|ty| self.lower_semantic_ty(ty, type_args))
+            .collect(),
+          fields: fields.iter().map(|f| self.lower_field_init(f, type_args)).collect(),
+        }
+      }
       ThirExprKind::Tuple(exprs) => {
         IrExprKind::Tuple(exprs.iter().map(|e| self.lower_expr(e, type_args)).collect())
       }
@@ -327,7 +340,7 @@ impl<'a> IrLowerer<'a> {
 
       InferTy::Var(_, _) | InferTy::Param(_) => SemanticTy::Error,
 
-      InferTy::Err(_) => SemanticTy::Error,
+      InferTy::Err(span) => SemanticTy::Error,
     }
   }
 

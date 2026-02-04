@@ -14,6 +14,9 @@ boron_parser = { workspace = true }
 dashmap = { workspace = true }
 itertools = { workspace = true }
 boron_thir = { workspace = true }
+boron_analysis = { workspace = true }
+rustc_apfloat = { workspace = true }
+boron_resolver = { workspace = true }
 
 [lints]
 workspace = true

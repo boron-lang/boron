@@ -6,8 +6,8 @@ impl LLVMCodegen<'_> {
     let struct_type = self.context.opaque_struct_type(&strukt.name);
     self.structs.insert(strukt.id, struct_type);
   }
-  
-  pub fn fill_struct_bodies(&self, strukt: &IrStruct) {
+
+  pub fn generate_struct_body(&self, strukt: &IrStruct) {
     let ty = self.structs.get(&strukt.id).expect("must exist");
     let mut field_types = vec![];
 

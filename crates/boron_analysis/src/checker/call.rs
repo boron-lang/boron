@@ -13,7 +13,7 @@ impl TyChecker<'_> {
     args: &[Expr],
     env: &mut TypeEnv,
     span: Span,
-    _call_hir_id: HirId,
+    call_hir_id: HirId,
   ) -> InferTy {
     let (callee_def_id, explicit_type_args) = match &callee.kind {
       ExprKind::Path(path) => {
@@ -57,8 +57,8 @@ impl TyChecker<'_> {
 
         if let Some(def_id) = callee_def_id {
           if let Some(scheme) = self.table.def_type(def_id) {
+            let mut subst = SubstitutionMap::new();
             if !scheme.vars.is_empty() {
-              let mut subst = SubstitutionMap::new();
               if !explicit_type_args.is_empty()
                 && explicit_type_args.len() == scheme.vars.len()
               {
@@ -89,8 +89,10 @@ impl TyChecker<'_> {
                   );
                 }
               }
-              self.table.record_monomorphization(def_id, subst);
+              self.table.record_monomorphization(def_id, subst.clone());
             }
+
+            self.table.record_expr_monomorphization(call_hir_id, def_id, subst);
           }
         }
 

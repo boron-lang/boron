@@ -60,8 +60,6 @@ panic = "abort"
 panic = "abort"
 
 [workspace.lints.rust]
-unsafe_code = "deny"
-
 elided_lifetimes_in_paths = "warn"
 future_incompatible = { level = "warn", priority = -1 }
 nonstandard_style = { level = "warn", priority = -1 }
@@ -70,7 +68,6 @@ rust_2021_prelude_collisions = "warn"
 semicolon_in_expressions_from_macros = "warn"
 trivial_numeric_casts = "warn"
 unexpected_cfgs = "warn"
-unsafe_op_in_unsafe_fn = "warn"
 unused_extern_crates = "warn"
 unused_import_braces = "warn"
 unused_lifetimes = "warn"
@@ -228,7 +225,6 @@ trailing_empty_array = "warn"
 trait_duplication_in_bounds = "warn"
 transmute_ptr_to_ptr = "warn"
 tuple_array_conversions = "warn"
-undocumented_unsafe_blocks = "warn"
 unimplemented = "warn"
 uninhabited_references = "warn"
 uninlined_format_args = "warn"

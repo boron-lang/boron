@@ -30,7 +30,7 @@ pub enum IrExprKind {
 
   Cast { expr: Box<IrExpr>, ty: SemanticTy },
 
-  Call { callee: DefId, args: Vec<IrExpr> },
+  Call { callee: DefId, type_args: Vec<SemanticTy>, args: Vec<IrExpr> },
 
   Field { object: Box<IrExpr>, field: Identifier },
 
@@ -38,7 +38,7 @@ pub enum IrExprKind {
 
   AddrOf { operand: Box<IrExpr> },
 
-  Struct { def_id: DefId, fields: Vec<IrFieldInit> },
+  Struct { def_id: DefId, type_args: Vec<SemanticTy>, fields: Vec<IrFieldInit> },
 
   Tuple(Vec<IrExpr>),
   Array(Vec<IrExpr>),
