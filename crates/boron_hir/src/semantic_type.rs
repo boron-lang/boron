@@ -5,7 +5,7 @@ use boron_resolver::DefId;
 pub enum SemanticTy {
   Primitive(PrimitiveKind),
 
-  Struct { def_id: DefId, fields: Vec<SemanticTy> },
+  Struct { def_id: DefId, args: Vec<SemanticTy> },
 
   Enum { def_id: DefId, variants: Vec<EnumVariant> },
 

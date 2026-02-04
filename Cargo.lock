@@ -183,8 +183,13 @@ name = "boron_codegen"
 version = "0.1.0"
 dependencies = [
  "boron_ir",
+ "boron_parser",
+ "boron_target",
+ "boron_thir",
  "boron_utils",
+ "dashmap 7.0.0-rc2",
  "inkwell",
+ "itertools",
 ]
 
 [[package]]

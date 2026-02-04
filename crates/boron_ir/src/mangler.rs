@@ -112,19 +112,19 @@ impl<'a> SymbolMangler<'a> {
     match ty {
       SemanticTy::Primitive(kind) => Self::mangle_primitive(*kind),
 
-      SemanticTy::Struct { def_id, fields } => {
+      SemanticTy::Struct { def_id, args } => {
         let base = self
           .hir
           .get_struct(*def_id)
           .map(|s| s.name.text())
           .unwrap_or_else(|| format!("s{}", def_id.index()));
 
-        if fields.is_empty() {
+        if args.is_empty() {
           base
         } else {
-          let field_strs: Vec<String> =
-            fields.iter().map(|f| self.mangle_type(f)).collect();
-          format!("{}${}", base, field_strs.join("$"))
+          let arg_strs: Vec<String> =
+            args.iter().map(|arg| self.mangle_type(arg)).collect();
+          format!("{}${}", base, arg_strs.join("$"))
         }
       }
 

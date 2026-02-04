@@ -1,18 +1,29 @@
-use crate::IrId;
+use crate::{IrBlock, IrId};
 use boron_hir::SemanticTy;
+use boron_resolver::DefId;
 
 #[derive(Debug, Clone)]
 pub struct IrFunction {
   pub id: IrId,
+  pub def_id: DefId,
   /// The concrete type args this monomorphization was instantiated with
   pub type_args: Vec<SemanticTy>,
   pub name: String,
   pub params: Vec<(String, SemanticTy)>,
+  pub return_type: SemanticTy,
+  pub body: Option<IrBody>,
+}
+
+#[derive(Debug, Clone)]
+pub struct IrBody {
+  pub entry: boron_hir::HirId,
+  pub blocks: Vec<IrBlock>,
 }
 
 #[derive(Debug, Clone)]
 pub struct IrStruct {
   pub id: IrId,
+  pub def_id: DefId,
   /// The concrete type args this monomorphization was instantiated with
   pub type_args: Vec<SemanticTy>,
   pub name: String,

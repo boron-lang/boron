@@ -21,7 +21,6 @@ pub enum ExprKind {
   /// Reference to a local variable or parameter
   LocalRef(DefId),
 
-  /// Path expression that couldn't be constant folded (e.g., function reference)
   Path(DefId),
 
   Binary {

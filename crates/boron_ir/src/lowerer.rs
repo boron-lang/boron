@@ -1,8 +1,14 @@
-use crate::{Ir, IrFunction, IrId, IrStruct, SymbolMangler};
+use crate::{
+  Ir, IrExpr, IrExprKind, IrFieldInit, IrFunction, IrId, IrLocal, IrStruct, SymbolMangler,
+};
 use boron_analysis::ty::SubstitutionMap;
 use boron_analysis::{InferTy, TypeTable};
+use boron_hir::pat::PatKind;
 use boron_hir::{Hir, ParamKind, SemanticTy};
-use boron_thir::{Function as ThirFunction, Struct as ThirStruct, Thir};
+use boron_thir::{
+  Expr as ThirExpr, ExprKind as ThirExprKind, FieldInit as ThirFieldInit,
+  Function as ThirFunction, Local as ThirLocal, Struct as ThirStruct, Thir,
+};
 
 #[derive(Debug)]
 pub struct IrLowerer<'a> {
@@ -52,22 +58,36 @@ impl<'a> IrLowerer<'a> {
           .collect();
 
         let mangled_name = self.mangler.mangle_function(func.def_id, &type_args);
+        let return_ty = Self::apply_subst_by_def_id(&func.return_type, &mono.type_args);
+
+        let body =
+          func.body.as_ref().map(|b| self.lower_body(b, &mono.type_args, func.def_id));
 
         self.ir.functions.push(IrFunction {
           name: mangled_name,
           params,
           id: IrId::new(),
           type_args,
+          return_type: Self::lower_type(&return_ty),
+          def_id: func.def_id,
+          body,
         });
       }
     } else if !is_generic {
       let params = self.lower_function_params(func, &SubstitutionMap::new());
       let mangled_name = self.mangler.mangle_function(func.def_id, &[]);
+      let body = func
+        .body
+        .as_ref()
+        .map(|b| self.lower_body(b, &SubstitutionMap::new(), func.def_id));
       self.ir.functions.push(IrFunction {
         name: mangled_name,
         params,
         id: IrId::new(),
         type_args: vec![],
+        return_type: Self::lower_type(&func.return_type),
+        def_id: func.def_id,
+        body,
       });
     }
   }
@@ -81,7 +101,6 @@ impl<'a> IrLowerer<'a> {
       .params
       .iter()
       .map(|p| {
-        // Get param name from HIR (THIR params don't have names yet)
         let name = self
           .hir
           .get_function(func.def_id)
@@ -96,7 +115,6 @@ impl<'a> IrLowerer<'a> {
           })
           .unwrap_or_else(|| format!("param_{}", p.def_id.index()));
 
-        // Use type directly from THIR param
         let substituted_ty = Self::apply_subst_by_def_id(&p.ty, type_args);
         (name, Self::lower_type(&substituted_ty))
       })
@@ -128,6 +146,7 @@ impl<'a> IrLowerer<'a> {
           fields,
           id: IrId::new(),
           type_args,
+          def_id: strukt.def_id,
         });
       }
     } else if !is_generic {
@@ -138,6 +157,7 @@ impl<'a> IrLowerer<'a> {
         fields,
         id: IrId::new(),
         type_args: vec![],
+        def_id: strukt.def_id,
       });
     }
   }
@@ -151,11 +171,122 @@ impl<'a> IrLowerer<'a> {
       .fields
       .iter()
       .map(|f| {
-        // Use type directly from THIR field
         let substituted_ty = Self::apply_subst_by_def_id(&f.ty, type_args);
         (f.name.text(), Self::lower_type(&substituted_ty))
       })
       .collect()
+  }
+
+  pub(crate) fn lower_local(
+    &self,
+    local: &ThirLocal,
+    type_args: &SubstitutionMap,
+  ) -> IrLocal {
+    let ty = self.lower_semantic_ty(&local.ty, type_args);
+
+    match &local.pat.kind {
+      PatKind::Binding { subpat, .. } if subpat.is_none() => {}
+      _ => todo!("lower complex pattern bindings in IR"),
+    }
+
+    IrLocal {
+      hir_id: local.hir_id,
+      def_id: local.def_id,
+      ty,
+      init: local.init.as_ref().map(|e| self.lower_expr(e, type_args)),
+      span: local.span,
+    }
+  }
+
+  pub(crate) fn lower_expr(
+    &self,
+    expr: &ThirExpr,
+    type_args: &SubstitutionMap,
+  ) -> IrExpr {
+    let kind = match &expr.kind {
+      ThirExprKind::Literal(lit) => IrExprKind::Literal(lit.clone()),
+      ThirExprKind::LocalRef(def_id) => IrExprKind::LocalRef(*def_id),
+      ThirExprKind::Path(def_id) => IrExprKind::GlobalRef(*def_id),
+      ThirExprKind::Binary { op, lhs, rhs } => IrExprKind::Binary {
+        op: *op,
+        lhs: Box::new(self.lower_expr(lhs, type_args)),
+        rhs: Box::new(self.lower_expr(rhs, type_args)),
+      },
+      ThirExprKind::Unary { op, operand } => IrExprKind::Unary {
+        op: *op,
+        operand: Box::new(self.lower_expr(operand, type_args)),
+      },
+      ThirExprKind::Assign { op, target, value } => IrExprKind::Assign {
+        op: *op,
+        target: Box::new(self.lower_expr(target, type_args)),
+        value: Box::new(self.lower_expr(value, type_args)),
+      },
+      ThirExprKind::Cast { expr: inner, ty } => IrExprKind::Cast {
+        expr: Box::new(self.lower_expr(inner, type_args)),
+        ty: self.lower_semantic_ty(ty, type_args),
+      },
+      ThirExprKind::Call { callee, args } => IrExprKind::Call {
+        callee: *callee,
+        args: args.iter().map(|a| self.lower_expr(a, type_args)).collect(),
+      },
+      ThirExprKind::Field { object, field } => IrExprKind::Field {
+        object: Box::new(self.lower_expr(object, type_args)),
+        field: *field,
+      },
+      ThirExprKind::Index { object, index } => IrExprKind::Index {
+        object: Box::new(self.lower_expr(object, type_args)),
+        index: Box::new(self.lower_expr(index, type_args)),
+      },
+      ThirExprKind::AddrOf { operand } => {
+        IrExprKind::AddrOf { operand: Box::new(self.lower_expr(operand, type_args)) }
+      }
+      ThirExprKind::Struct { def_id, fields } => IrExprKind::Struct {
+        def_id: *def_id,
+        fields: fields.iter().map(|f| self.lower_field_init(f, type_args)).collect(),
+      },
+      ThirExprKind::Tuple(exprs) => {
+        IrExprKind::Tuple(exprs.iter().map(|e| self.lower_expr(e, type_args)).collect())
+      }
+      ThirExprKind::Array(exprs) => {
+        IrExprKind::Array(exprs.iter().map(|e| self.lower_expr(e, type_args)).collect())
+      }
+      ThirExprKind::Block(_) => todo!("lower block expressions into CFG"),
+      ThirExprKind::If { .. } => todo!("lower if into CFG terminators"),
+      ThirExprKind::Match { .. } => todo!("lower match into CFG"),
+      ThirExprKind::Loop { .. } => todo!("lower loops into CFG"),
+      ThirExprKind::Break { .. } => todo!("lower break into CFG"),
+      ThirExprKind::Continue => todo!("lower continue into CFG"),
+      ThirExprKind::Return { .. } => todo!("lower return into CFG terminator"),
+      ThirExprKind::Err => IrExprKind::Err,
+    };
+
+    IrExpr {
+      hir_id: expr.hir_id,
+      ty: self.lower_semantic_ty(&expr.ty, type_args),
+      kind,
+      span: expr.span,
+    }
+  }
+
+  fn lower_field_init(
+    &self,
+    field: &ThirFieldInit,
+    type_args: &SubstitutionMap,
+  ) -> IrFieldInit {
+    let ty = self.lower_semantic_ty(&field.ty, type_args);
+
+    IrFieldInit {
+      hir_id: field.hir_id,
+      name: field.name,
+      ty,
+      value: self.lower_expr(&field.value, type_args),
+      span: field.span,
+    }
+  }
+
+  fn lower_semantic_ty(&self, ty: &InferTy, type_args: &SubstitutionMap) -> SemanticTy {
+    let substituted = Self::apply_subst_by_def_id(ty, type_args);
+    Self::lower_type(&substituted)
   }
 
   fn lower_type(ty: &InferTy) -> SemanticTy {
@@ -163,8 +294,8 @@ impl<'a> IrLowerer<'a> {
       InferTy::Primitive(kind, _) => SemanticTy::Primitive(*kind),
 
       InferTy::Adt { def_id, args, .. } => {
-        let fields = args.iter().map(Self::lower_type).collect();
-        SemanticTy::Struct { def_id: *def_id, fields }
+        let args = args.iter().map(Self::lower_type).collect();
+        SemanticTy::Struct { def_id: *def_id, args }
       }
 
       InferTy::Ptr { mutability, ty: inner, .. } => SemanticTy::Ptr {
@@ -204,7 +335,6 @@ impl<'a> IrLowerer<'a> {
     match ty {
       InferTy::Var(_var, _span) => ty.clone(),
       InferTy::Param(param) => {
-        // If we have a substitution for this param, use it; otherwise keep the param
         if let Some(subst_ty) = type_args.get(param.def_id) {
           subst_ty.clone()
         } else {

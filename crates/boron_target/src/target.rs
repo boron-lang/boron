@@ -355,9 +355,32 @@ pub struct Target {
   pub linker: Linker,
   pub c_compiler: CCompiler,
   pub data_layout: DataLayout,
+  pub triple: &'static str,
 }
 
 impl Target {
+  fn triple_for(os: Os, arch: Arch) -> &'static str {
+    match (os, arch) {
+      (Os::Windows, Arch::X86_64) => "x86_64-pc-windows-msvc",
+      (Os::Windows, Arch::X86) => "i686-pc-windows-msvc",
+      (Os::Windows, Arch::AArch64) => "aarch64-pc-windows-msvc",
+      (Os::Windows, Arch::Arm) => "armv7-pc-windows-msvc",
+      (Os::Windows, Arch::RiscV64) => "riscv64-pc-windows-msvc",
+
+      (Os::Linux, Arch::X86_64) => "x86_64-unknown-linux-gnu",
+      (Os::Linux, Arch::X86) => "i686-unknown-linux-gnu",
+      (Os::Linux, Arch::AArch64) => "aarch64-unknown-linux-gnu",
+      (Os::Linux, Arch::Arm) => "armv7-unknown-linux-gnueabihf",
+      (Os::Linux, Arch::RiscV64) => "riscv64-unknown-linux-gnu",
+
+      (Os::MacOs, Arch::X86_64) => "x86_64-apple-darwin",
+      (Os::MacOs, Arch::X86) => "i686-apple-darwin",
+      (Os::MacOs, Arch::AArch64) => "aarch64-apple-darwin",
+      (Os::MacOs, Arch::Arm) => "armv7-apple-darwin",
+      (Os::MacOs, Arch::RiscV64) => "riscv64-apple-darwin",
+    }
+  }
+
   pub fn host() -> Self {
     #[cfg(target_arch = "x86_64")]
     let arch = Arch::X86_64;
@@ -418,7 +441,9 @@ impl Target {
       }
     };
 
-    Self { arch, os, endian, pointer_width, linker, c_compiler, data_layout }
+    let triple = Self::triple_for(os, arch);
+
+    Self { arch, os, endian, pointer_width, linker, c_compiler, data_layout, triple }
   }
 
   pub fn new(
@@ -458,7 +483,9 @@ impl Target {
       (_, _, PointerWidth::Bits32, Endian::Big) => DataLayout::new_32bit_big_endian(),
     };
 
-    Self { arch, os, endian, pointer_width, linker, c_compiler, data_layout }
+    let triple = Self::triple_for(os, arch);
+
+    Self { arch, os, endian, pointer_width, linker, c_compiler, data_layout, triple }
   }
 
   pub fn exe_suffix(&self) -> &'static str {

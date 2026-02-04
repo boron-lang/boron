@@ -1,5 +1,3 @@
-//! HIR patterns for destructuring and matching.
-
 use crate::ids::HirId;
 
 use crate::{Expr, Literal};
@@ -7,7 +5,6 @@ use boron_resolver::DefId;
 use boron_utils::ident_table::Identifier;
 use boron_utils::prelude::Span;
 
-/// A pattern in HIR.
 #[derive(Debug, Clone)]
 pub struct Pat {
   pub hir_id: HirId,
@@ -15,7 +12,6 @@ pub struct Pat {
   pub span: Span,
 }
 
-/// Pattern kinds.
 #[derive(Debug, Clone)]
 pub enum PatKind {
   /// Wildcard: `_`

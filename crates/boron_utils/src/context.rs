@@ -1,6 +1,7 @@
 use crate::prelude::*;
 use boron_diagnostics::DiagnosticCtx;
 use boron_source::sources::Sources;
+use boron_target::target::Target;
 use std::sync::Arc;
 
 pub struct Context<'ctx> {
@@ -15,5 +16,9 @@ impl<'ctx> Context<'ctx> {
 
   pub fn dcx(&self) -> &DiagnosticCtx {
     self.session.dcx()
+  }
+
+  pub fn target(&self) -> &Target {
+    self.session.target()
   }
 }
