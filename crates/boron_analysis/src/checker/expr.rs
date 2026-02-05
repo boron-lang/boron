@@ -1,4 +1,4 @@
-use crate::builtins::{get_builtin, BuiltInParam};
+use crate::builtins::{BuiltInParam, get_builtin};
 use crate::checker::TyChecker;
 use crate::errors::{
   ArityMismatch, ArrayLenNotANumber, ArrayRepeatNotANumber, AssignTypeMismatch,
@@ -12,9 +12,9 @@ use crate::ty::InferTy;
 use crate::unify::{Expectation, UnifyError, UnifyResult};
 use boron_hir::expr::ComptimeArg;
 use boron_hir::{Expr, ExprKind, Literal};
-use boron_parser::ast::types::PrimitiveKind;
 use boron_parser::Mutability;
-use boron_utils::prelude::{warn, Span};
+use boron_parser::ast::types::PrimitiveKind;
+use boron_utils::prelude::{Span, warn};
 
 impl TyChecker<'_> {
   pub(crate) fn check_expr(

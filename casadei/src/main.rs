@@ -6,16 +6,17 @@ mod test;
 
 use crate::app::{App, AppState};
 use crate::directives::LineDirection;
-use crate::output::{FailureType, TestStatus};
-use crate::runner::TestRunner;
+use crate::output::{FailureType, TestResultPayload, TestStatus};
+use crate::runner::{run_single_test_in_process, TestRunner};
 use crate::test::Test;
-use boron_core::prelude::{Colorize, canonicalize_with_strip};
+use boron_core::prelude::{canonicalize_with_strip, Colorize};
 use boron_core::vars::FILE_EXTENSION;
 use color_eyre::owo_colors::OwoColorize;
 use glob::glob;
+use serde_json;
 use spinners::{Spinner, Spinners};
 use std::env;
-use std::io::{Write, stderr};
+use std::io::{stderr, stdout, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::thread::Builder;
@@ -23,6 +24,11 @@ use std::time::Instant;
 
 fn main() -> color_eyre::Result<()> {
   color_eyre::install()?;
+
+  if let Some(single_test) = parse_single_test_arg() {
+    return run_single_test_mode(single_test);
+  }
+
   build_compiler();
 
   // we don't want to count the compiler building
@@ -43,6 +49,7 @@ fn main() -> color_eyre::Result<()> {
 
   let mut passed = 0;
   let mut failed = 0;
+  let mut panicked = 0;
   let mut skipped = 0;
   let results = state.lock();
 
@@ -54,6 +61,17 @@ fn main() -> color_eyre::Result<()> {
         skipped += 1;
       }
       TestStatus::Passed => passed += 1,
+      TestStatus::Panicked(message) => {
+        panicked += 1;
+        println!(
+          "\n\n{}{}{}:",
+          "[".dimmed(),
+          test.short_path.display().to_string().bright_red(),
+          "]".dimmed()
+        );
+        println!("test panicked: {message}");
+        stderr().write_all(&result.output)?;
+      }
       TestStatus::Failed(failures) => {
         println!(
           "\n\n{}{}{}:",
@@ -99,14 +117,39 @@ fn main() -> color_eyre::Result<()> {
   }
 
   println!(
-    "\n\n Summary: {} | {} | {} finished in {}",
+    "\n\n Summary: {} | {} | {} | {} finished in {}",
     format!("{} passed", passed).bright_green(),
     format!("{} failed", failed).bright_red(),
+    format!("{} panicked", panicked).bright_magenta(),
     format!("{} skipped", skipped).bright_yellow(),
     format!("{:.2?}", instant.elapsed()).bright_magenta()
   );
 
   Ok(())
+}
+
+fn run_single_test_mode(path: PathBuf) -> color_eyre::Result<()> {
+  let test = Test::try_new(canonicalize_with_strip(path)?)?;
+  let result = run_single_test_in_process(&test);
+  let payload = TestResultPayload {
+    result: result.result,
+    output: String::from_utf8_lossy(&result.output).to_string(),
+  };
+  let json = serde_json::to_vec(&payload)?;
+  stdout().write_all(&json)?;
+  Ok(())
+}
+
+fn parse_single_test_arg() -> Option<PathBuf> {
+  let mut args = env::args_os().skip(1);
+
+  while let Some(arg) = args.next() {
+    if arg == "--single" {
+      return args.next().map(PathBuf::from);
+    }
+  }
+
+  None
 }
 
 fn build_compiler() {

@@ -53,6 +53,10 @@ boron_ir = { path = "crates/boron_ir" }
 boron_codegen = { path = "crates/boron_codegen" }
 boron_thir = { path = "crates/boron_thir" }
 
+[profile.testrunner]
+inherits = "dev"
+panic = "unwind"
+
 [profile.release]
 panic = "abort"
 

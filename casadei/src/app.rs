@@ -1,5 +1,5 @@
-use crate::output::TestResult;
-use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use crate::output::{TestResult, TestStatus};
+use indicatif::{ProgressBar, ProgressStyle};
 use parking_lot::Mutex;
 use std::sync::Arc;
 use std::time::Duration;
@@ -8,12 +8,24 @@ use std::time::Duration;
 pub struct AppState {
   pub total_tests: u64,
   pub completed_tests: u64,
+  pub passed: u64,
+  pub failed: u64,
+  pub panicked: u64,
+  pub skipped: u64,
   pub test_results: Vec<TestResult>,
 }
 
 impl AppState {
   pub fn new(total_tests: u64) -> Arc<Mutex<Self>> {
-    Arc::new(Mutex::new(Self { total_tests, completed_tests: 0, test_results: vec![] }))
+    Arc::new(Mutex::new(Self {
+      total_tests,
+      completed_tests: 0,
+      passed: 0,
+      failed: 0,
+      panicked: 0,
+      skipped: 0,
+      test_results: vec![],
+    }))
   }
 
   pub fn increment_completed(&mut self) {
@@ -21,6 +33,12 @@ impl AppState {
   }
 
   pub fn add_result(&mut self, result: TestResult) {
+    match &result.result {
+      TestStatus::Passed => self.passed += 1,
+      TestStatus::Failed(_) => self.failed += 1,
+      TestStatus::Panicked(_) => self.panicked += 1,
+      TestStatus::Skipped => self.skipped += 1,
+    }
     self.test_results.push(result);
   }
 }
@@ -42,7 +60,7 @@ impl App {
     .progress_chars("█▉▊▋▌▍▎▏ ")
     .tick_chars("⠋⠙⠚⠞⠖⠦⠴⠲⠳⠓");
 
-    let overall = MultiProgress::new().add(ProgressBar::new(total_tests));
+    let overall = ProgressBar::new(total_tests);
     overall.set_style(overall_style);
     overall.set_message("Overall");
     overall.enable_steady_tick(Duration::from_millis(100));
@@ -58,8 +76,13 @@ impl App {
         self.overall.set_length(state.total_tests.max(1));
         self.overall.set_position(state.completed_tests);
         self.overall.set_message(format!(
-          "All tests {}/{}",
-          state.completed_tests, state.total_tests
+          "All tests {}/{} | passed {} | failed {} | panicked {} | skipped {}",
+          state.completed_tests,
+          state.total_tests,
+          state.passed,
+          state.failed,
+          state.panicked,
+          state.skipped
         ));
 
         state.total_tests == state.completed_tests

@@ -1,12 +1,20 @@
 use crate::app::AppState;
 use crate::directives::{Directive, LineDirection};
-use crate::output::{FailureType, TestResult, TestStatus};
+use crate::output::{FailureType, TestResult, TestResultPayload, TestStatus};
 use crate::test::Test;
 use boron_core::prelude::*;
 use itertools::Itertools;
 use parking_lot::Mutex;
+use rayon::prelude::*;
+use std::any::Any;
+use std::cell::Cell;
+use std::env;
 use std::io::Cursor;
+use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::process::Command;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::Once;
 
 pub struct TestRunner<'tests> {
   pub tests: &'tests Vec<Test>,
@@ -31,16 +39,29 @@ impl<'tests> TestRunner<'tests> {
   }
 
   fn run_single_test(&'tests self, test: &'tests Test) -> TestResult {
-    let project_type = test
-      .directives
-      .iter()
-      .find_map(|directive| match directive {
-        Directive::PackageType(package_type) => Some(*package_type),
-        _ => None,
-      })
-      .unwrap_or(PackageType::Binary);
+    run_single_test_subprocess(test).unwrap_or_else(|(message, output)| TestResult {
+      result: TestStatus::Panicked(message),
+      output,
+      test_id: test.id,
+    })
+  }
+}
 
-    let output = Arc::new(Mutex::new(Cursor::new(vec![])));
+pub fn run_single_test_in_process(test: &Test) -> TestResult {
+  install_panic_hook();
+  let _panic_guard = PanicRunGuard::new();
+  let _panic_thread_guard = PanicHookGuard::new();
+  let project_type = test
+    .directives
+    .iter()
+    .find_map(|directive| match directive {
+      Directive::PackageType(package_type) => Some(*package_type),
+      _ => None,
+    })
+    .unwrap_or(PackageType::Binary);
+
+  let output = Arc::new(Mutex::new(Cursor::new(vec![])));
+  let result = catch_unwind(AssertUnwindSafe(|| {
     let result = compiler_entrypoint(
       &ProjectConfig {
         entrypoint: test.path.clone(),
@@ -59,7 +80,7 @@ impl<'tests> TestRunner<'tests> {
       true,
     );
 
-    let result = if let Ok(sess) = result {
+    if let Ok(sess) = result {
       let sources = sess.dcx().sources();
 
       if sess.dcx().has_errors() {
@@ -136,10 +157,108 @@ impl<'tests> TestRunner<'tests> {
       }
     } else {
       TestStatus::Failed(vec![FailureType::OtherCompilerError])
-    };
+    }
+  }));
 
-    TestResult { result, output: output.lock().get_ref().clone(), test_id: test.id }
+  let result = match result {
+    Ok(status) => status,
+    Err(panic_payload) => TestStatus::Panicked(panic_message(panic_payload)),
+  };
+
+  TestResult { result, output: output.lock().get_ref().clone(), test_id: test.id }
+}
+
+fn run_single_test_subprocess(test: &Test) -> Result<TestResult, (String, Vec<u8>)> {
+  let exe = env::current_exe()
+    .map_err(|error| (format!("failed to locate casadei executable: {error}"), vec![]))?;
+
+  let output = Command::new(exe)
+    .arg("--single")
+    .arg(&test.path)
+    .env("CASADEI_CHILD", "1")
+    .output()
+    .map_err(|error| (format!("failed to spawn casadei child: {error}"), vec![]))?;
+
+  if !output.status.success() {
+    let message = panic_message_from_stderr(&output.stderr, output.status.to_string());
+    return Err((message, output.stderr));
   }
+
+  let payload: TestResultPayload = serde_json::from_slice(&output.stdout)
+    .map_err(|error| (format!("failed to parse child result: {error}"), output.stdout))?;
+
+  Ok(TestResult {
+    result: payload.result,
+    output: payload.output.into_bytes(),
+    test_id: test.id,
+  })
+}
+
+thread_local! {
+  static SUPPRESS_PANIC_HOOK: Cell<bool> = const { Cell::new(false) };
+}
+
+static RUNNING_TESTS: AtomicBool = AtomicBool::new(false);
+static PANIC_HOOK_INSTALLED: Once = Once::new();
+
+fn install_panic_hook() {
+  PANIC_HOOK_INSTALLED.call_once(|| {
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+      let suppress = RUNNING_TESTS.load(Ordering::Relaxed)
+        || SUPPRESS_PANIC_HOOK.with(|flag| flag.get());
+
+      if !suppress {
+        default_hook(info);
+      }
+    }));
+  });
+}
+
+struct PanicRunGuard;
+
+impl PanicRunGuard {
+  fn new() -> Self {
+    RUNNING_TESTS.store(true, Ordering::Relaxed);
+    Self
+  }
+}
+
+impl Drop for PanicRunGuard {
+  fn drop(&mut self) {
+    RUNNING_TESTS.store(false, Ordering::Relaxed);
+  }
+}
+
+struct PanicHookGuard;
+
+impl PanicHookGuard {
+  fn new() -> Self {
+    SUPPRESS_PANIC_HOOK.with(|flag| flag.set(true));
+    Self
+  }
+}
+
+impl Drop for PanicHookGuard {
+  fn drop(&mut self) {
+    SUPPRESS_PANIC_HOOK.with(|flag| flag.set(false));
+  }
+}
+
+fn panic_message(panic_payload: Box<dyn Any + Send>) -> String {
+  if let Some(message) = panic_payload.downcast_ref::<&str>() {
+    (*message).to_string()
+  } else if let Some(message) = panic_payload.downcast_ref::<String>() {
+    message.clone()
+  } else {
+    "unknown panic".to_string()
+  }
+}
+
+fn panic_message_from_stderr(stderr: &[u8], status: String) -> String {
+  let message = String::from_utf8_lossy(stderr).trim().to_string();
+
+  if message.is_empty() { format!("child process crashed ({status})") } else { message }
 }
 
 fn matches_directive(

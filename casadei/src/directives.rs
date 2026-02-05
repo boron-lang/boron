@@ -1,4 +1,5 @@
 use boron_core::prelude::PackageType;
+use serde::{Deserialize, Serialize};
 use std::path::Path;
 
 #[derive(Clone, Debug)]
@@ -9,7 +10,7 @@ pub enum Directive {
   Invalid,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum LineDirection {
   Up,
   Down,

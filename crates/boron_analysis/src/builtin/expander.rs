@@ -80,7 +80,7 @@ impl<'a> BuiltInExpander<'a> {
 
           let result = match builtin {
             BuiltInKind::SizeOf => self.size_of(args[0].as_ty()),
-            _ => todo!(),
+            _ => todo!("{:#?}", builtin),
           };
 
           self.results.insert(expr.hir_id, result);
