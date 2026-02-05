@@ -6,11 +6,9 @@ repository.workspace = true
 edition.workspace = true
 
 [dependencies]
-dashmap.workspace = true
+dashmap = { workspace = true }
 parking_lot = { workspace = true }
-petgraph.workspace = true
-thiserror.workspace = true
-
+petgraph = { workspace = true }
 boron_diagnostic_macro = { workspace = true }
 boron_diagnostics = { workspace = true }
 boron_parser = { workspace = true }

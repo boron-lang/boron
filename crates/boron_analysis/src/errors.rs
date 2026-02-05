@@ -22,20 +22,20 @@ pub struct ArrayRepeatNotANumber {
 }
 
 #[derive(Diagnostic)]
-#[error("invalid unary operation")]
+#[error("cannot apply unary operator `{op}` to `{ty}`")]
 #[code(CONST_EVAL_INVALID_UNARY_OP)]
 pub struct InvalidUnaryOp {
-  #[error("cannot apply unary operator `{op}` to `{ty}`")]
+  #[error("in this expr")]
   pub span: Span,
   pub op: String,
   pub ty: String,
 }
 
 #[derive(Diagnostic)]
-#[error("invalid binary operation")]
+#[error("cannot apply binary operator `{op}` to `{lhs}` and `{rhs}`")]
 #[code(CONST_EVAL_INVALID_BINARY_OP)]
 pub struct InvalidBinaryOp {
-  #[error("cannot apply binary operator `{op}` to `{lhs}` and `{rhs}`")]
+  #[error("in this expr")]
   pub span: Span,
   pub op: String,
   pub lhs: String,

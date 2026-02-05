@@ -1,6 +1,6 @@
-//#error: invalid binary operation
+//#error: cannot apply binary operator `+` to `integer` and `*const u8`
 const X: i32 = 10 + "10";
-//#error: invalid unary operation
+//#error: cannot apply unary operator `~` to `*const u8`
 const Y: i32 = ~"10";
 
 func main() {

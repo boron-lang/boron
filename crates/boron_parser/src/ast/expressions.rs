@@ -5,6 +5,7 @@ use crate::ast::types::{Mutability, Type};
 use crate::{IntBase, PrimitiveKind};
 use boron_utils::ident_table::Identifier;
 use boron_utils::prelude::Span;
+use strum::Display;
 
 #[derive(Debug, Clone)]
 pub struct Expr {
@@ -198,34 +199,50 @@ pub struct Argument {
   pub span: Span,
 }
 
-// Ops
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Display)]
 pub enum BinaryOp {
   // Arithmetic
+  #[strum(serialize = "+")]
   Add,
+  #[strum(serialize = "-")]
   Sub,
+  #[strum(serialize = "*")]
   Mul,
+  #[strum(serialize = "/")]
   Div,
+  #[strum(serialize = "%")]
   Mod,
 
   // Comparison
+  #[strum(serialize = "==")]
   Eq,
+  #[strum(serialize = "!=")]
   Ne,
+  #[strum(serialize = "<")]
   Lt,
+  #[strum(serialize = "<=")]
   Le,
+  #[strum(serialize = ">")]
   Gt,
+  #[strum(serialize = ">=")]
   Ge,
 
   // Logical
+  #[strum(serialize = "&&")]
   And,
+  #[strum(serialize = "||")]
   Or,
 
   // Bitwise
+  #[strum(serialize = "&")]
   BitAnd,
+  #[strum(serialize = "|")]
   BitOr,
+  #[strum(serialize = "^")]
   BitXor,
+  #[strum(serialize = "<<")]
   Shl,
+  #[strum(serialize = ">>")]
   Shr,
 }
 
@@ -266,13 +283,18 @@ impl AssignOp {
   }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Display)]
 pub enum UnaryOp {
-  Not,    // !
+  #[strum(serialize = "!")]
+  Not, // !
+  #[strum(serialize = "~")]
   BitNot, // ~
-  Neg,    // -
-  Plus,   // +
-  Deref,  // *
+  #[strum(serialize = "-")]
+  Neg, // -
+  #[strum(serialize = "+")]
+  Plus, // +
+  #[strum(serialize = "*")]
+  Deref, // *
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

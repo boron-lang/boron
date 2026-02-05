@@ -299,7 +299,6 @@ dependencies = [
  "dashmap 7.0.0-rc2",
  "parking_lot",
  "petgraph",
- "thiserror",
 ]
 
 [[package]]

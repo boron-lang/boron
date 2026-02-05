@@ -216,12 +216,12 @@ impl<'a> TyChecker<'a> {
     let result = self.unify(&init_ty, &expected);
     if let UnifyResult::Err(err) = &result {
       match err {
-        UnifyError::Mismatch { expected, found } => {
+        UnifyError::Mismatch { .. } => {
           self.dcx().emit(ConstInitMismatch {
             expected_span: konst.ty.span,
-            expected: self.format_type(expected),
+            expected: self.format_type(&expected),
             value_span: konst.value.span,
-            found: self.format_type(found),
+            found: self.format_type(&init_ty),
           });
         }
         _ => self.handle_unify_result(result, konst.value.span),

@@ -1,20 +1,21 @@
-use crate::builtins::{BuiltInParam, get_builtin};
+use crate::builtins::{get_builtin, BuiltInParam};
 use crate::checker::TyChecker;
 use crate::errors::{
-  ArityMismatch, ArrayLenNotANumber, ArrayRepeatNotANumber, AssignTypeMismatch,
-  FuncArgMismatch, IndexTypeMismatch, TypeMismatch,
+  ArityMismatch, ArrayRepeatNotANumber, AssignTypeMismatch, FuncArgMismatch,
+  IndexTypeMismatch, InvalidBinaryOp, InvalidUnaryOp, TypeMismatch,
 };
 use crate::functions::FinalComptimeArg;
 use crate::interpreter::values::ConstValue;
 use crate::interpreter::{InterpreterContext, InterpreterMode};
 use crate::table::TypeEnv;
 use crate::ty::InferTy;
+use crate::TyVarKind;
 use crate::unify::{Expectation, UnifyError, UnifyResult};
 use boron_hir::expr::ComptimeArg;
 use boron_hir::{Expr, ExprKind, Literal};
-use boron_parser::Mutability;
 use boron_parser::ast::types::PrimitiveKind;
-use boron_utils::prelude::{Span, warn};
+use boron_parser::{Mutability, UnaryOp};
+use boron_utils::prelude::{warn, Span};
 
 impl TyChecker<'_> {
   pub(crate) fn check_expr(
@@ -36,17 +37,81 @@ impl TyChecker<'_> {
         self.check_path(path.def_id, env, Some(&explicit_args))
       }
 
-      ExprKind::Binary { op: _, lhs, rhs } => {
+      ExprKind::Binary { op, lhs, rhs } => {
         let lhs_ty = self.check_expr(lhs, env, &Expectation::none());
         let rhs_ty = self.check_expr(rhs, env, &Expectation::none());
-        let x = self.unify(&lhs_ty, &rhs_ty);
-        self.handle_unify_result(x, expr.span);
+        let result = self.unify(&lhs_ty, &rhs_ty);
+
+        if let UnifyResult::Err(err) = &result
+          && let UnifyError::Mismatch { .. } = err
+        {
+          self.dcx().emit(InvalidBinaryOp {
+            op: op.to_string(),
+            lhs: self.format_type(&lhs_ty),
+            rhs: self.format_type(&rhs_ty),
+            span: expr.span,
+          })
+        } else {
+          self.handle_unify_result(result, expr.span);
+        }
+
         lhs_ty
       }
 
-      ExprKind::Unary { op: _, operand } => {
-        // TODO: Implement unary operator type checking
-        self.check_expr(operand, env, &Expectation::none())
+      ExprKind::Unary { op, operand } => {
+        let operand_ty = self.check_expr(operand, env, &Expectation::none());
+        let resolved = self.infcx.resolve(&operand_ty);
+
+        let invalid = || {
+          self.dcx().emit(InvalidUnaryOp {
+            op: op.to_string(),
+            ty: self.format_type(&resolved),
+            span: expr.span,
+          });
+          InferTy::Err(expr.span)
+        };
+
+        match op {
+          UnaryOp::Not => {
+            let expected = InferTy::Primitive(PrimitiveKind::Bool, expr.span);
+            let result = self.unify(&operand_ty, &expected);
+            if let UnifyResult::Err(err) = &result {
+              if let UnifyError::Mismatch { .. } = err {
+                return invalid();
+              }
+              self.handle_unify_result(result, expr.span);
+            }
+            expected
+          }
+          UnaryOp::BitNot => {
+            let expected = self.infcx.fresh_int(expr.span);
+            let result = self.unify(&operand_ty, &expected);
+            if let UnifyResult::Err(err) = &result {
+              if let UnifyError::Mismatch { .. } = err {
+                return invalid();
+              }
+              self.handle_unify_result(result, expr.span);
+              return InferTy::Err(expr.span);
+            }
+            operand_ty
+          }
+          UnaryOp::Neg | UnaryOp::Plus => {
+            if !resolved.is_numeric()
+              && !matches!(
+                &resolved,
+                InferTy::Var(var, _) if matches!(self.infcx.var_kind(*var), TyVarKind::Integer | TyVarKind::Float)
+              )
+            {
+              return invalid();
+            }
+            operand_ty
+          }
+          UnaryOp::Deref => match &resolved {
+            InferTy::Ptr { ty, .. } => ty.as_ref().clone(),
+            InferTy::Slice(ty, _) => ty.as_ref().clone(),
+            _ => invalid(),
+          },
+        }
       }
 
       ExprKind::Call { callee, args } => {

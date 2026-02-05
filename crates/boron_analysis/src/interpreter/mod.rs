@@ -3,9 +3,10 @@ pub mod utils;
 pub mod values;
 
 use crate::errors::{
-  DivisionByZero, InvalidBinaryOp, InvalidUnaryOp, PathNotConst, ShiftOutOfRange,
+  DivisionByZero, PathNotConst, ShiftOutOfRange,
   UnsupportedConstExpr,
 };
+use crate::float::construct_float;
 use crate::interpreter::stack::Stack;
 use crate::interpreter::utils::InterpreterLimits;
 use crate::interpreter::values::ConstValue;
@@ -14,11 +15,9 @@ use boron_diagnostics::DiagnosticCtx;
 use boron_hir::{Const, Expr, ExprKind, Hir, HirId, Literal};
 use boron_parser::{BinaryOp, UnaryOp};
 use boron_resolver::Resolver;
-use boron_utils::prelude::Span;
 use dashmap::DashMap;
 use std::cmp::PartialEq;
 use std::str::FromStr;
-use crate::float::construct_float;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum InterpreterMode {
@@ -166,25 +165,6 @@ impl<'a> Interpreter<'a> {
     }
   }
 
-  fn emit_binary_op_error(
-    &self,
-    span: Span,
-    op: &str,
-    lval: &ConstValue,
-    rval: &ConstValue,
-  ) {
-    if matches!(lval, &ConstValue::Poison) || matches!(rval, &ConstValue::Poison) {
-      return;
-    }
-
-    self.dcx.emit(InvalidBinaryOp {
-      span,
-      op: op.to_owned(),
-      lhs: Self::const_value_type_name(lval).to_owned(),
-      rhs: Self::const_value_type_name(rval).to_owned(),
-    });
-  }
-
   fn eval_unary(&self, expr: &Expr, op: &UnaryOp, operand: &Expr) -> ConstValue {
     let val = self.evaluate_expr(operand);
 
@@ -194,11 +174,6 @@ impl<'a> Interpreter<'a> {
         if let ConstValue::Int(i) = val {
           ConstValue::Int(-i)
         } else {
-          self.dcx.emit(InvalidUnaryOp {
-            span: expr.span,
-            op: "-".to_owned(),
-            ty: Self::const_value_type_name(&val).to_owned(),
-          });
           ConstValue::Poison
         }
       }
@@ -206,11 +181,6 @@ impl<'a> Interpreter<'a> {
         if let ConstValue::Bool(b) = val {
           ConstValue::Bool(!b)
         } else {
-          self.dcx.emit(InvalidUnaryOp {
-            span: expr.span,
-            op: "!".to_owned(),
-            ty: Self::const_value_type_name(&val).to_owned(),
-          });
           ConstValue::Poison
         }
       }
@@ -218,11 +188,6 @@ impl<'a> Interpreter<'a> {
         if let ConstValue::Int(i) = val {
           ConstValue::Int(!i)
         } else {
-          self.dcx.emit(InvalidUnaryOp {
-            span: expr.span,
-            op: "~".to_owned(),
-            ty: Self::const_value_type_name(&val).to_owned(),
-          });
           ConstValue::Poison
         }
       }
@@ -248,16 +213,12 @@ impl<'a> Interpreter<'a> {
         (ConstValue::String(l), ConstValue::String(r)) => {
           ConstValue::String(format!("{l}{r}"))
         }
-        _ => {
-          self.emit_binary_op_error(expr.span, "+", lval, rval);
-          ConstValue::Poison
-        }
+        _ => ConstValue::Poison,
       },
       Sub => {
         if let (ConstValue::Int(l), ConstValue::Int(r)) = (lval, rval) {
           ConstValue::Int(l.wrapping_sub(*r))
         } else {
-          self.emit_binary_op_error(expr.span, "-", lval, rval);
           ConstValue::Poison
         }
       }
@@ -265,7 +226,6 @@ impl<'a> Interpreter<'a> {
         if let (ConstValue::Int(l), ConstValue::Int(r)) = (lval, rval) {
           ConstValue::Int(l.wrapping_mul(*r))
         } else {
-          self.emit_binary_op_error(expr.span, "*", lval, rval);
           ConstValue::Poison
         }
       }
@@ -278,7 +238,6 @@ impl<'a> Interpreter<'a> {
             ConstValue::Int(l.wrapping_div(*r))
           }
         } else {
-          self.emit_binary_op_error(expr.span, "/", lval, rval);
           ConstValue::Poison
         }
       }
@@ -291,7 +250,6 @@ impl<'a> Interpreter<'a> {
             ConstValue::Int(l.wrapping_rem(*r))
           }
         } else {
-          self.emit_binary_op_error(expr.span, "%", lval, rval);
           ConstValue::Poison
         }
       }
@@ -314,34 +272,22 @@ impl<'a> Interpreter<'a> {
       Lt => match (lval, rval) {
         (ConstValue::Int(l), ConstValue::Int(r)) => ConstValue::Bool(l < r),
         (ConstValue::Char(l), ConstValue::Char(r)) => ConstValue::Bool(l < r),
-        _ => {
-          self.emit_binary_op_error(expr.span, "<", lval, rval);
-          ConstValue::Poison
-        }
+        _ => ConstValue::Poison,
       },
       Le => match (lval, rval) {
         (ConstValue::Int(l), ConstValue::Int(r)) => ConstValue::Bool(l <= r),
         (ConstValue::Char(l), ConstValue::Char(r)) => ConstValue::Bool(l <= r),
-        _ => {
-          self.emit_binary_op_error(expr.span, "<=", lval, rval);
-          ConstValue::Poison
-        }
+        _ => ConstValue::Poison,
       },
       Gt => match (lval, rval) {
         (ConstValue::Int(l), ConstValue::Int(r)) => ConstValue::Bool(l > r),
         (ConstValue::Char(l), ConstValue::Char(r)) => ConstValue::Bool(l > r),
-        _ => {
-          self.emit_binary_op_error(expr.span, ">", lval, rval);
-          ConstValue::Poison
-        }
+        _ => ConstValue::Poison,
       },
       Ge => match (lval, rval) {
         (ConstValue::Int(l), ConstValue::Int(r)) => ConstValue::Bool(l >= r),
         (ConstValue::Char(l), ConstValue::Char(r)) => ConstValue::Bool(l >= r),
-        _ => {
-          self.emit_binary_op_error(expr.span, ">=", lval, rval);
-          ConstValue::Poison
-        }
+        _ => ConstValue::Poison,
       },
       _ => unreachable!(),
     }
@@ -361,7 +307,6 @@ impl<'a> Interpreter<'a> {
         if let (ConstValue::Bool(l), ConstValue::Bool(r)) = (lval, rval) {
           ConstValue::Bool(*l && *r)
         } else {
-          self.emit_binary_op_error(expr.span, "&&", lval, rval);
           ConstValue::Poison
         }
       }
@@ -369,7 +314,6 @@ impl<'a> Interpreter<'a> {
         if let (ConstValue::Bool(l), ConstValue::Bool(r)) = (lval, rval) {
           ConstValue::Bool(*l || *r)
         } else {
-          self.emit_binary_op_error(expr.span, "||", lval, rval);
           ConstValue::Poison
         }
       }
@@ -390,26 +334,17 @@ impl<'a> Interpreter<'a> {
       BitAnd => match (lval, rval) {
         (ConstValue::Int(l), ConstValue::Int(r)) => ConstValue::Int(l & r),
         (ConstValue::Bool(l), ConstValue::Bool(r)) => ConstValue::Bool(l & r),
-        _ => {
-          self.emit_binary_op_error(expr.span, "&", lval, rval);
-          ConstValue::Poison
-        }
+        _ => ConstValue::Poison,
       },
       BitOr => match (lval, rval) {
         (ConstValue::Int(l), ConstValue::Int(r)) => ConstValue::Int(l | r),
         (ConstValue::Bool(l), ConstValue::Bool(r)) => ConstValue::Bool(l | r),
-        _ => {
-          self.emit_binary_op_error(expr.span, "|", lval, rval);
-          ConstValue::Poison
-        }
+        _ => ConstValue::Poison,
       },
       BitXor => match (lval, rval) {
         (ConstValue::Int(l), ConstValue::Int(r)) => ConstValue::Int(l ^ r),
         (ConstValue::Bool(l), ConstValue::Bool(r)) => ConstValue::Bool(l ^ r),
-        _ => {
-          self.emit_binary_op_error(expr.span, "^", lval, rval);
-          ConstValue::Poison
-        }
+        _ => ConstValue::Poison,
       },
       Shl => {
         if let (ConstValue::Int(l), ConstValue::Int(r)) = (lval, rval) {
@@ -425,7 +360,6 @@ impl<'a> Interpreter<'a> {
             ConstValue::Int(l.wrapping_shl(*r as u32))
           }
         } else {
-          self.emit_binary_op_error(expr.span, "<<", lval, rval);
           ConstValue::Poison
         }
       }
@@ -443,7 +377,6 @@ impl<'a> Interpreter<'a> {
             ConstValue::Int(l.wrapping_shr(*r as u32))
           }
         } else {
-          self.emit_binary_op_error(expr.span, ">>", lval, rval);
           ConstValue::Poison
         }
       }
@@ -491,7 +424,7 @@ impl<'a> Interpreter<'a> {
         Literal::Float { value, .. } => {
           let value = construct_float(self.dcx, value, expr.span);
           ConstValue::Float(value)
-        },
+        }
       },
       ExprKind::Unary { op, operand } => self.eval_unary(expr, op, operand),
       ExprKind::Binary { op, lhs, rhs } => self.eval_binary(expr, op, lhs, rhs),
