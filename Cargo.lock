@@ -238,6 +238,7 @@ dependencies = [
  "generational-arena",
  "log",
  "parking_lot",
+ "strum 0.27.2",
  "unicode-width",
  "yansi",
 ]
@@ -281,6 +282,7 @@ dependencies = [
  "boron_utils",
  "dashmap 7.0.0-rc2",
  "stringcase",
+ "strum 0.27.2",
  "unicode-normalization",
  "unicode-xid",
 ]
@@ -349,6 +351,7 @@ dependencies = [
  "petgraph",
  "rayon",
  "serde",
+ "strum 0.27.2",
  "thiserror",
 ]
 

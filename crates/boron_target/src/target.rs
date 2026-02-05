@@ -1,7 +1,8 @@
 use crate::primitive::PrimitiveKind;
-use strum::EnumString;
+use strum::{Display, EnumString};
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Display)]
+#[strum(serialize_all = "lowercase")]
 pub enum Endian {
   Little,
   Big,

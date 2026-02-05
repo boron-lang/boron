@@ -1,6 +1,9 @@
-use std::fmt::Display;
+use strum::{Display, EnumString};
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+#[derive(
+  Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Display, EnumString,
+)]
+#[strum(serialize_all = "lowercase")]
 pub enum Mode {
   #[default]
   Debug,
@@ -9,23 +12,6 @@ pub enum Mode {
 
 impl Mode {
   pub fn from_str(mode: &str) -> Option<Self> {
-    match mode.to_lowercase().as_str() {
-      "debug" => Some(Self::Debug),
-      "release" => Some(Self::Release),
-      _ => None,
-    }
-  }
-}
-
-impl Display for Mode {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    write!(
-      f,
-      "{}",
-      match self {
-        Self::Debug => "debug",
-        Self::Release => "release",
-      }
-    )
+    mode.parse().ok()
   }
 }

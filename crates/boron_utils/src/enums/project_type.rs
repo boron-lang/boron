@@ -1,37 +1,14 @@
 use serde::{Deserialize, Serialize};
-use std::fmt::Display;
-use std::str::FromStr;
+use strum::{Display, EnumString};
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Serialize, Deserialize, Display, EnumString)]
 #[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
 pub enum PackageType {
   #[serde(alias = "bin")]
+  #[strum(serialize = "binary", serialize = "bin")]
   Binary,
   #[serde(alias = "lib")]
+  #[strum(serialize = "library", serialize = "lib")]
   Library,
-}
-
-impl Display for PackageType {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    write!(
-      f,
-      "{}",
-      match self {
-        Self::Binary => "binary",
-        Self::Library => "library",
-      }
-    )
-  }
-}
-
-impl FromStr for PackageType {
-  type Err = ();
-
-  fn from_str(s: &str) -> Result<Self, Self::Err> {
-    match s.to_ascii_lowercase().as_str() {
-      "binary" | "bin" => Ok(Self::Binary),
-      "library" | "lib" => Ok(Self::Library),
-      _ => Err(()),
-    }
-  }
 }

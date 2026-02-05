@@ -16,6 +16,7 @@ yansi = { workspace = true }
 unicode-width = "0.2.1"
 log = { workspace = true }
 derivative = { workspace = true }
+strum = { workspace = true }
 
 [lints]
 workspace = true

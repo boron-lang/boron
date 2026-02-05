@@ -1,20 +1,8 @@
-use std::fmt::Display;
+use strum::Display;
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
+#[strum(serialize_all = "lowercase")]
 pub enum LibType {
   Static,
   Dynamic,
-}
-
-impl Display for LibType {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    write!(
-      f,
-      "{:?}",
-      match self {
-        Self::Static => "static",
-        Self::Dynamic => "dynamic",
-      }
-    )
-  }
 }

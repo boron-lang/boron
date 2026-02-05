@@ -16,6 +16,7 @@ log = { workspace = true }
 parking_lot = { workspace = true }
 rayon = { workspace = true }
 serde = { workspace = true }
+strum = { workspace = true }
 thiserror = { workspace = true }
 boron_source = { workspace = true }
 boron_diagnostics = { workspace = true }

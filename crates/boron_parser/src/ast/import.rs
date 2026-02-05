@@ -108,22 +108,14 @@ impl Display for Path {
   }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, strum::Display)]
+#[strum(serialize_all = "lowercase")]
 pub enum PathRoot {
   /// Absolute from the package root
   Package,
   /// Relative from current directory
+  #[strum(serialize = "self")]
   SelfMod,
   /// Relative from the parent
   Super,
-}
-
-impl Display for PathRoot {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    match self {
-      Self::Super => write!(f, "super"),
-      Self::SelfMod => write!(f, "self"),
-      Self::Package => write!(f, "package"),
-    }
-  }
 }
