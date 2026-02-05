@@ -67,7 +67,13 @@ impl<'ctx> CompilationUnit<'ctx> {
     let Some(ir) = &self.ir else {
       return Ok(());
     };
-    run_codegen(self.ctx, ir)
+    match run_codegen(self.ctx, ir) {
+      Err(err) => {
+        self.emit_errors();
+        Err(err)
+      }
+      _ => Ok(()),
+    }
   }
 
   fn lower_to_thir(&mut self) {
@@ -78,6 +84,7 @@ impl<'ctx> CompilationUnit<'ctx> {
 
     self.thir =
       Some(ThirLowerer::new(hir, &self.resolver, self.ctx.dcx(), typeck).lower());
+    self.emit_errors();
   }
 
   fn lower_to_ir(&mut self) {
@@ -88,6 +95,7 @@ impl<'ctx> CompilationUnit<'ctx> {
     };
 
     self.ir = Some(IrLowerer::new(hir, thir, typeck).lower());
+    self.emit_errors();
   }
 
   fn expand_builtins(&mut self) {
@@ -125,6 +133,7 @@ impl<'ctx> CompilationUnit<'ctx> {
     let dcx = self.ctx.dcx();
     let hir = lower_to_hir(&self.resolver, &self.modules, dcx);
     self.hir = Some(hir);
+    self.emit_errors();
   }
 
   pub fn sess(&self) -> &Session {
