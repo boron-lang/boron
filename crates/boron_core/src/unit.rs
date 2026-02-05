@@ -58,16 +58,16 @@ impl<'ctx> CompilationUnit<'ctx> {
     self.lower_to_ir();
   }
 
-  pub fn build(&mut self) {
+  pub fn build(&mut self) -> Result<()> {
     self.check();
     if self.sess().create_output_dir().is_none() {
       self.sess().dcx().bug("failed to create output directory");
     }
 
     let Some(ir) = &self.ir else {
-      return;
+      return Ok(());
     };
-    run_codegen(self.ctx, ir);
+    run_codegen(self.ctx, ir)
   }
 
   fn lower_to_thir(&mut self) {

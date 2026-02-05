@@ -17,6 +17,8 @@ boron_thir = { workspace = true }
 boron_analysis = { workspace = true }
 rustc_apfloat = { workspace = true }
 boron_resolver = { workspace = true }
+anyhow = { workspace = true }
+fs-err = { workspace = true }
 
 [lints]
 workspace = true

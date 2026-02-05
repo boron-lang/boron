@@ -6,14 +6,17 @@ mod structs;
 mod types;
 
 use crate::Codegen;
+use anyhow::{anyhow, Result};
 use boron_ir::{Ir, IrId};
 use boron_resolver::DefId;
 use boron_utils::context::Context;
+use boron_utils::prelude::Mode;
 use dashmap::DashMap;
 use inkwell::builder::Builder;
 use inkwell::context::Context as LLVMContext;
 use inkwell::module::Module;
-use inkwell::targets::TargetData;
+use inkwell::passes::PassBuilderOptions;
+use inkwell::targets::TargetMachine;
 use inkwell::types::StructType;
 use inkwell::values::{FunctionValue, PointerValue};
 
@@ -22,7 +25,7 @@ pub struct LLVMCodegen<'ctx> {
   pub context: &'ctx LLVMContext,
   pub module: Module<'ctx>,
   pub builder: Builder<'ctx>,
-  pub target_data: TargetData,
+  pub target_machine: TargetMachine,
   pub structs: DashMap<IrId, StructType<'ctx>>,
   pub funcs: DashMap<IrId, FunctionValue<'ctx>>,
   pub locals: DashMap<DefId, PointerValue<'ctx>>,
@@ -34,7 +37,7 @@ impl<'ctx> Codegen for LLVMCodegen<'ctx> {
     "LLVM"
   }
 
-  fn generate(&self, ir: &Ir) {
+  fn generate(&self, ir: &Ir) -> Result<()> {
     for strukt in &ir.structs {
       self.create_struct_type(strukt);
     }
@@ -51,6 +54,17 @@ impl<'ctx> Codegen for LLVMCodegen<'ctx> {
       self.generate_function_body(&func)
     }
 
-    self.output_ir();
+    let opt_level = if self.ctx.session.config().mode == Mode::Release {
+      "default<O3>"
+    } else {
+      "default<O0>"
+    };
+    self
+      .module
+      .run_passes(opt_level, &self.target_machine, PassBuilderOptions::create())
+      .map_err(|s| anyhow!("Failed to run optimization passes: {}", s))?;
+
+    self.output_ir()?;
+    Ok(())
   }
 }

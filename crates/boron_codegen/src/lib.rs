@@ -4,19 +4,19 @@ use crate::llvm::LLVMCodegen;
 use boron_ir::Ir;
 use boron_utils::context::Context;
 use dashmap::DashMap;
-use inkwell::OptimizationLevel;
 use inkwell::context::Context as LLVMContext;
 use inkwell::targets::{
   CodeModel, InitializationConfig, RelocMode, Target, TargetTriple,
 };
+use inkwell::OptimizationLevel;
 
 pub trait Codegen {
   fn backend_name(&self) -> &str;
 
-  fn generate(&self, ir: &Ir);
+  fn generate(&self, ir: &Ir) -> anyhow::Result<()>;
 }
 
-pub fn run_codegen<'a>(ctx: &'a Context<'a>, ir: &Ir) {
+pub fn run_codegen<'a>(ctx: &'a Context<'a>, ir: &Ir) -> anyhow::Result<()> {
   Target::initialize_native(&InitializationConfig::default())
     .expect("failed to init native target");
 
@@ -46,12 +46,12 @@ pub fn run_codegen<'a>(ctx: &'a Context<'a>, ir: &Ir) {
     context: &llvm_ctx,
     module,
     builder: llvm_ctx.create_builder(),
-    target_data,
+    target_machine,
     structs: DashMap::new(),
     funcs: DashMap::new(),
     locals: DashMap::new(),
     ir,
   };
 
-  codegen.generate(ir);
+  codegen.generate(ir)
 }

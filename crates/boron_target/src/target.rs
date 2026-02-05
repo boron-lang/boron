@@ -517,6 +517,13 @@ impl Target {
     }
   }
 
+  pub fn obj_file_suffix(&self) -> &'static str {
+    match self.os {
+      Os::Windows => ".obj",
+      Os::Linux | Os::MacOs => ".o",
+    }
+  }
+
   pub fn dll_name(&self, name: &str) -> String {
     format!("{}{}{}", self.lib_prefix(), name, self.dll_suffix())
   }

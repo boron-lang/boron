@@ -39,7 +39,7 @@ pub fn compiler_entrypoint(
   if check_only {
     unit.check();
   } else {
-    unit.build();
+    unit.build()?;
   }
 
   Ok(sess)
