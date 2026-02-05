@@ -1,4 +1,5 @@
-use crate::builtins::{get_builtin, BuiltInParam};
+use crate::TyVarKind;
+use crate::builtins::{BuiltInParam, get_builtin};
 use crate::checker::TyChecker;
 use crate::errors::{
   ArityMismatch, ArrayRepeatNotANumber, AssignTypeMismatch, FuncArgMismatch,
@@ -9,13 +10,12 @@ use crate::interpreter::values::ConstValue;
 use crate::interpreter::{InterpreterContext, InterpreterMode};
 use crate::table::TypeEnv;
 use crate::ty::InferTy;
-use crate::TyVarKind;
 use crate::unify::{Expectation, UnifyError, UnifyResult};
 use boron_hir::expr::ComptimeArg;
 use boron_hir::{Expr, ExprKind, Literal};
 use boron_parser::ast::types::PrimitiveKind;
 use boron_parser::{Mutability, UnaryOp};
-use boron_utils::prelude::{warn, Span};
+use boron_utils::prelude::{Span, warn};
 
 impl TyChecker<'_> {
   pub(crate) fn check_expr(
@@ -58,61 +58,7 @@ impl TyChecker<'_> {
         lhs_ty
       }
 
-      ExprKind::Unary { op, operand } => {
-        let operand_ty = self.check_expr(operand, env, &Expectation::none());
-        let resolved = self.infcx.resolve(&operand_ty);
-
-        let invalid = || {
-          self.dcx().emit(InvalidUnaryOp {
-            op: op.to_string(),
-            ty: self.format_type(&resolved),
-            span: expr.span,
-          });
-          InferTy::Err(expr.span)
-        };
-
-        match op {
-          UnaryOp::Not => {
-            let expected = InferTy::Primitive(PrimitiveKind::Bool, expr.span);
-            let result = self.unify(&operand_ty, &expected);
-            if let UnifyResult::Err(err) = &result {
-              if let UnifyError::Mismatch { .. } = err {
-                return invalid();
-              }
-              self.handle_unify_result(result, expr.span);
-            }
-            expected
-          }
-          UnaryOp::BitNot => {
-            let expected = self.infcx.fresh_int(expr.span);
-            let result = self.unify(&operand_ty, &expected);
-            if let UnifyResult::Err(err) = &result {
-              if let UnifyError::Mismatch { .. } = err {
-                return invalid();
-              }
-              self.handle_unify_result(result, expr.span);
-              return InferTy::Err(expr.span);
-            }
-            operand_ty
-          }
-          UnaryOp::Neg | UnaryOp::Plus => {
-            if !resolved.is_numeric()
-              && !matches!(
-                &resolved,
-                InferTy::Var(var, _) if matches!(self.infcx.var_kind(*var), TyVarKind::Integer | TyVarKind::Float)
-              )
-            {
-              return invalid();
-            }
-            operand_ty
-          }
-          UnaryOp::Deref => match &resolved {
-            InferTy::Ptr { ty, .. } => ty.as_ref().clone(),
-            InferTy::Slice(ty, _) => ty.as_ref().clone(),
-            _ => invalid(),
-          },
-        }
-      }
+      ExprKind::Unary { op, operand } => self.check_unary(env, expr, op, operand),
 
       ExprKind::Call { callee, args } => {
         self.check_call(callee, args, env, expr.span, expr.hir_id)

@@ -1,7 +1,5 @@
-func square(x: i32) -> i32 {
-    x * x
-}
-
 func main() {
-    var hello = square(10);
+    //#error: cannot apply unary operator `~` to `*const u8`
+    var x = ~"hello";
+    var y = +10;
 }

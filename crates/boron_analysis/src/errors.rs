@@ -274,3 +274,23 @@ pub struct ConstInitMismatch {
   pub value_span: Span,
   pub found: String,
 }
+
+#[derive(Diagnostic)]
+#[error("type `{ty}` cannot be dereferenced")]
+#[code(TYPE_CHECKER_TY_CANT_BE_DEREFERENCED)]
+pub struct TyCantBeDereferenced {
+  #[error("error while trying to dereference this")]
+  pub span: Span,
+  pub ty: String,
+}
+
+#[derive(Diagnostic)]
+#[error(
+  "logical not (`!`) cannot be applied to integer values. use bitwise not (`~`) for integers"
+)]
+#[code(TYPE_CHECKER_NOT_ON_NUMERIC)]
+pub struct UnaryNotOnNumeric {
+  // TODO: add suggestion when implemented
+  #[error("in this expression")]
+  pub span: Span,
+}

@@ -1,3 +1,4 @@
+use crate::TyChecker;
 use boron_parser::ast::types::{Mutability, PrimitiveKind};
 use boron_resolver::DefId;
 use boron_source::new_id;
@@ -202,5 +203,25 @@ impl TypeScheme {
 
   pub fn is_mono(&self) -> bool {
     self.vars.is_empty()
+  }
+}
+
+impl TyChecker<'_> {
+  pub fn is_numeric(&self, ty: &InferTy) -> bool {
+    ty.is_numeric()
+      || if let InferTy::Var(var, _) = ty {
+        self.infcx.var_kind(*var) != TyVarKind::General
+      } else {
+        false
+      }
+  }
+
+  pub fn is_int(&self, ty: &InferTy) -> bool {
+    ty.is_integer()
+      || if let InferTy::Var(var, _) = ty {
+        self.infcx.var_kind(*var) == TyVarKind::Integer
+      } else {
+        false
+      }
   }
 }

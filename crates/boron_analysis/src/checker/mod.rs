@@ -6,6 +6,7 @@ mod path;
 mod pattern;
 mod stmt;
 mod struct_init;
+mod unary;
 
 use crate::errors::{ConstInitMismatch, ReturnTypeMismatch};
 use crate::interpreter::Interpreter;

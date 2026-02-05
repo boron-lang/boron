@@ -1,0 +1,37 @@
+func main() {
+    //#error: cannot apply unary operator `~` to `*const u8`
+    var x = ~"hello";
+
+    //#error: cannot apply unary operator `!` to `float`
+    var b = !3.14;
+
+    //#error: cannot apply unary operator `!` to `*const u8`
+    var c = !"string";
+
+    //#error: cannot apply unary operator `~` to `bool`
+    var d = ~true;
+
+    //#error: cannot apply unary operator `~` to `float`
+    var e = ~3.14;
+
+    //#error: cannot apply unary operator `-` to `bool`
+    var f = -true;
+
+    //#error: cannot apply unary operator `-` to `*const u8`
+    var g = -"string";
+
+    //#error: cannot apply unary operator `+` to `bool`
+    var h = +false;
+
+    //#error: cannot apply unary operator `+` to `*const u8`
+    var i = +"string";
+
+    //#error: type `integer` cannot be dereferenced
+    var j = *42;
+
+    //#error: type `bool` cannot be dereferenced
+    var k = *true;
+
+    //#error: type `float` cannot be dereferenced
+    var l = *3.14;
+}

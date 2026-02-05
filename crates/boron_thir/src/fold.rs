@@ -2,6 +2,7 @@ use crate::ThirLowerer;
 use boron_analysis::interpreter::values::ConstValue;
 use boron_analysis::literal_table::FullLiteral;
 use boron_hir::{expr::Expr as HirExpr, expr::ExprKind as HirExprKind};
+use boron_parser::UnaryOp;
 
 impl<'a> ThirLowerer<'a> {
   pub fn can_const_fold(&self, expr: &HirExpr) -> bool {
@@ -11,7 +12,9 @@ impl<'a> ThirLowerer<'a> {
       HirExprKind::Binary { lhs, rhs, .. } => {
         self.can_const_fold(lhs) && self.can_const_fold(rhs)
       }
-      HirExprKind::Unary { operand, .. } => self.can_const_fold(operand),
+      HirExprKind::Unary { operand, op } => {
+        !matches!(op, UnaryOp::Deref) && self.can_const_fold(operand)
+      }
       HirExprKind::Tuple(exprs) => exprs.iter().all(|e| self.can_const_fold(e)),
       HirExprKind::Array(exprs, len) => {
         exprs.iter().all(|e| self.can_const_fold(e))
