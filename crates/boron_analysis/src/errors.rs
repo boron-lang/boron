@@ -286,7 +286,7 @@ pub struct TyCantBeDereferenced {
 
 #[derive(Diagnostic)]
 #[error(
-  "logical not (`!`) cannot be applied to integer values. use bitwise not (`~`) for integers"
+  "logical not (`!`) cannot be applied to numeric values. use bitwise not (`~`) for numerics"
 )]
 #[code(TYPE_CHECKER_NOT_ON_NUMERIC)]
 pub struct UnaryNotOnNumeric {

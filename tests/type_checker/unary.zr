@@ -2,7 +2,7 @@ func main() {
     //#error: cannot apply unary operator `~` to `*const u8`
     var x = ~"hello";
 
-    //#error: cannot apply unary operator `!` to `float`
+    //#error: logical not (`!`) cannot be applied to numeric values. use bitwise not (`~`) for numerics
     var b = !3.14;
 
     //#error: cannot apply unary operator `!` to `*const u8`

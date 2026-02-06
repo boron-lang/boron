@@ -1,0 +1,6 @@
+struct Value { x: f32 }
+
+func main() {
+    //#error: struct fields init follow this format: .name = value, but found name: value
+    var value = Value { x: 10.0 };
+}

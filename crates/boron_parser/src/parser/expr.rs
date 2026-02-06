@@ -1,13 +1,13 @@
 use crate::ast::expressions::*;
 use crate::ast::types::Mutability;
 use crate::lexer::IntBase as LexIntBase;
-use crate::parser::Parser;
 use crate::parser::errors::{
   DuplicateNamedArg, EmptyMatch, ExpectedExpressionFound, ExpectedFatArrow,
-  ExpectedFieldName, ExpectedPattern, InvalidAssignTarget, InvalidRepeatSyntax,
-  MissingColonInTernary, MissingInKeyword, RepeatSyntaxOnlyAtStart,
+  ExpectedFieldName, ExpectedPattern, InvalidAssignTarget, InvalidFieldInit,
+  InvalidRepeatSyntax, MissingColonInTernary, MissingInKeyword, RepeatSyntaxOnlyAtStart,
   RepeatSyntaxRequiredValue,
 };
+use crate::parser::Parser;
 use crate::{IntBase, NodeId, Path, PathParsingContext, PathSegment, TokenType};
 use boron_source::prelude::Span;
 use boron_utils::prelude::Identifier;
@@ -518,9 +518,7 @@ impl Parser<'_> {
     let start = self.current_span();
     let path = self.parse_path(PathParsingContext::Normal);
 
-    if self.check(TokenType::LeftBrace)
-      && self.peek_ahead(1).is_some_and(|t| matches!(t.kind, TokenType::Dot))
-    {
+    if self.check(TokenType::LeftBrace) && self.is_struct_literal() {
       self.eat(TokenType::LeftBrace);
       let fields = self.parse_struct_field_inits();
       self.expect(TokenType::RightBrace, "to close struct literal");
@@ -531,37 +529,27 @@ impl Parser<'_> {
     Expr::new(ExprKind::Path(path), self.span_from(start))
   }
 
+  fn is_struct_literal(&self) -> bool {
+    self
+      .peek_ahead(1)
+      .is_some_and(|t| matches!(t.kind, TokenType::Dot | TokenType::Identifier(_)))
+  }
+
   fn parse_struct_field_inits(&mut self) -> Vec<StructFieldInit> {
     let mut fields = vec![];
 
     while !self.check(TokenType::RightBrace) && !self.is_at_end() {
-      if !self.eat(TokenType::Dot) {
-        break;
-      }
-
       let field_start = self.current_span();
-      let name = self.parse_identifier();
 
-      let value = if self.eat(TokenType::Assign) {
-        self.parse_expr()
-      } else {
-        Expr::new(
-          ExprKind::Path(Path {
-            id: NodeId::new(),
-            root: None,
-            segments: vec![PathSegment { identifier: name, args: vec![] }],
-            span: *name.span(),
-          }),
-          *name.span(),
-        )
+      let field = match self.parse_single_field_init(field_start) {
+        Some(field) => field,
+        None => {
+          self.advance_until_one_of(&[TokenType::RightBrace]);
+          return vec![];
+        }
       };
 
-      fields.push(StructFieldInit {
-        id: NodeId::new(),
-        name,
-        value,
-        span: self.span_from(field_start),
-      });
+      fields.push(field);
 
       if !self.eat(TokenType::Comma) {
         break;
@@ -569,6 +557,41 @@ impl Parser<'_> {
     }
 
     fields
+  }
+
+  fn parse_single_field_init(&mut self, field_start: Span) -> Option<StructFieldInit> {
+    let has_dot = self.eat(TokenType::Dot);
+    if !has_dot && matches!(self.peek().kind, TokenType::Identifier(_)) {
+      self.emit(InvalidFieldInit { span: self.span_from(field_start) });
+    }
+
+    let name = match &self.peek().kind {
+      TokenType::Identifier(_) => self.parse_identifier(),
+      _ => return None,
+    };
+
+    let separator = if has_dot { TokenType::Assign } else { TokenType::Colon };
+    let value =
+      if self.eat(separator) { self.parse_expr() } else { self.make_path_expr(name) };
+
+    Some(StructFieldInit {
+      id: NodeId::new(),
+      name,
+      value,
+      span: self.span_from(field_start),
+    })
+  }
+
+  fn make_path_expr(&self, name: Identifier) -> Expr {
+    Expr::new(
+      ExprKind::Path(Path {
+        id: NodeId::new(),
+        root: None,
+        segments: vec![PathSegment { identifier: name, args: vec![] }],
+        span: *name.span(),
+      }),
+      *name.span(),
+    )
   }
 
   fn parse_if_expr(&mut self) -> Expr {

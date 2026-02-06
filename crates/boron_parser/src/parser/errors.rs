@@ -431,3 +431,11 @@ pub struct SuperOnlyInModOrImport {
   #[error("found here")]
   pub span: Span,
 }
+
+#[derive(Diagnostic)]
+#[error("struct fields init follow this format: .name = value, but found name: value")]
+#[code(PARSE_INVALID_FIELD_INIT)]
+pub struct InvalidFieldInit {
+  #[error("in this field init")]
+  pub span: Span
+}
