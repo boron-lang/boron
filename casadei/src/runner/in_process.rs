@@ -3,10 +3,8 @@ use crate::output::{FailureType, TestResult, TestStatus};
 use crate::test::Test;
 use boron_core::prelude::*;
 use itertools::Itertools;
-use parking_lot::Mutex;
-use std::io::Cursor;
+use boron_diagnostics::DiagnosticWriter;
 use std::panic::{AssertUnwindSafe, catch_unwind};
-use std::sync::Arc;
 
 use super::directives::matches_directive;
 use super::panic::{
@@ -28,7 +26,7 @@ pub fn run_single_test_in_process(test: &Test) -> TestResult {
     })
     .unwrap_or(PackageType::Binary);
 
-  let output = Arc::new(Mutex::new(Cursor::new(vec![])));
+  let output = DiagnosticWriter::buffer();
   let result = catch_unwind(AssertUnwindSafe(|| {
     let result = compiler_entrypoint(
       &ProjectConfig {
@@ -136,5 +134,6 @@ pub fn run_single_test_in_process(test: &Test) -> TestResult {
       TestStatus::Panicked(message)
     }
   });
-  TestResult { result, output: output.lock().get_ref().clone(), test_id: test.id }
+  let output_bytes = output.buffer_bytes().unwrap_or_default();
+  TestResult { result, output: output_bytes, test_id: test.id }
 }

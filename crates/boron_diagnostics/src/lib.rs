@@ -5,13 +5,13 @@ pub mod codes;
 mod ctx;
 mod diagnostics;
 mod emitters;
-mod fmt;
 mod output_type;
-mod show;
+mod writer;
 
 pub use code::*;
 pub use ctx::*;
 pub use diagnostics::*;
+pub use writer::*;
 
 pub mod prelude {
   pub use crate::code::*;
@@ -20,6 +20,7 @@ pub mod prelude {
   pub use crate::ctx::*;
   pub use crate::diagnostics::*;
   pub use crate::output_type::*;
+  pub use crate::writer::*;
   pub use anyhow::Result;
 }
 

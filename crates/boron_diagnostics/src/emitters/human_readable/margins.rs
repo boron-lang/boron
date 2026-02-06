@@ -1,6 +1,6 @@
+use crate::emitters::fmt::Fmt as _;
 use crate::emitters::human_readable::label::{LabelInfo, LineLabel};
-use crate::emitters::human_readable::{CROSS_GAPS, HumanReadableEmitter};
-use crate::fmt::Fmt as _;
+use crate::emitters::human_readable::{HumanReadableEmitter, CROSS_GAPS};
 use boron_source::prelude::SourceFile;
 use boron_source::span::Span;
 use std::io;

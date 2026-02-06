@@ -7,9 +7,11 @@ use dashmap::mapref::one::{Ref, RefMut};
 use dashmap::DashMap;
 use derivative::Derivative;
 use log::debug;
-use parking_lot::Mutex;
-use std::io::{stderr, Cursor, Write as _};
+use parking_lot::{Mutex, MutexGuard};
+use std::io::Result;
+use std::io::{stderr, Cursor, Stderr, Write as _, Write};
 use std::sync::Arc;
+use crate::writer::DiagnosticWriter;
 
 #[derive(Derivative)]
 #[derivative(Debug)]
@@ -20,7 +22,6 @@ pub struct DiagnosticCtx {
   pub writer: DiagnosticWriter,
   stop_on_error: bool,
 }
-pub type DiagnosticWriter = Arc<Mutex<Cursor<Vec<u8>>>>;
 
 pub trait ToDiagnostic {
   fn to_diagnostic(self) -> Diag;
@@ -138,8 +139,12 @@ impl DiagnosticCtx {
   }
 
   pub fn flush_to_stderr(&self) {
-    let writer = self.writer.lock();
-    let _ = stderr().write_all(writer.get_ref());
-    let _ = stderr().flush();
+    if let Some(bytes) = self.writer.buffer_bytes() {
+      let _ = stderr().write_all(&bytes);
+      let _ = stderr().flush();
+      return;
+    }
+
+    self.writer.flush();
   }
 }

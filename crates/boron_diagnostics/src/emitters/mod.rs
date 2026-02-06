@@ -1,4 +1,6 @@
+mod fmt;
 pub mod human_readable;
+mod show;
 
 use crate::Diag;
 use boron_source::prelude::Sources;
