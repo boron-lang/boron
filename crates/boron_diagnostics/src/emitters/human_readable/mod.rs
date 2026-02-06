@@ -11,9 +11,9 @@ use crate::emitters::Emitter;
 use crate::fmt::Fmt as _;
 use crate::show::Show;
 use crate::Diag;
+use anyhow::Result;
 use boron_source::line::Line;
 use boron_source::prelude::{SourceFile, Sources, Span};
-
 use std::io::Write;
 use std::ops::Range;
 use std::sync::Arc;
@@ -39,13 +39,16 @@ impl HumanReadableEmitter {
   }
 
   fn margin_color(&self) -> Option<Color> {
-    Some(Color::Fixed(246)).filter(|_| self.color)
+    Some(Color::Fixed(44)).filter(|_| self.color)
   }
-  fn skipped_margin_color(&self) -> Option<Color> {
-    Some(Color::Fixed(240)).filter(|_| self.color)
+  fn line_number_color(&self) -> Option<Color> {
+    Some(Color::Fixed(246)).filter(|_| self.color)
   }
   fn note_color(&self) -> Option<Color> {
     Some(Color::Fixed(115)).filter(|_| self.color)
+  }
+  fn help_color(&self) -> Option<Color> {
+    Some(Color::Fixed(51)).filter(|_| self.color)
   }
 
   fn char_width(c: char, col: usize) -> (char, usize) {
@@ -62,7 +65,7 @@ impl HumanReadableEmitter {
 }
 
 impl Emitter for HumanReadableEmitter {
-  fn emit_diagnostic(&self, diag: &Diag, w: &mut dyn Write) -> anyhow::Result<()> {
+  fn emit_diagnostic(&self, diag: &Diag, w: &mut dyn Write) -> Result<()> {
     Self::write_header(diag, w)?;
     let groups = self.get_source_groups(diag);
     let line_no_width = self.calculate_line_number_width(&groups);
@@ -96,7 +99,14 @@ impl<'a> HumanReadableEmitter {
     multi_labels_with_message: &'a [&'a LabelInfo<'a>],
     src: &'a SourceFile,
   ) -> MarginContext<'a> {
-    MarginContext { idx, is_line, is_ellipsis, line_no_width, multi_labels_with_message, src }
+    MarginContext {
+      idx,
+      is_line,
+      is_ellipsis,
+      line_no_width,
+      multi_labels_with_message,
+      src,
+    }
   }
 
   fn label_context(
@@ -114,10 +124,38 @@ impl<'a> HumanReadableEmitter {
     src: &'a SourceFile,
     line_no_width: usize,
     w: &mut dyn Write,
-  ) -> anyhow::Result<()> {
-    let margin = Self::margin_context(0, false, false, line_no_width, multi_labels_with_message, src);
+  ) -> Result<()> {
+    let margin = Self::margin_context(
+      0,
+      false,
+      false,
+      line_no_width,
+      multi_labels_with_message,
+      src,
+    );
     let labels = Self::label_context(true, Some((0, false)), &[], &None);
     Ok(self.write_margin(w, &margin, &labels)?)
+  }
+
+  fn write_section_margin_with_bar(
+    &self,
+    bar_char: char,
+    bar_color: Option<Color>,
+    multi_labels_with_message: &'a [&'a LabelInfo<'a>],
+    src: &'a SourceFile,
+    line_no_width: usize,
+    w: &mut dyn Write,
+  ) -> Result<()> {
+    let margin = Self::margin_context(
+      0,
+      false,
+      false,
+      line_no_width,
+      multi_labels_with_message,
+      src,
+    );
+    let labels = Self::label_context(true, Some((0, false)), &[], &None);
+    Ok(self.write_margin_with_bar(w, &margin, &labels, bar_char, bar_color)?)
   }
 
   fn write_margin_from_ctx(
@@ -129,7 +167,7 @@ impl<'a> HumanReadableEmitter {
     line_labels: &'a [LineLabel<'a>],
     margin_label: &'a Option<LineLabel<'a>>,
     w: &mut dyn Write,
-  ) -> anyhow::Result<()> {
+  ) -> Result<()> {
     let margin = Self::margin_context(
       ctx.idx,
       is_line,
@@ -142,11 +180,11 @@ impl<'a> HumanReadableEmitter {
     Ok(self.write_margin(w, &margin, &labels)?)
   }
 
-  fn write_header(diag: &Diag, w: &mut dyn Write) -> anyhow::Result<()> {
+  fn write_header(diag: &Diag, w: &mut dyn Write) -> Result<()> {
     let code = diag.code.as_ref().map(|c| format!("[{c}] "));
     let id = format!("{}{}:", Show(code), diag.level.name());
     let kind_color = diag.level.color();
-    writeln!(w, "{} {}", id.fg(kind_color), diag.message)?;
+    writeln!(w, "{} {}", id.fg(kind_color).bold(), diag.message.clone().bold())?;
     Ok(())
   }
 
@@ -174,7 +212,7 @@ impl<'a> HumanReadableEmitter {
     groups: &[SourceGroup<'a>],
     line_no_width: usize,
     w: &mut dyn Write,
-  ) -> anyhow::Result<()> {
+  ) -> Result<()> {
     let groups_len = groups.len();
     for (group_idx, group) in groups.iter().enumerate() {
       self.write_source_group(diag, group, group_idx, groups_len, line_no_width, w)?;
@@ -190,7 +228,7 @@ impl<'a> HumanReadableEmitter {
     groups_len: usize,
     line_no_width: usize,
     w: &mut dyn Write,
-  ) -> anyhow::Result<()> {
+  ) -> Result<()> {
     let SourceGroup { src_id, char_span, labels, .. } = group;
     let src_name = self
       .sources
@@ -241,7 +279,7 @@ impl<'a> HumanReadableEmitter {
     src_name: &str,
     line_no_width: usize,
     w: &mut dyn Write,
-  ) -> anyhow::Result<()> {
+  ) -> Result<()> {
     let draw = &self.characters;
     let location = labels[0].char_span.start;
     let (line_no, col_no) = Self::get_line_col_display(src, location);
@@ -249,13 +287,13 @@ impl<'a> HumanReadableEmitter {
 
     writeln!(
       w,
-      "{}{}{}{} {} {}",
-      Show((' ', line_no_width + 2)),
-      if group_idx == 0 { draw.ltop } else { draw.lcross }.fg(self.margin_color()),
+      "{}{}{}{}{} {}",
+      Show((' ', line_no_width + 1)),
       draw.hbar.fg(self.margin_color()),
-      draw.lbox.fg(self.margin_color()),
+      draw.hbar.fg(self.margin_color()),
+      draw.hbar.fg(self.margin_color()),
+      ">".fg(self.margin_color()),
       line_ref,
-      draw.rbox.fg(self.margin_color()),
     )?;
 
     writeln!(
@@ -313,7 +351,7 @@ impl<'a> HumanReadableEmitter {
     src: &SourceFile,
     line_no_width: usize,
     w: &mut dyn Write,
-  ) -> anyhow::Result<()> {
+  ) -> Result<()> {
     let mut is_ellipsis = false;
 
     for idx in line_range.clone() {
@@ -438,7 +476,7 @@ impl<'a> HumanReadableEmitter {
     &self,
     ctx: &LineRenderContext<'a>,
     w: &mut dyn Write,
-  ) -> anyhow::Result<bool> {
+  ) -> Result<bool> {
     let within_label = ctx
       .multi_labels
       .iter()
@@ -464,7 +502,7 @@ impl<'a> HumanReadableEmitter {
     &self,
     ctx: &LineRenderContext<'a>,
     w: &mut dyn Write,
-  ) -> anyhow::Result<()> {
+  ) -> Result<()> {
     // Write margin and source line
     self.write_margin_from_ctx(
       ctx,
@@ -507,7 +545,7 @@ impl<'a> HumanReadableEmitter {
     &self,
     ctx: &LineRenderContext<'a>,
     w: &mut dyn Write,
-  ) -> anyhow::Result<()> {
+  ) -> Result<()> {
     let arrow_end_space = 2;
     let arrow_len = ctx.line_labels.iter().fold(0, |l, ll| {
       if ll.multi {
@@ -536,7 +574,7 @@ impl<'a> HumanReadableEmitter {
     row: usize,
     arrow_len: usize,
     w: &mut dyn Write,
-  ) -> anyhow::Result<()> {
+  ) -> Result<()> {
     let draw = &self.characters;
 
     self.write_margin_from_ctx(
@@ -600,7 +638,7 @@ impl<'a> HumanReadableEmitter {
     row: usize,
     arrow_len: usize,
     w: &mut dyn Write,
-  ) -> anyhow::Result<()> {
+  ) -> Result<()> {
     let draw = &self.characters;
 
     self.write_margin_from_ctx(
@@ -677,7 +715,13 @@ impl<'a> HumanReadableEmitter {
     }
 
     if line_label.draw_msg {
-      write!(w, " {}", Show(line_label.label.info.message.as_ref()))?;
+      write!(
+        w,
+        " {}",
+        Show(line_label.label.info.message.as_ref())
+          .bold()
+          .fg(line_label.label.info.color())
+      )?;
     }
     writeln!(w)?;
     Ok(())
@@ -722,7 +766,7 @@ impl<'a> HumanReadableEmitter {
     src: &SourceFile,
     line_no_width: usize,
     w: &mut dyn Write,
-  ) -> anyhow::Result<()> {
+  ) -> Result<()> {
     self.write_helps(diag, multi_labels_with_message, src, line_no_width, w)?;
     self.write_notes(diag, multi_labels_with_message, src, line_no_width, w)?;
     Ok(())
@@ -735,18 +779,20 @@ impl<'a> HumanReadableEmitter {
     src: &SourceFile,
     line_no_width: usize,
     w: &mut dyn Write,
-  ) -> anyhow::Result<()> {
+  ) -> Result<()> {
     for (i, help) in diag.helps.iter().enumerate() {
       self.write_section_margin(multi_labels_with_message, src, line_no_width, w)?;
       writeln!(w)?;
 
-      let help_prefix = format!("{} {}", "Help", i + 1);
+      let help_prefix = format!("help {}", i + 1);
       let help_prefix_len = if diag.helps.len() > 1 { help_prefix.len() } else { 4 };
 
       self.write_multiline_section(
         help,
-        if diag.helps.len() > 1 { &help_prefix } else { "Help" },
+        &help_prefix,
         help_prefix_len,
+        '=',
+        self.help_color(),
         multi_labels_with_message,
         src,
         line_no_width,
@@ -763,18 +809,20 @@ impl<'a> HumanReadableEmitter {
     src: &SourceFile,
     line_no_width: usize,
     w: &mut dyn Write,
-  ) -> anyhow::Result<()> {
+  ) -> Result<()> {
     for (i, note) in diag.notes.iter().enumerate() {
       self.write_section_margin(multi_labels_with_message, src, line_no_width, w)?;
       writeln!(w)?;
 
-      let note_prefix = format!("{} {}", "Note", i + 1);
+      let note_prefix = format!("note {}", i + 1);
       let note_prefix_len = if diag.notes.len() > 1 { note_prefix.len() } else { 4 };
 
       self.write_multiline_section(
         note,
-        if diag.notes.len() > 1 { &note_prefix } else { "Note" },
+        &note_prefix,
         note_prefix_len,
+        '=',
+        self.note_color(),
         multi_labels_with_message,
         src,
         line_no_width,
@@ -789,15 +837,24 @@ impl<'a> HumanReadableEmitter {
     text: &str,
     prefix: &str,
     prefix_len: usize,
+    bar_char: char,
+    bar_color: Option<Color>,
     multi_labels_with_message: &[&LabelInfo<'a>],
     src: &SourceFile,
     line_no_width: usize,
     w: &mut dyn Write,
-  ) -> anyhow::Result<()> {
+  ) -> Result<()> {
     let mut lines = text.lines();
     if let Some(line) = lines.next() {
-      self.write_section_margin(multi_labels_with_message, src, line_no_width, w)?;
-      writeln!(w, "{}: {}", prefix.fg(self.note_color()), line)?;
+      self.write_section_margin_with_bar(
+        bar_char,
+        bar_color,
+        multi_labels_with_message,
+        src,
+        line_no_width,
+        w,
+      )?;
+      writeln!(w, "{}: {}", prefix.bold(), line)?;
     }
 
     for line in lines {
@@ -812,11 +869,10 @@ impl<'a> HumanReadableEmitter {
     is_final_group: bool,
     line_no_width: usize,
     w: &mut dyn Write,
-  ) -> anyhow::Result<()> {
+  ) -> Result<()> {
     let draw = &self.characters;
     if is_final_group {
-      let final_margin = format!("{}{}", Show((draw.hbar, line_no_width + 2)), draw.rbot);
-      writeln!(w, "{}", final_margin.fg(self.margin_color()))?;
+      writeln!(w, "")?;
     } else {
       writeln!(
         w,

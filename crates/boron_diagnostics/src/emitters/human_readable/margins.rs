@@ -38,6 +38,24 @@ impl<'a> HumanReadableEmitter {
     Ok(())
   }
 
+  pub(super) fn write_margin_with_bar(
+    &self,
+    w: &mut dyn Write,
+    margin: &MarginContext<'a>,
+    labels: &MarginLabelContext<'a>,
+    bar_char: char,
+    bar_color: Option<yansi::Color>,
+  ) -> io::Result<()> {
+    let padding = " ".repeat(margin.line_no_width + 1);
+    write!(w, " {}{} ", padding, bar_char.fg(bar_color))?;
+
+    if labels.draw_labels {
+      self.write_multi_line_margins(w, margin, labels)?;
+    }
+
+    Ok(())
+  }
+
   fn write_line_number(
     &self,
     w: &mut dyn Write,
@@ -45,17 +63,21 @@ impl<'a> HumanReadableEmitter {
   ) -> io::Result<()> {
     let draw = &self.characters;
 
-    let line_no_margin = if margin.is_line && !margin.is_ellipsis {
+    if margin.is_line && !margin.is_ellipsis {
       let line_no = format!("{}", margin.idx + 1);
       let padding = " ".repeat(margin.line_no_width - line_no.chars().count());
-      format!("{}{} {}", padding, line_no, draw.vbar).fg(self.margin_color())
+      write!(
+        w,
+        " {}{} {} ",
+        padding,
+        line_no.fg(self.line_number_color()),
+        draw.vbar.fg(self.margin_color())
+      )
     } else {
       let padding = " ".repeat(margin.line_no_width + 1);
       let vbar = if margin.is_ellipsis { draw.vbar_gap } else { draw.vbar };
-      format!("{padding}{vbar}").fg(self.skipped_margin_color())
-    };
-
-    write!(w, " {line_no_margin} ")
+      write!(w, " {}{} ", padding, vbar.fg(self.margin_color()))
+    }
   }
 
   fn write_multi_line_margins(

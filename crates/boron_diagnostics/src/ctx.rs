@@ -1,14 +1,14 @@
-use crate::emitters::Emitter;
 use crate::emitters::human_readable::HumanReadableEmitter;
+use crate::emitters::Emitter;
 use crate::output_type::DiagnosticOutputType;
 use crate::{Diag, Diagnostic, DiagnosticId, DiagnosticLevel};
 use boron_source::prelude::Sources;
-use dashmap::DashMap;
 use dashmap::mapref::one::{Ref, RefMut};
+use dashmap::DashMap;
 use derivative::Derivative;
 use log::debug;
 use parking_lot::Mutex;
-use std::io::{Cursor, Write as _, stderr};
+use std::io::{stderr, Cursor, Write as _};
 use std::sync::Arc;
 
 #[derive(Derivative)]
@@ -104,7 +104,6 @@ impl DiagnosticCtx {
         panic!("No diagnostic found for {id:?}");
       };
 
-      // won't emit cancelled diagnostic
       if diagnostic.emitted || diagnostic.cancelled {
         return;
       }

@@ -1,26 +1,31 @@
-use std::fmt;
-use std::fmt::{Display, Formatter};
-use yansi::{Color, Paint};
+use std::fmt::Display;
+use yansi::{Color, Paint, Painted};
 
 pub trait Fmt: Sized {
-  fn fg<C: Into<Option<Color>>>(self, color: C) -> Foreground<Self>
+  fn fg<C: Into<Option<Color>>>(self, color: C) -> Painted<Self>
   where
     Self: Display,
   {
-    Foreground(self, color.into())
+    let mut painted = Paint::new(self);
+    if let Some(col) = color.into() {
+      painted = painted.fg(col);
+    }
+    painted
+  }
+
+  fn bold(self) -> Painted<Self>
+  where
+    Self: Display,
+  {
+    Paint::new(self).bold()
+  }
+
+  fn italic(self) -> Painted<Self>
+  where
+    Self: Display,
+  {
+    Paint::new(self).italic()
   }
 }
 
 impl<T: Display> Fmt for T {}
-
-#[derive(Copy, Clone, Debug)]
-pub struct Foreground<T>(T, Option<Color>);
-impl<T: Display> Display for Foreground<T> {
-  fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-    if let Some(col) = self.1 {
-      write!(f, "{}", Paint::new(&self.0).fg(col))
-    } else {
-      write!(f, "{}", self.0)
-    }
-  }
-}

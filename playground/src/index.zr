@@ -1,4 +1,3 @@
 func main() {
-    //#error: expected a comptime type, but found an expression in function argument
-    var size = sizeOf!("dwa")
+    10 = 20;
 }
