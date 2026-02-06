@@ -437,5 +437,5 @@ pub struct SuperOnlyInModOrImport {
 #[code(PARSE_INVALID_FIELD_INIT)]
 pub struct InvalidFieldInit {
   #[error("in this field init")]
-  pub span: Span
+  pub span: Span,
 }

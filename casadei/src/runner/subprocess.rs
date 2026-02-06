@@ -5,7 +5,9 @@ use std::process::Command;
 
 use super::panic::panic_message_from_stderr;
 
-pub(crate) fn run_single_test_subprocess(test: &Test) -> Result<TestResult, (String, Vec<u8>)> {
+pub(crate) fn run_single_test_subprocess(
+  test: &Test,
+) -> Result<TestResult, (String, Vec<u8>)> {
   let exe = env::current_exe()
     .map_err(|error| (format!("failed to locate casadei executable: {error}"), vec![]))?;
 

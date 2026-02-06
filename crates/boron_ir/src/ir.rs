@@ -1,5 +1,5 @@
-use crate::items::IrFunction;
 use crate::IrStruct;
+use crate::items::IrFunction;
 use boron_hir::SemanticTy;
 use boron_resolver::DefId;
 use boron_source::new_id;
@@ -20,12 +20,12 @@ impl Ir {
       .find(|s| &s.def_id == id && types == &s.type_args)
       .expect("all structs should be known")
   }
-  
+
   pub fn find_function(&self, id: &DefId, types: &Vec<SemanticTy>) -> &IrFunction {
     self
-        .functions
-        .iter()
-        .find(|s| &s.def_id == id && types == &s.type_args)
-        .expect("all functions should be known")
+      .functions
+      .iter()
+      .find(|s| &s.def_id == id && types == &s.type_args)
+      .expect("all functions should be known")
   }
 }

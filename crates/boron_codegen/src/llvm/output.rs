@@ -1,5 +1,5 @@
 use crate::llvm::LLVMCodegen;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use fs_err;
 use inkwell::targets::FileType;
 

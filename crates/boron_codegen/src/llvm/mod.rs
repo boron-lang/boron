@@ -6,7 +6,7 @@ mod structs;
 mod types;
 
 use crate::Codegen;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use boron_ir::{Ir, IrId};
 use boron_resolver::DefId;
 use boron_utils::context::Context;

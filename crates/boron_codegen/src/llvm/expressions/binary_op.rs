@@ -1,9 +1,9 @@
 use crate::llvm::LLVMCodegen;
 use boron_ir::{IrExpr, SemanticTy};
 use boron_parser::BinaryOp;
-use inkwell::values::BasicValueEnum;
 use inkwell::FloatPredicate;
 use inkwell::IntPredicate;
+use inkwell::values::BasicValueEnum;
 
 impl<'ctx> LLVMCodegen<'ctx> {
   pub fn generate_binary_op(

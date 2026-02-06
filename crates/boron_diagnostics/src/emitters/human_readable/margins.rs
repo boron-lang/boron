@@ -6,36 +6,33 @@ use boron_source::span::Span;
 use std::io;
 use std::io::Write;
 
+pub(super) struct MarginContext<'a> {
+  pub idx: usize,
+  pub is_line: bool,
+  pub is_ellipsis: bool,
+  pub line_no_width: usize,
+  pub multi_labels_with_message: &'a [&'a LabelInfo<'a>],
+  pub src: &'a SourceFile,
+}
+
+pub(super) struct MarginLabelContext<'a> {
+  pub draw_labels: bool,
+  pub report_row: Option<(usize, bool)>,
+  pub line_labels: &'a [LineLabel<'a>],
+  pub margin_label: &'a Option<LineLabel<'a>>,
+}
+
 impl<'a> HumanReadableEmitter {
-  #[expect(clippy::too_many_arguments, clippy::fn_params_excessive_bools)]
-  pub fn write_margin(
+  pub(super) fn write_margin(
     &self,
     w: &mut dyn Write,
-    idx: usize,
-    is_line: bool,
-    is_ellipsis: bool,
-    draw_labels: bool,
-    report_row: Option<(usize, bool)>,
-    line_labels: &[LineLabel<'a>],
-    margin_label: &Option<LineLabel<'a>>,
-    line_no_width: usize,
-    multi_labels_with_message: &[&LabelInfo<'a>],
-    src: &SourceFile,
+    margin: &MarginContext<'a>,
+    labels: &MarginLabelContext<'a>,
   ) -> io::Result<()> {
-    self.write_line_number(w, idx, is_line, is_ellipsis, line_no_width)?;
+    self.write_line_number(w, margin)?;
 
-    if draw_labels {
-      self.write_multi_line_margins(
-        w,
-        idx,
-        is_line,
-        is_ellipsis,
-        report_row,
-        line_labels,
-        margin_label,
-        multi_labels_with_message,
-        src,
-      )?;
+    if labels.draw_labels {
+      self.write_multi_line_margins(w, margin, labels)?;
     }
 
     Ok(())
@@ -44,133 +41,96 @@ impl<'a> HumanReadableEmitter {
   fn write_line_number(
     &self,
     w: &mut dyn Write,
-    idx: usize,
-    is_line: bool,
-    is_ellipsis: bool,
-    line_no_width: usize,
+    margin: &MarginContext<'a>,
   ) -> io::Result<()> {
     let draw = &self.characters;
 
-    let line_no_margin = if is_line && !is_ellipsis {
-      let line_no = format!("{}", idx + 1);
-      let padding = " ".repeat(line_no_width - line_no.chars().count());
+    let line_no_margin = if margin.is_line && !margin.is_ellipsis {
+      let line_no = format!("{}", margin.idx + 1);
+      let padding = " ".repeat(margin.line_no_width - line_no.chars().count());
       format!("{}{} {}", padding, line_no, draw.vbar).fg(self.margin_color())
     } else {
-      let padding = " ".repeat(line_no_width + 1);
-      let vbar = if is_ellipsis { draw.vbar_gap } else { draw.vbar };
+      let padding = " ".repeat(margin.line_no_width + 1);
+      let vbar = if margin.is_ellipsis { draw.vbar_gap } else { draw.vbar };
       format!("{padding}{vbar}").fg(self.skipped_margin_color())
     };
 
     write!(w, " {line_no_margin} ")
   }
 
-  #[expect(clippy::too_many_arguments)]
   fn write_multi_line_margins(
     &self,
     w: &mut dyn Write,
-    idx: usize,
-    is_line: bool,
-    is_ellipsis: bool,
-    report_row: Option<(usize, bool)>,
-    line_labels: &[LineLabel<'a>],
-    margin_label: &Option<LineLabel<'a>>,
-    multi_labels_with_message: &[&LabelInfo<'a>],
-    src: &SourceFile,
+    margin: &MarginContext<'a>,
+    labels: &MarginLabelContext<'a>,
   ) -> io::Result<()> {
-    let col_count =
-      multi_labels_with_message.len() + (!multi_labels_with_message.is_empty()) as usize;
+    let col_count = margin.multi_labels_with_message.len()
+      + (!margin.multi_labels_with_message.is_empty()) as usize;
 
     for col in 0..col_count {
-      let chars = self.get_margin_chars(
-        col,
-        idx,
-        is_line,
-        is_ellipsis,
-        report_row,
-        line_labels,
-        margin_label,
-        multi_labels_with_message,
-        src,
-      );
+      let chars = self.get_margin_chars(col, margin, labels);
       write!(w, "{}{}", chars.0, chars.1)?;
     }
 
     Ok(())
   }
 
-  #[expect(clippy::too_many_arguments)]
   fn get_margin_chars(
     &self,
     col: usize,
-    idx: usize,
-    is_line: bool,
-    is_ellipsis: bool,
-    report_row: Option<(usize, bool)>,
-    line_labels: &[LineLabel<'a>],
-    margin_label: &Option<LineLabel<'a>>,
-    multi_labels_with_message: &[&LabelInfo<'a>],
-    src: &SourceFile,
+    margin: &MarginContext<'a>,
+    labels: &MarginLabelContext<'a>,
   ) -> (String, String) {
-    let multi_label = multi_labels_with_message.get(col);
-    let line_span = src.line(idx).expect("line should exist").span();
+    let multi_label = margin.multi_labels_with_message.get(col);
+    let line_span = margin.src.line(margin.idx).expect("line should exist").span();
 
     let mut state = MarginState::default();
 
     // Collect information about what to draw
-    for (i, label) in multi_labels_with_message
-      [0..(col + 1).min(multi_labels_with_message.len())]
+    for (i, label) in margin.multi_labels_with_message
+      [0..(col + 1).min(margin.multi_labels_with_message.len())]
       .iter()
       .enumerate()
     {
-      Self::update_margin_state(
-        &mut state,
-        label,
-        i,
-        col,
-        &line_span,
-        is_line,
-        report_row,
-        line_labels,
-        margin_label,
-      );
+      Self::update_margin_state(&mut state, label, i, col, &line_span, margin, labels);
     }
 
     // Apply margin pointer logic
-    if let (Some((margin, _)), true) = (state.margin_ptr, is_line) {
-      let is_col = multi_label.is_some_and(|ml| std::ptr::eq(*ml, margin.label));
-      let is_limit = col + 1 == multi_labels_with_message.len();
+    if let (Some((margin_ptr, _)), true) = (state.margin_ptr, margin.is_line) {
+      let is_col = multi_label.is_some_and(|ml| std::ptr::eq(*ml, margin_ptr.label));
+      let is_limit = col + 1 == margin.multi_labels_with_message.len();
       if !is_col && !is_limit {
-        state.hbar = state.hbar.or(Some(margin.label));
+        state.hbar = state.hbar.or(Some(margin_ptr.label));
       }
     }
 
     // Filter hbar for margin labels
     state.hbar = state.hbar.filter(|l| {
-      margin_label.as_ref().is_none_or(|margin| !std::ptr::eq(margin.label, *l))
-        || !is_line
+      labels
+        .margin_label
+        .as_ref()
+        .is_none_or(|margin_label| !std::ptr::eq(margin_label.label, *l))
+        || !margin.is_line
     });
 
     self.render_margin_chars(
       &state,
       multi_label,
       col,
-      is_line,
-      is_ellipsis,
-      multi_labels_with_message,
+      margin.is_line,
+      margin.is_ellipsis,
+      margin.multi_labels_with_message,
     )
   }
 
-  #[expect(clippy::too_many_arguments)]
   fn update_margin_state(
     state: &mut MarginState<'a>,
     label: &'a LabelInfo<'a>,
     i: usize,
     col: usize,
     line_span: &Span,
-    is_line: bool,
-    report_row: Option<(usize, bool)>,
-    line_labels: &[LineLabel<'a>],
-    margin_label: &'a Option<LineLabel<'a>>,
+    margin: &MarginContext<'a>,
+    labels: &MarginLabelContext<'a>,
   ) {
     let is_parent = i != col;
     let is_start = line_span.contains(label.char_span.start);
@@ -182,29 +142,29 @@ impl<'a> HumanReadableEmitter {
       return;
     }
 
-    let margin = margin_label.as_ref().filter(|m| std::ptr::eq(label, m.label));
+    let margin_label =
+      labels.margin_label.as_ref().filter(|m| std::ptr::eq(label, m.label));
 
-    if let Some(margin) = margin.filter(|_| is_line) {
-      state.margin_ptr = Some((margin, is_start));
-    } else if !is_start && (!is_end || is_line) {
+    if let Some(margin_label) = margin_label.filter(|_| margin.is_line) {
+      state.margin_ptr = Some((margin_label, is_start));
+    } else if !is_start && (!is_end || margin.is_line) {
       state.vbar = state.vbar.or_else(|| Some(label).filter(|_| !is_parent));
-    } else if let Some((report_row, is_arrow)) = report_row {
+    } else if let Some((report_row, is_arrow)) = labels.report_row {
       Self::handle_report_row(
         state,
         label,
-        margin,
+        margin_label,
         report_row,
         is_arrow,
         is_start,
         is_parent,
-        line_labels,
+        labels.line_labels,
         col,
         i,
       );
     }
   }
 
-  #[expect(clippy::too_many_arguments, clippy::fn_params_excessive_bools)]
   fn handle_report_row(
     state: &mut MarginState<'a>,
     label: &'a LabelInfo<'a>,

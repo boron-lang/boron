@@ -7,6 +7,7 @@ use crate::Diag;
 use crate::emitters::Emitter;
 use crate::emitters::human_readable::chars::{Characters, ascii};
 use crate::emitters::human_readable::label::{LabelInfo, LabelKind, LineLabel};
+use crate::emitters::human_readable::margins::{MarginContext, MarginLabelContext};
 use crate::emitters::human_readable::source_groups::SourceGroup;
 use crate::fmt::Fmt as _;
 use crate::show::Show;
@@ -72,6 +73,18 @@ impl Emitter for HumanReadableEmitter {
   fn sources(&self) -> &Arc<Sources> {
     &self.sources
   }
+}
+
+struct LineRenderContext<'a> {
+  idx: usize,
+  line: &'a Line,
+  line_labels: &'a [LineLabel<'a>],
+  margin_label: &'a Option<LineLabel<'a>>,
+  is_ellipsis: bool,
+  line_no_width: usize,
+  multi_labels: &'a [&'a LabelInfo<'a>],
+  multi_labels_with_message: &'a [&'a LabelInfo<'a>],
+  src: &'a SourceFile,
 }
 
 impl<'a> HumanReadableEmitter {
@@ -237,7 +250,6 @@ impl<'a> HumanReadableEmitter {
     (multi_labels, multi_labels_with_message)
   }
 
-  #[expect(clippy::too_many_arguments)]
   fn write_lines(
     &self,
     line_range: &Range<usize>,
@@ -261,32 +273,26 @@ impl<'a> HumanReadableEmitter {
         &margin_label,
       );
 
+      let mut ctx = LineRenderContext {
+        idx,
+        line: &line,
+        line_labels: line_labels.as_slice(),
+        margin_label: &margin_label,
+        is_ellipsis,
+        line_no_width,
+        multi_labels,
+        multi_labels_with_message,
+        src,
+      };
+
       if line_labels.is_empty() && margin_label.is_none() {
-        is_ellipsis = self.handle_empty_line(
-          idx,
-          &line,
-          multi_labels,
-          is_ellipsis,
-          line_no_width,
-          multi_labels_with_message,
-          src,
-          w,
-        )?;
+        is_ellipsis = self.handle_empty_line(&ctx, w)?;
         continue;
       }
 
       is_ellipsis = false;
-      self.write_line_with_labels(
-        idx,
-        &line,
-        line_labels.as_slice(),
-        &margin_label,
-        is_ellipsis,
-        line_no_width,
-        multi_labels_with_message,
-        src,
-        w,
-      )?;
+      ctx.is_ellipsis = false;
+      self.write_line_with_labels(&ctx, w)?;
     }
 
     Ok(())
@@ -374,72 +380,64 @@ impl<'a> HumanReadableEmitter {
     line_labels
   }
 
-  #[expect(clippy::too_many_arguments)]
   fn handle_empty_line(
     &self,
-    idx: usize,
-    line: &Line,
-    multi_labels: &[&LabelInfo<'a>],
-    is_ellipsis: bool,
-    line_no_width: usize,
-    multi_labels_with_message: &[&LabelInfo<'a>],
-    src: &SourceFile,
+    ctx: &LineRenderContext<'a>,
     w: &mut dyn Write,
   ) -> anyhow::Result<bool> {
-    let within_label =
-      multi_labels.iter().any(|label| label.char_span.contains(&line.span().start()));
+    let within_label = ctx
+      .multi_labels
+      .iter()
+      .any(|label| label.char_span.contains(&ctx.line.span().start()));
 
-    if !is_ellipsis && within_label {
-    } else if !is_ellipsis {
-      self.write_margin(
-        w,
-        idx,
-        false,
-        is_ellipsis,
-        false,
-        None,
-        &[],
-        &None,
-        line_no_width,
-        multi_labels_with_message,
-        src,
-      )?;
+    if !ctx.is_ellipsis && within_label {
+    } else if !ctx.is_ellipsis {
+      let margin = MarginContext {
+        idx: ctx.idx,
+        is_line: false,
+        is_ellipsis: ctx.is_ellipsis,
+        line_no_width: ctx.line_no_width,
+        multi_labels_with_message: ctx.multi_labels_with_message,
+        src: ctx.src,
+      };
+      let labels = MarginLabelContext {
+        draw_labels: false,
+        report_row: None,
+        line_labels: &[],
+        margin_label: &None,
+      };
+      self.write_margin(w, &margin, &labels)?;
       writeln!(w)?;
     }
     Ok(true)
   }
 
-  #[expect(clippy::too_many_arguments)]
   fn write_line_with_labels(
     &self,
-    idx: usize,
-    line: &Line,
-    line_labels: &[LineLabel<'a>],
-    margin_label: &Option<LineLabel<'a>>,
-    is_ellipsis: bool,
-    line_no_width: usize,
-    multi_labels_with_message: &[&LabelInfo<'a>],
-    src: &SourceFile,
+    ctx: &LineRenderContext<'a>,
     w: &mut dyn Write,
   ) -> anyhow::Result<()> {
     // Write margin and source line
-    self.write_margin(
-      w,
-      idx,
-      true,
-      is_ellipsis,
-      true,
-      None,
-      line_labels,
-      margin_label,
-      line_no_width,
-      multi_labels_with_message,
-      src,
-    )?;
+    let margin = MarginContext {
+      idx: ctx.idx,
+      is_line: true,
+      is_ellipsis: ctx.is_ellipsis,
+      line_no_width: ctx.line_no_width,
+      multi_labels_with_message: ctx.multi_labels_with_message,
+      src: ctx.src,
+    };
+    let labels = MarginLabelContext {
+      draw_labels: true,
+      report_row: None,
+      line_labels: ctx.line_labels,
+      margin_label: ctx.margin_label,
+    };
+    self.write_margin(w, &margin, &labels)?;
 
-    if !is_ellipsis {
-      for (col, c) in src
-        .get_line_text(*line)
+    if !ctx.is_ellipsis {
+      for (col, c) in ctx
+        .src
+        .get_line_text(*ctx.line)
         .expect("line text should exist")
         .trim_end()
         .chars()
@@ -458,130 +456,86 @@ impl<'a> HumanReadableEmitter {
     writeln!(w)?;
 
     // Write arrows for labels
-    self.write_label_arrows(
-      idx,
-      line,
-      line_labels,
-      margin_label,
-      is_ellipsis,
-      line_no_width,
-      multi_labels_with_message,
-      src,
-      w,
-    )?;
+    self.write_label_arrows(ctx, w)?;
 
     Ok(())
   }
 
-  #[expect(clippy::too_many_arguments)]
   fn write_label_arrows(
     &self,
-    idx: usize,
-    line: &Line,
-    line_labels: &[LineLabel<'a>],
-    margin_label: &Option<LineLabel<'a>>,
-    is_ellipsis: bool,
-    line_no_width: usize,
-    multi_labels_with_message: &[&LabelInfo<'a>],
-    src: &SourceFile,
+    ctx: &LineRenderContext<'a>,
     w: &mut dyn Write,
   ) -> anyhow::Result<()> {
     let arrow_end_space = 2;
-    let arrow_len = line_labels.iter().fold(0, |l, ll| {
+    let arrow_len = ctx.line_labels.iter().fold(0, |l, ll| {
       if ll.multi {
-        line.len()
+        ctx.line.len()
       } else {
-        l.max(ll.label.char_span.end.saturating_sub(line.offset()))
+        l.max(ll.label.char_span.end.saturating_sub(ctx.line.offset()))
       }
     }) + arrow_end_space;
 
-    for row in 0..line_labels.len() {
-      let line_label = &line_labels[row];
+    for row in 0..ctx.line_labels.len() {
+      let line_label = &ctx.line_labels[row];
       if line_label.label.info.message.is_none() {
         continue;
       }
 
       // First arrow line (underlines)
-      self.write_arrow_underline_row(
-        idx,
-        line,
-        line_labels,
-        row,
-        arrow_len,
-        margin_label,
-        is_ellipsis,
-        line_no_width,
-        multi_labels_with_message,
-        src,
-        w,
-      )?;
+      self.write_arrow_underline_row(ctx, row, arrow_len, w)?;
 
       // Second arrow line (horizontal bars and message)
-      self.write_arrow_message_row(
-        idx,
-        line,
-        line_label,
-        line_labels,
-        row,
-        arrow_len,
-        margin_label,
-        is_ellipsis,
-        line_no_width,
-        multi_labels_with_message,
-        src,
-        w,
-      )?;
+      self.write_arrow_message_row(ctx, line_label, row, arrow_len, w)?;
     }
 
     Ok(())
   }
 
-  #[expect(clippy::too_many_arguments)]
   fn write_arrow_underline_row(
     &self,
-    idx: usize,
-    line: &Line,
-    line_labels: &[LineLabel<'a>],
+    ctx: &LineRenderContext<'a>,
     row: usize,
     arrow_len: usize,
-    margin_label: &Option<LineLabel<'a>>,
-    is_ellipsis: bool,
-    line_no_width: usize,
-    multi_labels_with_message: &[&LabelInfo<'a>],
-    src: &SourceFile,
     w: &mut dyn Write,
   ) -> anyhow::Result<()> {
     let draw = &self.characters;
 
-    self.write_margin(
-      w,
-      idx,
-      false,
-      is_ellipsis,
-      true,
-      Some((row, false)),
-      line_labels,
-      margin_label,
-      line_no_width,
-      multi_labels_with_message,
-      src,
-    )?;
+    let margin = MarginContext {
+      idx: ctx.idx,
+      is_line: false,
+      is_ellipsis: ctx.is_ellipsis,
+      line_no_width: ctx.line_no_width,
+      multi_labels_with_message: ctx.multi_labels_with_message,
+      src: ctx.src,
+    };
+    let labels = MarginLabelContext {
+      draw_labels: true,
+      report_row: Some((row, false)),
+      line_labels: ctx.line_labels,
+      margin_label: ctx.margin_label,
+    };
+    self.write_margin(w, &margin, &labels)?;
 
-    let mut chars =
-      src.get_line_text(*line).expect("line text should exist").trim_end().chars();
+    let mut chars = ctx
+      .src
+      .get_line_text(*ctx.line)
+      .expect("line text should exist")
+      .trim_end()
+      .chars();
     for col in 0..arrow_len {
       let width = chars.next().map_or(1, |c| Self::char_width(c, col).1);
-      let vbar = Self::get_vbar(col, row, line_labels, margin_label);
-      let underline = Self::get_underline(col, line, line_labels).filter(|_| row == 0);
+      let vbar = Self::get_vbar(col, row, ctx.line_labels, ctx.margin_label);
+      let underline =
+        Self::get_underline(col, ctx.line, ctx.line_labels).filter(|_| row == 0);
 
       let [c, tail] = if let Some(vbar_ll) = vbar {
         let [c, tail] = if underline.is_some() {
           #[expect(clippy::overly_complex_bool_expr)]
           if ExactSizeIterator::len(&vbar_ll.label.char_span) <= 1 || true {
             [draw.underbar, draw.underline]
-          } else if line.offset() + col == vbar_ll.label.char_span.start {
+          } else if ctx.line.offset() + col == vbar_ll.label.char_span.start {
             [draw.ltop, draw.underbar]
-          } else if line.offset() + col == vbar_ll.label.last_offset() {
+          } else if ctx.line.offset() + col == vbar_ll.label.last_offset() {
             [draw.rtop, draw.underbar]
           } else {
             [draw.underbar, draw.underline]
@@ -606,40 +560,38 @@ impl<'a> HumanReadableEmitter {
     Ok(())
   }
 
-  #[expect(clippy::too_many_arguments)]
   fn write_arrow_message_row(
     &self,
-    idx: usize,
-    line: &Line,
+    ctx: &LineRenderContext<'a>,
     line_label: &LineLabel<'a>,
-    line_labels: &[LineLabel<'a>],
     row: usize,
     arrow_len: usize,
-    margin_label: &Option<LineLabel<'a>>,
-    is_ellipsis: bool,
-    line_no_width: usize,
-    multi_labels_with_message: &[&LabelInfo<'a>],
-    src: &SourceFile,
     w: &mut dyn Write,
   ) -> anyhow::Result<()> {
     let draw = &self.characters;
 
-    self.write_margin(
-      w,
-      idx,
-      false,
-      is_ellipsis,
-      true,
-      Some((row, true)),
-      line_labels,
-      margin_label,
-      line_no_width,
-      multi_labels_with_message,
-      src,
-    )?;
+    let margin = MarginContext {
+      idx: ctx.idx,
+      is_line: false,
+      is_ellipsis: ctx.is_ellipsis,
+      line_no_width: ctx.line_no_width,
+      multi_labels_with_message: ctx.multi_labels_with_message,
+      src: ctx.src,
+    };
+    let labels = MarginLabelContext {
+      draw_labels: true,
+      report_row: Some((row, true)),
+      line_labels: ctx.line_labels,
+      margin_label: ctx.margin_label,
+    };
+    self.write_margin(w, &margin, &labels)?;
 
-    let mut chars =
-      src.get_line_text(*line).expect("line text should exist").trim_end().chars();
+    let mut chars = ctx
+      .src
+      .get_line_text(*ctx.line)
+      .expect("line text should exist")
+      .trim_end()
+      .chars();
     for col in 0..arrow_len {
       let width = chars.next().map_or(1, |c| Self::char_width(c, col).1);
 
@@ -651,7 +603,10 @@ impl<'a> HumanReadableEmitter {
 
       let [c, tail] = if col == line_label.col
         && line_label.label.info.message.is_some()
-        && margin_label.as_ref().is_none_or(|m| !std::ptr::eq(line_label.label, m.label))
+        && ctx
+          .margin_label
+          .as_ref()
+          .is_none_or(|m| !std::ptr::eq(line_label.label, m.label))
       {
         [
           if line_label.multi {
@@ -662,8 +617,9 @@ impl<'a> HumanReadableEmitter {
           .fg(line_label.label.info.color()),
           draw.hbar.fg(line_label.label.info.color()),
         ]
-      } else if let Some(vbar_ll) = Self::get_vbar(col, row, line_labels, margin_label)
-        .filter(|_| col != line_label.col || line_label.label.info.message.is_some())
+      } else if let Some(vbar_ll) =
+        Self::get_vbar(col, row, ctx.line_labels, ctx.margin_label)
+          .filter(|_| col != line_label.col || line_label.label.info.message.is_some())
       {
         if !CROSS_GAPS && is_hbar {
           [
@@ -754,19 +710,21 @@ impl<'a> HumanReadableEmitter {
     w: &mut dyn Write,
   ) -> anyhow::Result<()> {
     for (i, help) in diag.helps.iter().enumerate() {
-      self.write_margin(
-        w,
-        0,
-        false,
-        false,
-        true,
-        Some((0, false)),
-        &[],
-        &None,
+      let margin = MarginContext {
+        idx: 0,
+        is_line: false,
+        is_ellipsis: false,
         line_no_width,
         multi_labels_with_message,
         src,
-      )?;
+      };
+      let labels = MarginLabelContext {
+        draw_labels: true,
+        report_row: Some((0, false)),
+        line_labels: &[],
+        margin_label: &None,
+      };
+      self.write_margin(w, &margin, &labels)?;
       writeln!(w)?;
 
       let help_prefix = format!("{} {}", "Help", i + 1);
@@ -794,19 +752,21 @@ impl<'a> HumanReadableEmitter {
     w: &mut dyn Write,
   ) -> anyhow::Result<()> {
     for (i, note) in diag.notes.iter().enumerate() {
-      self.write_margin(
-        w,
-        0,
-        false,
-        false,
-        true,
-        Some((0, false)),
-        &[],
-        &None,
+      let margin = MarginContext {
+        idx: 0,
+        is_line: false,
+        is_ellipsis: false,
         line_no_width,
         multi_labels_with_message,
         src,
-      )?;
+      };
+      let labels = MarginLabelContext {
+        draw_labels: true,
+        report_row: Some((0, false)),
+        line_labels: &[],
+        margin_label: &None,
+      };
+      self.write_margin(w, &margin, &labels)?;
       writeln!(w)?;
 
       let note_prefix = format!("{} {}", "Note", i + 1);
@@ -825,7 +785,6 @@ impl<'a> HumanReadableEmitter {
     Ok(())
   }
 
-  #[expect(clippy::too_many_arguments)]
   fn write_multiline_section(
     &self,
     text: &str,
@@ -838,36 +797,40 @@ impl<'a> HumanReadableEmitter {
   ) -> anyhow::Result<()> {
     let mut lines = text.lines();
     if let Some(line) = lines.next() {
-      self.write_margin(
-        w,
-        0,
-        false,
-        false,
-        true,
-        Some((0, false)),
-        &[],
-        &None,
+      let margin = MarginContext {
+        idx: 0,
+        is_line: false,
+        is_ellipsis: false,
         line_no_width,
         multi_labels_with_message,
         src,
-      )?;
+      };
+      let labels = MarginLabelContext {
+        draw_labels: true,
+        report_row: Some((0, false)),
+        line_labels: &[],
+        margin_label: &None,
+      };
+      self.write_margin(w, &margin, &labels)?;
       writeln!(w, "{}: {}", prefix.fg(self.note_color()), line)?;
     }
 
     for line in lines {
-      self.write_margin(
-        w,
-        0,
-        false,
-        false,
-        true,
-        Some((0, false)),
-        &[],
-        &None,
+      let margin = MarginContext {
+        idx: 0,
+        is_line: false,
+        is_ellipsis: false,
         line_no_width,
         multi_labels_with_message,
         src,
-      )?;
+      };
+      let labels = MarginLabelContext {
+        draw_labels: true,
+        report_row: Some((0, false)),
+        line_labels: &[],
+        margin_label: &None,
+      };
+      self.write_margin(w, &margin, &labels)?;
       writeln!(w, "{:>pad$}{}", "", line, pad = prefix_len + 2)?;
     }
     Ok(())

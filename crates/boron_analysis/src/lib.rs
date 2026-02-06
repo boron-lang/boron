@@ -15,7 +15,7 @@ pub mod validator;
 mod vars;
 
 pub use builtin::*;
-pub use checker::{typeck_hir, TyChecker};
+pub use checker::{TyChecker, typeck_hir};
 pub use literals::*;
 pub use table::{InferCtx, TypeEnv, TypeTable};
 pub use ty::{InferTy, TyVar, TyVarKind, TypeScheme};

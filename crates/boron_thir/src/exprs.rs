@@ -21,81 +21,38 @@ pub enum ExprKind {
   LocalRef(DefId),
   Path(DefId),
 
-  Binary {
-    op: BinaryOp,
-    lhs: Box<Expr>,
-    rhs: Box<Expr>,
-  },
+  Binary { op: BinaryOp, lhs: Box<Expr>, rhs: Box<Expr> },
 
-  Unary {
-    op: UnaryOp,
-    operand: Box<Expr>,
-  },
+  Unary { op: UnaryOp, operand: Box<Expr> },
 
-  Assign {
-    op: AssignOp,
-    target: Box<Expr>,
-    value: Box<Expr>,
-  },
+  Assign { op: AssignOp, target: Box<Expr>, value: Box<Expr> },
 
-  Cast {
-    expr: Box<Expr>,
-    ty: InferTy,
-  },
+  Cast { expr: Box<Expr>, ty: InferTy },
 
-  Call {
-    callee: DefId,
-    type_args: Vec<InferTy>,
-    args: Vec<Expr>,
-  },
+  Call { callee: DefId, type_args: Vec<InferTy>, args: Vec<Expr> },
 
-  Field {
-    object: Box<Expr>,
-    field: Identifier,
-  },
+  Field { object: Box<Expr>, field: Identifier },
 
-  Index {
-    object: Box<Expr>,
-    index: Box<Expr>,
-  },
+  Index { object: Box<Expr>, index: Box<Expr> },
 
-  AddrOf {
-    operand: Box<Expr>,
-  },
+  AddrOf { operand: Box<Expr> },
 
-  Struct {
-    def_id: DefId,
-    type_args: Vec<InferTy>,
-    fields: Vec<FieldInit>,
-  },
+  Struct { def_id: DefId, type_args: Vec<InferTy>, fields: Vec<FieldInit> },
 
   Tuple(Vec<Expr>),
   Array(Vec<Expr>),
 
   Block(Block),
 
-  If {
-    condition: Box<Expr>,
-    then_block: Block,
-    else_branch: Option<Box<Expr>>,
-  },
+  If { condition: Box<Expr>, then_block: Block, else_branch: Option<Box<Expr>> },
 
-  Match {
-    scrutinee: Box<Expr>,
-    arms: Vec<MatchArm>,
-  },
+  Match { scrutinee: Box<Expr>, arms: Vec<MatchArm> },
 
-  Loop {
-    body: Block,
-  },
+  Loop { body: Block },
 
-  Break {
-    value: Option<Box<Expr>>,
-  },
+  Break { value: Option<Box<Expr>> },
   Continue,
-  Return {
-    value: Option<Box<Expr>>,
-  },
+  Return { value: Option<Box<Expr>> },
 
   Err,
 }

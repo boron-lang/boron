@@ -3,8 +3,7 @@ pub mod utils;
 pub mod values;
 
 use crate::errors::{
-  DivisionByZero, PathNotConst, ShiftOutOfRange,
-  UnsupportedConstExpr,
+  DivisionByZero, PathNotConst, ShiftOutOfRange, UnsupportedConstExpr,
 };
 use crate::float::construct_float;
 use crate::interpreter::stack::Stack;

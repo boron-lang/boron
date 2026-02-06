@@ -1,4 +1,4 @@
-use crate::directives::{parse_directive, Directive};
+use crate::directives::{Directive, parse_directive};
 use boron_core::prelude::fs::read_to_string;
 use boron_core::prelude::strip_same_root;
 use boron_source::new_id;
