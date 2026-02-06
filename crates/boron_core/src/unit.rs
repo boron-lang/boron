@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use boron_analysis::results::BuiltInResults;
 use boron_analysis::validator::validate_comptime;
-use boron_analysis::{expand_builtins, typeck_hir, TypeTable};
+use boron_analysis::{TypeTable, expand_builtins, typeck_hir};
 use boron_codegen::run_codegen;
 use boron_hir::hir::Hir;
 use boron_hir::lower::lower_to_hir;
@@ -47,15 +47,27 @@ impl<'ctx> CompilationUnit<'ctx> {
     };
 
     self.resolver.build_import_graph(&self.modules);
-    self.resolve_names();
-    self.lower_to_hir();
-    self.validate_comptime();
+    if self.run_step(|this| this.resolve_names()) {
+      return;
+    }
+    if self.run_step(|this| this.lower_to_hir()) {
+      return;
+    }
+    if self.run_step(|this| this.validate_comptime()) {
+      return;
+    }
 
-    self.typeck();
-    self.expand_builtins();
-    self.lower_to_thir();
+    if self.run_step(|this| this.typeck()) {
+      return;
+    }
+    if self.run_step(|this| this.expand_builtins()) {
+      return;
+    }
+    if self.run_step(|this| this.lower_to_thir()) {
+      return;
+    }
 
-    self.lower_to_ir();
+    let _ = self.run_step(|this| this.lower_to_ir());
   }
 
   pub fn build(&mut self) -> Result<()> {
@@ -81,10 +93,14 @@ impl<'ctx> CompilationUnit<'ctx> {
     let Some(typeck) = &self.typeck else {
       return;
     };
+    let Some(builtin_results) = &self.builtin_results else {
+      return;
+    };
 
-    self.thir =
-      Some(ThirLowerer::new(hir, &self.resolver, self.ctx.dcx(), typeck).lower());
-    self.emit_errors();
+    self.thir = Some(
+      ThirLowerer::new(hir, &self.resolver, self.ctx.dcx(), typeck, builtin_results)
+        .lower(),
+    );
   }
 
   fn lower_to_ir(&mut self) {
@@ -95,7 +111,6 @@ impl<'ctx> CompilationUnit<'ctx> {
     };
 
     self.ir = Some(IrLowerer::new(hir, thir, typeck).lower());
-    self.emit_errors();
   }
 
   fn expand_builtins(&mut self) {
@@ -105,7 +120,6 @@ impl<'ctx> CompilationUnit<'ctx> {
     };
 
     self.builtin_results = Some(expand_builtins(self.ctx, &self.resolver, typeck, hir));
-    self.emit_errors();
   }
 
   fn validate_comptime(&self) {
@@ -113,31 +127,35 @@ impl<'ctx> CompilationUnit<'ctx> {
     let dcx = self.ctx.dcx();
 
     validate_comptime(hir, dcx, &self.resolver);
-    self.emit_errors();
   }
 
   fn typeck(&mut self) {
     let Some(hir) = &self.hir else { return };
     let table = typeck_hir(hir, self.ctx, &self.resolver);
 
-    self.emit_errors();
     self.typeck = Some(table);
   }
 
   fn resolve_names(&self) {
     ResolveVisitor::resolve_modules(&self.resolver, &self.modules, self.ctx);
-    self.emit_errors();
   }
 
   fn lower_to_hir(&mut self) {
     let dcx = self.ctx.dcx();
     let hir = lower_to_hir(&self.resolver, &self.modules, dcx);
     self.hir = Some(hir);
-    self.emit_errors();
   }
 
   pub fn sess(&self) -> &Session {
     self.ctx.session
+  }
+
+  fn run_step<F>(&mut self, step: F) -> bool
+  where
+    F: FnOnce(&mut Self),
+  {
+    step(self);
+    self.emit_errors()
   }
 
   fn file_to_module(&mut self, id: SourceFileId) -> Option<SourceFileId> {
@@ -220,13 +238,13 @@ impl<'ctx> CompilationUnit<'ctx> {
       );
     }
 
-    if self.ctx.session.is_test() && emitted > 0 {
-      true
-    } else if emitted > 0 {
+    if emitted > 0 {
       self.ctx.dcx().flush_to_stderr();
-      exit(1)
-    } else {
-      false
+      if !self.ctx.session.is_test() {
+        exit(1)
+      }
     }
+
+    emitted > 0
   }
 }

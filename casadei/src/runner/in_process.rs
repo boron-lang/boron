@@ -5,14 +5,18 @@ use boron_core::prelude::*;
 use itertools::Itertools;
 use parking_lot::Mutex;
 use std::io::Cursor;
-use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::Arc;
 
 use super::directives::matches_directive;
-use super::panic::{install_panic_hook, panic_message, PanicHookGuard, PanicRunGuard};
+use super::panic::{
+  PanicHookGuard, PanicRunGuard, clear_last_backtrace, install_panic_hook, panic_message,
+  take_last_backtrace,
+};
 
 pub fn run_single_test_in_process(test: &Test) -> TestResult {
   install_panic_hook();
+  clear_last_backtrace();
   let _panic_guard = PanicRunGuard::new();
   let _panic_thread_guard = PanicHookGuard::new();
   let project_type = test
@@ -124,6 +128,13 @@ pub fn run_single_test_in_process(test: &Test) -> TestResult {
     }
   }));
 
-  let result = result.unwrap_or_else(|panic_payload| TestStatus::Panicked(panic_message(panic_payload)));
+  let result = result.unwrap_or_else(|panic_payload| {
+    let message = panic_message(panic_payload);
+    if let Some(backtrace) = take_last_backtrace() {
+      TestStatus::Panicked(format!("{message}\nbacktrace:\n{backtrace}"))
+    } else {
+      TestStatus::Panicked(message)
+    }
+  });
   TestResult { result, output: output.lock().get_ref().clone(), test_id: test.id }
 }

@@ -1,17 +1,16 @@
-use crate::Param;
 use crate::exprs::{Block, Expr, ExprKind, FieldInit, Local, MatchArm, Stmt, StmtKind};
 use crate::items::{Field, Function, Struct};
+use crate::Param;
 use boron_analysis::float::construct_float;
 use boron_analysis::int::construct_i128;
 use boron_analysis::interpreter::{
   Interpreter, InterpreterCache, InterpreterContext, InterpreterMode,
 };
 use boron_analysis::literal_table::FullLiteral;
+use boron_analysis::results::BuiltInResults;
 use boron_analysis::{InferTy, TypeTable};
 use boron_diagnostics::DiagnosticCtx;
-use boron_hir::expr::{
-  ComptimeArg as HirComptimeArg, FieldInit as HirFieldInit, PathExpr as HirPathExpr,
-};
+use boron_hir::expr::{FieldInit as HirFieldInit, PathExpr as HirPathExpr};
 use boron_hir::{
   Block as HirBlock, Expr as HirExpr, ExprKind as HirExprKind, Function as HirFunction,
   Hir, HirId, Literal, Local as HirLocal, MatchArm as HirMatchArm, Stmt as HirStmt,
@@ -43,6 +42,7 @@ pub struct ThirLowerer<'a> {
   type_table: &'a TypeTable,
   interpreter_cache: InterpreterCache,
   thir: Thir,
+  built_in_results: &'a BuiltInResults,
 }
 
 impl<'a> ThirLowerer<'a> {
@@ -51,6 +51,7 @@ impl<'a> ThirLowerer<'a> {
     resolver: &'a Resolver,
     dcx: &'a DiagnosticCtx,
     type_table: &'a TypeTable,
+    built_in_results: &'a BuiltInResults,
   ) -> Self {
     Self {
       hir,
@@ -59,6 +60,7 @@ impl<'a> ThirLowerer<'a> {
       type_table,
       interpreter_cache: InterpreterCache::new(),
       thir: Thir::new(),
+      built_in_results,
     }
   }
 
@@ -188,7 +190,7 @@ impl<'a> ThirLowerer<'a> {
       HirExprKind::Assign { op, target, value } => self.lower_assign(*op, target, value),
       HirExprKind::Cast { expr: inner, ty: _ } => self.lower_cast(inner, expr.hir_id),
       HirExprKind::Call { callee, args } => self.lower_call(callee, args, expr.hir_id),
-      HirExprKind::Comptime { callee, args } => self.lower_comptime(callee, args, expr),
+      HirExprKind::Comptime { .. } => self.lower_comptime(expr),
       HirExprKind::MethodCall { receiver, method, args } => {
         self.lower_method_call(receiver, method, args)
       }
@@ -351,13 +353,23 @@ impl<'a> ThirLowerer<'a> {
       .collect()
   }
 
-  fn lower_comptime(
-    &mut self,
-    callee: &HirExpr,
-    args: &[HirComptimeArg],
-    expr: &HirExpr,
-  ) -> ExprKind {
-    todo!("evaluate value")
+  fn lower_comptime(&mut self, expr: &HirExpr) -> ExprKind {
+    let comptime = self
+      .resolver
+      .get_recorded_comptime_builtin(self.hir.hir_to_node(&expr.hir_id).unwrap());
+
+    let const_val = if let Some(_) = comptime {
+      self.built_in_results.get(expr.hir_id)
+    } else {
+      self.interpreter_cache.get(expr.hir_id)
+    }
+    .expect("comptime functions should be resolved by now");
+
+    if let Some(lit) = Self::const_value_to_literal(const_val) {
+      ExprKind::Literal(lit)
+    } else {
+      ExprKind::Err
+    }
   }
 
   fn lower_method_call(

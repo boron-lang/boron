@@ -1,10 +1,12 @@
-use crate::TypeTable;
 use crate::results::BuiltInResults;
+use crate::{InferTy, TypeTable};
 use boron_diagnostics::DiagnosticCtx;
 use boron_hir::{Block, Expr, ExprKind, Function, Hir, ParamKind, StmtKind};
-use boron_resolver::Resolver;
 use boron_resolver::prelude::BuiltInKind;
+use boron_resolver::Resolver;
 use boron_utils::context::Context;
+use boron_utils::prelude::debug;
+use crate::interpreter::values::ConstValue;
 
 pub struct BuiltInExpander<'a> {
   pub ctx: &'a Context<'a>,
@@ -71,12 +73,22 @@ impl<'a> BuiltInExpander<'a> {
 
       ExprKind::Comptime { callee, args } => {
         self.walk_expr(callee);
+
+        if let Some(ty) = self.type_table.node_type(expr.hir_id)
+          && let InferTy::Err(_) = ty
+        {
+          self.results.insert(expr.hir_id, ConstValue::Poison);
+          return;
+        }
         let comptime = self
           .resolver
           .get_recorded_comptime_builtin(self.hir.hir_to_node(&expr.hir_id).unwrap());
 
         if let Some(builtin) = comptime {
-          let args = self.type_table.comptime_args.get(&expr.hir_id).unwrap();
+          let Some(args) = self.type_table.comptime_args.get(&expr.hir_id) else {
+            debug!("skipping builtin because there might have been an error before");
+            return;
+          };
 
           let result = match builtin {
             BuiltInKind::SizeOf => self.size_of(args[0].as_ty()),

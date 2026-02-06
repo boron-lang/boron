@@ -1,5 +1,4 @@
-struct Value { x: f32 }
-
 func main() {
-    var value = Value { x: 10.0 };
+    //#error: expected a comptime type, but found an expression in function argument
+    var size = sizeOf!("dwa")
 }
