@@ -25,7 +25,7 @@ pub fn compiler_entrypoint(
       );
     }
   }
-  let sources = Arc::new(Sources::new());
+  let sources = Arc::new(Sources::with_root(config.root.clone()));
 
   let sess = Session::new(config.clone(), &sources, writer, is_test);
   let context = &mut Context::new(&sess, Arc::clone(&sources));

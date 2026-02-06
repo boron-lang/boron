@@ -2,7 +2,7 @@ use crate::source_file::{SourceFile, SourceFileId};
 use dashmap::DashMap;
 use dashmap::iter::Iter;
 use dashmap::mapref::one::Ref;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Default)]
 pub struct SourcesImpl {
@@ -11,14 +11,25 @@ pub struct SourcesImpl {
 }
 
 /// This struct handles all sources (files) used in the compilation process.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Sources {
   inner: SourcesImpl,
+  root: Option<PathBuf>,
+}
+
+impl Default for Sources {
+  fn default() -> Self {
+    Self { inner: Default::default(), root: None }
+  }
 }
 
 impl Sources {
   pub fn new() -> Self {
     Default::default()
+  }
+
+  pub fn with_root(root: PathBuf) -> Self {
+    Self { inner: Default::default(), root: Some(root) }
   }
 
   pub fn add(&self, input: String, path: PathBuf) -> SourceFileId {
@@ -49,6 +60,29 @@ impl Sources {
   }
 
   pub fn display(&self, id: SourceFileId) -> Option<String> {
-    self.get(id).map(|s| s.path().display().to_string())
+    self.get(id).map(|s| {
+      let path = s.path();
+      if let Some(root) = &self.root {
+        Self::strip_root(path.as_path(), root).display().to_string()
+      } else {
+        path.display().to_string()
+      }
+    })
+  }
+
+  fn strip_root(path: &Path, root: &Path) -> PathBuf {
+    let path_components: Vec<_> = path.components().collect();
+    let root_components: Vec<_> = root.components().collect();
+
+    let mut common_length = 0;
+    for (path_comp, root_comp) in path_components.iter().zip(root_components.iter()) {
+      if path_comp == root_comp {
+        common_length += 1;
+      } else {
+        break;
+      }
+    }
+
+    path_components.iter().skip(common_length).collect()
   }
 }
