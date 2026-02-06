@@ -3,14 +3,14 @@ mod label;
 mod margins;
 mod source_groups;
 
-use crate::Diag;
-use crate::emitters::Emitter;
-use crate::emitters::human_readable::chars::{Characters, ascii};
+use crate::emitters::human_readable::chars::{ascii, Characters};
 use crate::emitters::human_readable::label::{LabelInfo, LabelKind, LineLabel};
 use crate::emitters::human_readable::margins::{MarginContext, MarginLabelContext};
 use crate::emitters::human_readable::source_groups::SourceGroup;
+use crate::emitters::Emitter;
 use crate::fmt::Fmt as _;
 use crate::show::Show;
+use crate::Diag;
 use boron_source::line::Line;
 use boron_source::prelude::{SourceFile, Sources, Span};
 
@@ -88,6 +88,60 @@ struct LineRenderContext<'a> {
 }
 
 impl<'a> HumanReadableEmitter {
+  fn margin_context(
+    idx: usize,
+    is_line: bool,
+    is_ellipsis: bool,
+    line_no_width: usize,
+    multi_labels_with_message: &'a [&'a LabelInfo<'a>],
+    src: &'a SourceFile,
+  ) -> MarginContext<'a> {
+    MarginContext { idx, is_line, is_ellipsis, line_no_width, multi_labels_with_message, src }
+  }
+
+  fn label_context(
+    draw_labels: bool,
+    report_row: Option<(usize, bool)>,
+    line_labels: &'a [LineLabel<'a>],
+    margin_label: &'a Option<LineLabel<'a>>,
+  ) -> MarginLabelContext<'a> {
+    MarginLabelContext { draw_labels, report_row, line_labels, margin_label }
+  }
+
+  fn write_section_margin(
+    &self,
+    multi_labels_with_message: &'a [&'a LabelInfo<'a>],
+    src: &'a SourceFile,
+    line_no_width: usize,
+    w: &mut dyn Write,
+  ) -> anyhow::Result<()> {
+    let margin = Self::margin_context(0, false, false, line_no_width, multi_labels_with_message, src);
+    let labels = Self::label_context(true, Some((0, false)), &[], &None);
+    Ok(self.write_margin(w, &margin, &labels)?)
+  }
+
+  fn write_margin_from_ctx(
+    &self,
+    ctx: &LineRenderContext<'a>,
+    is_line: bool,
+    draw_labels: bool,
+    report_row: Option<(usize, bool)>,
+    line_labels: &'a [LineLabel<'a>],
+    margin_label: &'a Option<LineLabel<'a>>,
+    w: &mut dyn Write,
+  ) -> anyhow::Result<()> {
+    let margin = Self::margin_context(
+      ctx.idx,
+      is_line,
+      ctx.is_ellipsis,
+      ctx.line_no_width,
+      ctx.multi_labels_with_message,
+      ctx.src,
+    );
+    let labels = Self::label_context(draw_labels, report_row, line_labels, margin_label);
+    Ok(self.write_margin(w, &margin, &labels)?)
+  }
+
   fn write_header(diag: &Diag, w: &mut dyn Write) -> anyhow::Result<()> {
     let code = diag.code.as_ref().map(|c| format!("[{c}] "));
     let id = format!("{}{}:", Show(code), diag.level.name());
@@ -390,22 +444,16 @@ impl<'a> HumanReadableEmitter {
       .iter()
       .any(|label| label.char_span.contains(&ctx.line.span().start()));
 
-    if !ctx.is_ellipsis && within_label {
-    } else if !ctx.is_ellipsis {
-      let margin = MarginContext {
-        idx: ctx.idx,
-        is_line: false,
-        is_ellipsis: ctx.is_ellipsis,
-        line_no_width: ctx.line_no_width,
-        multi_labels_with_message: ctx.multi_labels_with_message,
-        src: ctx.src,
-      };
-      let labels = MarginLabelContext {
-        draw_labels: false,
-        report_row: None,
-        line_labels: &[],
-        margin_label: &None,
-      };
+    if !ctx.is_ellipsis && !within_label {
+      let margin = Self::margin_context(
+        ctx.idx,
+        false,
+        ctx.is_ellipsis,
+        ctx.line_no_width,
+        ctx.multi_labels_with_message,
+        ctx.src,
+      );
+      let labels = Self::label_context(false, None, &[], &None);
       self.write_margin(w, &margin, &labels)?;
       writeln!(w)?;
     }
@@ -418,21 +466,15 @@ impl<'a> HumanReadableEmitter {
     w: &mut dyn Write,
   ) -> anyhow::Result<()> {
     // Write margin and source line
-    let margin = MarginContext {
-      idx: ctx.idx,
-      is_line: true,
-      is_ellipsis: ctx.is_ellipsis,
-      line_no_width: ctx.line_no_width,
-      multi_labels_with_message: ctx.multi_labels_with_message,
-      src: ctx.src,
-    };
-    let labels = MarginLabelContext {
-      draw_labels: true,
-      report_row: None,
-      line_labels: ctx.line_labels,
-      margin_label: ctx.margin_label,
-    };
-    self.write_margin(w, &margin, &labels)?;
+    self.write_margin_from_ctx(
+      ctx,
+      true,
+      true,
+      None,
+      ctx.line_labels,
+      ctx.margin_label,
+      w,
+    )?;
 
     if !ctx.is_ellipsis {
       for (col, c) in ctx
@@ -481,10 +523,7 @@ impl<'a> HumanReadableEmitter {
         continue;
       }
 
-      // First arrow line (underlines)
       self.write_arrow_underline_row(ctx, row, arrow_len, w)?;
-
-      // Second arrow line (horizontal bars and message)
       self.write_arrow_message_row(ctx, line_label, row, arrow_len, w)?;
     }
 
@@ -500,21 +539,15 @@ impl<'a> HumanReadableEmitter {
   ) -> anyhow::Result<()> {
     let draw = &self.characters;
 
-    let margin = MarginContext {
-      idx: ctx.idx,
-      is_line: false,
-      is_ellipsis: ctx.is_ellipsis,
-      line_no_width: ctx.line_no_width,
-      multi_labels_with_message: ctx.multi_labels_with_message,
-      src: ctx.src,
-    };
-    let labels = MarginLabelContext {
-      draw_labels: true,
-      report_row: Some((row, false)),
-      line_labels: ctx.line_labels,
-      margin_label: ctx.margin_label,
-    };
-    self.write_margin(w, &margin, &labels)?;
+    self.write_margin_from_ctx(
+      ctx,
+      false,
+      true,
+      Some((row, false)),
+      ctx.line_labels,
+      ctx.margin_label,
+      w,
+    )?;
 
     let mut chars = ctx
       .src
@@ -570,21 +603,15 @@ impl<'a> HumanReadableEmitter {
   ) -> anyhow::Result<()> {
     let draw = &self.characters;
 
-    let margin = MarginContext {
-      idx: ctx.idx,
-      is_line: false,
-      is_ellipsis: ctx.is_ellipsis,
-      line_no_width: ctx.line_no_width,
-      multi_labels_with_message: ctx.multi_labels_with_message,
-      src: ctx.src,
-    };
-    let labels = MarginLabelContext {
-      draw_labels: true,
-      report_row: Some((row, true)),
-      line_labels: ctx.line_labels,
-      margin_label: ctx.margin_label,
-    };
-    self.write_margin(w, &margin, &labels)?;
+    self.write_margin_from_ctx(
+      ctx,
+      false,
+      true,
+      Some((row, true)),
+      ctx.line_labels,
+      ctx.margin_label,
+      w,
+    )?;
 
     let mut chars = ctx
       .src
@@ -710,21 +737,7 @@ impl<'a> HumanReadableEmitter {
     w: &mut dyn Write,
   ) -> anyhow::Result<()> {
     for (i, help) in diag.helps.iter().enumerate() {
-      let margin = MarginContext {
-        idx: 0,
-        is_line: false,
-        is_ellipsis: false,
-        line_no_width,
-        multi_labels_with_message,
-        src,
-      };
-      let labels = MarginLabelContext {
-        draw_labels: true,
-        report_row: Some((0, false)),
-        line_labels: &[],
-        margin_label: &None,
-      };
-      self.write_margin(w, &margin, &labels)?;
+      self.write_section_margin(multi_labels_with_message, src, line_no_width, w)?;
       writeln!(w)?;
 
       let help_prefix = format!("{} {}", "Help", i + 1);
@@ -752,21 +765,7 @@ impl<'a> HumanReadableEmitter {
     w: &mut dyn Write,
   ) -> anyhow::Result<()> {
     for (i, note) in diag.notes.iter().enumerate() {
-      let margin = MarginContext {
-        idx: 0,
-        is_line: false,
-        is_ellipsis: false,
-        line_no_width,
-        multi_labels_with_message,
-        src,
-      };
-      let labels = MarginLabelContext {
-        draw_labels: true,
-        report_row: Some((0, false)),
-        line_labels: &[],
-        margin_label: &None,
-      };
-      self.write_margin(w, &margin, &labels)?;
+      self.write_section_margin(multi_labels_with_message, src, line_no_width, w)?;
       writeln!(w)?;
 
       let note_prefix = format!("{} {}", "Note", i + 1);
@@ -797,40 +796,12 @@ impl<'a> HumanReadableEmitter {
   ) -> anyhow::Result<()> {
     let mut lines = text.lines();
     if let Some(line) = lines.next() {
-      let margin = MarginContext {
-        idx: 0,
-        is_line: false,
-        is_ellipsis: false,
-        line_no_width,
-        multi_labels_with_message,
-        src,
-      };
-      let labels = MarginLabelContext {
-        draw_labels: true,
-        report_row: Some((0, false)),
-        line_labels: &[],
-        margin_label: &None,
-      };
-      self.write_margin(w, &margin, &labels)?;
+      self.write_section_margin(multi_labels_with_message, src, line_no_width, w)?;
       writeln!(w, "{}: {}", prefix.fg(self.note_color()), line)?;
     }
 
     for line in lines {
-      let margin = MarginContext {
-        idx: 0,
-        is_line: false,
-        is_ellipsis: false,
-        line_no_width,
-        multi_labels_with_message,
-        src,
-      };
-      let labels = MarginLabelContext {
-        draw_labels: true,
-        report_row: Some((0, false)),
-        line_labels: &[],
-        margin_label: &None,
-      };
-      self.write_margin(w, &margin, &labels)?;
+      self.write_section_margin(multi_labels_with_message, src, line_no_width, w)?;
       writeln!(w, "{:>pad$}{}", "", line, pad = prefix_len + 2)?;
     }
     Ok(())
