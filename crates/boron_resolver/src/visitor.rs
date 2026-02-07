@@ -1,4 +1,3 @@
-use crate::DefId;
 use crate::builtin_kind::BuiltInKind;
 use crate::def::{DefKind, Definition};
 use crate::errors::{
@@ -9,7 +8,7 @@ use crate::module_resolver::ModuleResolver;
 use crate::resolver::Resolver;
 use crate::scope::ScopeKind;
 use crate::symbol::{Symbol, SymbolKind};
-use boron_parser::ast::ProgramNode;
+use crate::DefId;
 use boron_parser::ast::expressions::{Expr, ExprKind};
 use boron_parser::ast::items::{
   ConstItem, EnumItem, FunctionItem, Item, ItemKind, ModItem, StructItem, Visibility,
@@ -17,6 +16,7 @@ use boron_parser::ast::items::{
 use boron_parser::ast::params::Param;
 use boron_parser::ast::statements::{Block, Statement};
 use boron_parser::ast::types::Type;
+use boron_parser::ast::ProgramNode;
 use boron_parser::import::ImportDecl;
 use boron_parser::module::Modules;
 use boron_parser::{
@@ -25,7 +25,7 @@ use boron_parser::{
 };
 use boron_source::prelude::{SourceFileId, Span};
 use boron_utils::context::Context;
-use boron_utils::prelude::{Identifier, debug};
+use boron_utils::prelude::{debug, get_or_intern, Identifier};
 use dashmap::DashMap;
 
 #[derive(Clone, Debug, Copy, Hash, PartialEq, Eq)]
@@ -141,9 +141,8 @@ impl<'a> ResolveVisitor<'a> {
     binding: Identifier,
     import: &ImportDecl,
   ) {
-    let name = binding.text();
     let def = Definition::new(
-      name.clone(),
+      binding,
       import.id,
       target_file,
       DefKind::Module,
@@ -152,13 +151,13 @@ impl<'a> ResolveVisitor<'a> {
     );
     let def_id = self.resolver().add_definition(def);
 
-    self.module_resolver.define_value(name.clone(), def_id);
-    self.module_resolver.define_type(name.clone(), def_id);
+    self.module_resolver.define_value(binding, def_id);
+    self.module_resolver.define_type(binding, def_id);
 
     self.resolver().symbols.record_resolution(import.id, def_id);
 
     if let Some(scope_id) = self.module_resolver.current_scope() {
-      let symbol = Symbol::new(name, def_id, SymbolKind::Module, scope_id);
+      let symbol = Symbol::new(binding, def_id, SymbolKind::Module, scope_id);
       self.resolver().symbols.insert(symbol);
     }
   }
@@ -170,11 +169,7 @@ impl<'a> ResolveVisitor<'a> {
     import: &ImportDecl,
   ) {
     for spec in specs {
-      let (orig_name, local_name) = {
-        let orig = spec.name.text();
-        let local = spec.alias.as_ref().map(|a| a.text()).unwrap_or_else(|| orig.clone());
-        (orig, local)
-      };
+      let (orig_name, local_name) = (spec.name, spec.alias.unwrap_or(spec.name));
 
       let mut last_def = None;
       let mut recorded = false;
@@ -231,9 +226,12 @@ impl<'a> ResolveVisitor<'a> {
     }
   }
 
-  fn define_public_exports<F>(&mut self, exports: &DashMap<String, DefId>, mut define: F)
-  where
-    F: FnMut(&mut ModuleResolver<'a>, String, DefId),
+  fn define_public_exports<F>(
+    &mut self,
+    exports: &DashMap<Identifier, DefId>,
+    mut define: F,
+  ) where
+    F: FnMut(&mut ModuleResolver<'a>, Identifier, DefId),
   {
     for entry in exports.iter() {
       let name = entry.key().clone();
@@ -248,11 +246,11 @@ impl<'a> ResolveVisitor<'a> {
 
   fn handle_import_resolution(
     &mut self,
-    local_name: &str,
+    local_name: &Identifier,
     spec_id: NodeId,
     def_id: DefId,
     recorded: &mut bool,
-    define: fn(&mut ModuleResolver<'a>, String, DefId),
+    define: fn(&mut ModuleResolver<'a>, Identifier, DefId),
   ) {
     define(&mut self.module_resolver, local_name.to_owned(), def_id);
     if !*recorded {
@@ -287,7 +285,7 @@ impl<'a> ResolveVisitor<'a> {
 
   fn define_item(
     &mut self,
-    name: String,
+    name: Identifier,
     node_id: NodeId,
     kind: DefKind,
     span: Span,
@@ -337,7 +335,7 @@ impl<'a> ResolveVisitor<'a> {
   }
   fn define_function(&mut self, func: &FunctionItem, vis: Visibility) {
     self.define_item(
-      func.name.text(),
+      func.name,
       func.id,
       DefKind::Function,
       *func.name.span(),
@@ -347,9 +345,9 @@ impl<'a> ResolveVisitor<'a> {
 
     for param in &func.params {
       let (name, id, span) = match param {
-        Param::Regular(reg) => (reg.name.text(), reg.id, reg.span),
-        Param::Variadic(var) => (var.name.text(), var.id, var.span),
-        Param::SelfParam(s) => ("self".to_owned(), s.id, s.span),
+        Param::Regular(reg) => (reg.name, reg.id, reg.span),
+        Param::Variadic(var) => (var.name, var.id, var.span),
+        Param::SelfParam(s) => (get_or_intern("self", Some(s.span)), s.id, s.span),
       };
 
       let def =
@@ -361,14 +359,7 @@ impl<'a> ResolveVisitor<'a> {
   }
 
   fn define_struct(&mut self, s: &StructItem, vis: Visibility) {
-    self.define_item(
-      s.name.text(),
-      s.id,
-      DefKind::Struct,
-      *s.name.span(),
-      vis,
-      Namespace::Type,
-    );
+    self.define_item(s.name, s.id, DefKind::Struct, *s.name.span(), vis, Namespace::Type);
 
     for member in &s.members {
       if let StructMember::Item(i) = member {
@@ -378,53 +369,33 @@ impl<'a> ResolveVisitor<'a> {
   }
 
   fn define_enum(&mut self, e: &EnumItem, vis: Visibility) {
-    self.define_item(
-      e.name.text(),
-      e.id,
-      DefKind::Enum,
-      *e.name.span(),
-      vis,
-      Namespace::Type,
-    );
+    self.define_item(e.name, e.id, DefKind::Enum, *e.name.span(), vis, Namespace::Type);
   }
 
   fn define_const(&mut self, c: &ConstItem, vis: Visibility) {
-    self.define_item(
-      c.name.text(),
-      c.id,
-      DefKind::Const,
-      *c.name.span(),
-      vis,
-      Namespace::Value,
-    );
+    self.define_item(c.name, c.id, DefKind::Const, *c.name.span(), vis, Namespace::Value);
   }
 
   fn define_mod(&mut self, m: &ModItem, vis: Visibility) {
-    let name = m.name.text();
+    let name = m.name;
     let span = *m.name.span();
 
-    let def = Definition::new(
-      String::new(), // TODO: could be the stringified module path
-      m.id,
-      self.current_file(),
-      DefKind::Module,
-      span,
-      vis,
-    );
+    let def =
+      Definition::new(name, m.id, self.current_file(), DefKind::Module, span, vis);
     let def_id = self.resolver().add_definition(def);
 
-    self.module_resolver.define_value(name.clone(), def_id);
-    self.module_resolver.define_type(name.clone(), def_id);
+    self.module_resolver.define_value(name, def_id);
+    self.module_resolver.define_type(name, def_id);
 
     self.resolver().symbols.record_resolution(m.id, def_id);
 
     if let Some(scope_id) = self.module_resolver.current_scope() {
-      let symbol = Symbol::new(name.clone(), def_id, SymbolKind::Module, scope_id);
+      let symbol = Symbol::new(name, def_id, SymbolKind::Module, scope_id);
       self.resolver().symbols.insert(symbol);
     }
 
     if matches!(vis, Visibility::Public(_)) && self.module_resolver.is_at_module_scope() {
-      self.module_resolver.export_value(name.clone(), def_id);
+      self.module_resolver.export_value(name, def_id);
       self.module_resolver.export_type(name, def_id);
     }
 
@@ -438,31 +409,21 @@ impl<'a> ResolveVisitor<'a> {
   fn collect_inline_mod_item(&mut self, item: &Item, module_def_id: DefId) {
     let (name, node_id, def_kind, span, namespace) = match &item.kind {
       ItemKind::Function(f) => {
-        (f.name.text(), f.id, DefKind::Function, *f.name.span(), Namespace::Value)
+        (f.name, f.id, DefKind::Function, *f.name.span(), Namespace::Value)
       }
       ItemKind::Struct(s) => {
-        (s.name.text(), s.id, DefKind::Struct, *s.name.span(), Namespace::Type)
+        (s.name, s.id, DefKind::Struct, *s.name.span(), Namespace::Type)
       }
-      ItemKind::Enum(e) => {
-        (e.name.text(), e.id, DefKind::Enum, *e.name.span(), Namespace::Type)
-      }
+      ItemKind::Enum(e) => (e.name, e.id, DefKind::Enum, *e.name.span(), Namespace::Type),
       ItemKind::Const(c) => {
-        (c.name.text(), c.id, DefKind::Const, *c.name.span(), Namespace::Value)
+        (c.name, c.id, DefKind::Const, *c.name.span(), Namespace::Value)
       }
       ItemKind::Mod(m) => {
         self.define_mod(m, item.visibility);
         if matches!(item.visibility, Visibility::Public(_)) {
-          if let Some(nested_def_id) = self.module_resolver.lookup_value(&m.name.text()) {
-            self.resolver().export_inline_value(
-              module_def_id,
-              m.name.text(),
-              nested_def_id,
-            );
-            self.resolver().export_inline_type(
-              module_def_id,
-              m.name.text(),
-              nested_def_id,
-            );
+          if let Some(nested_def_id) = self.module_resolver.lookup_value(&m.name) {
+            self.resolver().export_inline_value(module_def_id, m.name, nested_def_id);
+            self.resolver().export_inline_type(module_def_id, m.name, nested_def_id);
           }
         }
         return;
@@ -470,7 +431,7 @@ impl<'a> ResolveVisitor<'a> {
     };
 
     if let Some(def_id) =
-      self.define_item(name.clone(), node_id, def_kind, span, item.visibility, namespace)
+      self.define_item(name, node_id, def_kind, span, item.visibility, namespace)
     {
       if matches!(item.visibility, Visibility::Public(_)) {
         match namespace {
@@ -515,15 +476,14 @@ impl<'a> ResolveVisitor<'a> {
   }
 
   fn resolve_function(&mut self, func: &FunctionItem, item: &Item) {
-    let func_def = self.module_resolver.lookup_value(&func.name.text());
+    let func_def = self.module_resolver.lookup_value(&func.name);
     self.module_resolver.enter_scope(ScopeKind::Function, func_def);
 
     if let Some(generics) = &func.generics {
       for param in &generics.params {
-        let name = param.name.text();
         let span = *param.name.span();
         let def = Definition::new(
-          name.clone(),
+          param.name,
           param.id,
           self.current_file(),
           DefKind::TypeParam,
@@ -532,7 +492,7 @@ impl<'a> ResolveVisitor<'a> {
         );
         let def_id = self.resolver().add_definition(def);
         self.resolver().symbols.record_resolution(param.id, def_id);
-        self.module_resolver.define_type(name, def_id);
+        self.module_resolver.define_type(param.name, def_id);
       }
     }
 
@@ -562,15 +522,14 @@ impl<'a> ResolveVisitor<'a> {
   }
 
   fn resolve_struct(&mut self, s: &StructItem, item: &Item) {
-    let struct_def = self.module_resolver.lookup_type(&s.name.text());
+    let struct_def = self.module_resolver.lookup_type(&s.name);
     self.module_resolver.enter_scope(ScopeKind::Struct, struct_def);
 
     if let Some(generics) = &s.generics {
       for param in &generics.params {
-        let name = param.name.text();
         let span = *param.name.span();
         let def = Definition::new(
-          name.clone(),
+          param.name,
           param.id,
           self.current_file(),
           DefKind::TypeParam,
@@ -579,7 +538,7 @@ impl<'a> ResolveVisitor<'a> {
         );
         let def_id = self.resolver().add_definition(def);
         self.resolver().symbols.record_resolution(param.id, def_id);
-        self.module_resolver.define_type(name, def_id);
+        self.module_resolver.define_type(param.name, def_id);
       }
     }
 
@@ -596,15 +555,14 @@ impl<'a> ResolveVisitor<'a> {
   }
 
   fn resolve_enum(&mut self, e: &EnumItem, item: &Item) {
-    let enum_def = self.module_resolver.lookup_type(&e.name.text());
+    let enum_def = self.module_resolver.lookup_type(&e.name);
     self.module_resolver.enter_scope(ScopeKind::Enum, enum_def);
 
     if let Some(generics) = &e.generics {
       for param in &generics.params {
-        let name = param.name.text();
         let span = *param.name.span();
         let def = Definition::new(
-          name.clone(),
+          param.name,
           param.id,
           self.current_file(),
           DefKind::TypeParam,
@@ -613,7 +571,7 @@ impl<'a> ResolveVisitor<'a> {
         );
         let def_id = self.resolver().add_definition(def);
         self.resolver().symbols.record_resolution(param.id, def_id);
-        self.module_resolver.define_type(name, def_id);
+        self.module_resolver.define_type(param.name, def_id);
       }
     }
 
@@ -645,7 +603,7 @@ impl<'a> ResolveVisitor<'a> {
   }
 
   fn resolve_mod(&mut self, m: &ModItem) {
-    let mod_def = self.module_resolver.lookup_value(&m.name.text());
+    let mod_def = self.module_resolver.lookup_value(&m.name);
     self.module_resolver.enter_scope(ScopeKind::Module, mod_def);
 
     for item in &m.items {
@@ -677,7 +635,7 @@ impl<'a> ResolveVisitor<'a> {
         let name = var.name.text();
         let span = *var.name.span();
         let def = Definition::new(
-          name.clone(),
+          var.name,
           var.id,
           self.current_file(),
           DefKind::Local,
@@ -685,7 +643,7 @@ impl<'a> ResolveVisitor<'a> {
           Visibility::Public(Span::dummy()),
         );
         let def_id = self.resolver().add_definition(def);
-        self.module_resolver.define_value(name, def_id);
+        self.module_resolver.define_value(var.name, def_id);
       }
       Statement::ConstDecl(c) => {
         self.resolve_expr(&c.value);
@@ -693,10 +651,9 @@ impl<'a> ResolveVisitor<'a> {
           self.resolve_type(ty);
         }
 
-        let name = c.name.text();
         let span = *c.name.span();
         let def = Definition::new(
-          name.clone(),
+          c.name,
           c.id,
           self.current_file(),
           DefKind::Const,
@@ -704,7 +661,7 @@ impl<'a> ResolveVisitor<'a> {
           Visibility::Public(Span::dummy()),
         );
         let def_id = self.resolver().add_definition(def);
-        self.module_resolver.define_value(name, def_id);
+        self.module_resolver.define_value(c.name, def_id);
       }
       Statement::Expr(expr_stmt) => {
         self.resolve_expr(&expr_stmt.expr);
@@ -749,7 +706,7 @@ impl<'a> ResolveVisitor<'a> {
     }
 
     if path.segments.len() == 1 {
-      let name = path.segments[0].identifier.text();
+      let name = path.segments[0].identifier;
 
       if let Some(def_id) = self
         .module_resolver
@@ -764,7 +721,7 @@ impl<'a> ResolveVisitor<'a> {
     }
 
     let first = &path.segments[0];
-    let first_name = first.identifier.text();
+    let first_name = first.identifier;
 
     let Some(mut current_def) = self
       .module_resolver
@@ -779,7 +736,7 @@ impl<'a> ResolveVisitor<'a> {
     };
 
     for segment in &path.segments[1..] {
-      let seg_name = segment.identifier.text();
+      let seg_name = segment.identifier;
       let Some(def) = self.resolver().get_definition(current_def) else {
         return;
       };
@@ -918,10 +875,9 @@ impl<'a> ResolveVisitor<'a> {
         self.resolve_expr(&for_expr.iterator);
         self.module_resolver.enter_scope(ScopeKind::Loop, None);
 
-        let name = for_expr.binding.text();
         let span = *for_expr.binding.span();
         let def = Definition::new(
-          name.clone(),
+          for_expr.binding,
           for_expr.id,
           self.current_file(),
           DefKind::Local,
@@ -929,7 +885,7 @@ impl<'a> ResolveVisitor<'a> {
           Visibility::Public(Span::dummy()),
         );
         let def_id = self.resolver().add_definition(def);
-        self.module_resolver.define_value(name, def_id);
+        self.module_resolver.define_value(for_expr.binding, def_id);
 
         self.resolve_block(&for_expr.body);
         self.module_resolver.leave_scope();

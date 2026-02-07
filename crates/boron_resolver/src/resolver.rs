@@ -7,6 +7,7 @@ use crate::symbol::SymbolTable;
 use boron_parser::module::Modules;
 use boron_parser::{NodeId, Path};
 use boron_source::prelude::SourceFileId;
+use boron_utils::ident_table::Identifier;
 use dashmap::DashMap;
 use parking_lot::RwLock;
 
@@ -25,13 +26,13 @@ pub struct Resolver {
   /// Path to `SourceFileId` mapping
   pub path_to_files: DashMap<NodeId, SourceFileId>,
   /// Per-file exported symbols for cross-module resolution
-  pub module_exports_values: DashMap<SourceFileId, DashMap<String, DefId>>,
+  pub module_exports_values: DashMap<SourceFileId, DashMap<Identifier, DefId>>,
   /// Per-file exported symbols for cross-module resolution
-  pub module_exports_types: DashMap<SourceFileId, DashMap<String, DefId>>,
+  pub module_exports_types: DashMap<SourceFileId, DashMap<Identifier, DefId>>,
   /// Per-DefId exported symbols for inline modules
-  pub inline_module_exports_values: DashMap<DefId, DashMap<String, DefId>>,
+  pub inline_module_exports_values: DashMap<DefId, DashMap<Identifier, DefId>>,
   /// Per-DefId exported symbols for inline modules
-  pub inline_module_exports_types: DashMap<DefId, DashMap<String, DefId>>,
+  pub inline_module_exports_types: DashMap<DefId, DashMap<Identifier, DefId>>,
   module_ribs: DashMap<SourceFileId, RwLock<(ScopeId, Rib)>>,
   pub comptime_using_builtins: DashMap<NodeId, BuiltInKind>,
 }
@@ -111,7 +112,7 @@ impl Resolver {
     self.module_ribs.get(&file).map(|entry| entry.read().clone())
   }
 
-  pub fn export_value(&self, module: SourceFileId, name: String, def_id: DefId) {
+  pub fn export_value(&self, module: SourceFileId, name: Identifier, def_id: DefId) {
     self
       .module_exports_values
       .entry(module)
@@ -119,7 +120,7 @@ impl Resolver {
       .insert(name, def_id);
   }
 
-  pub fn export_type(&self, module: SourceFileId, name: String, def_id: DefId) {
+  pub fn export_type(&self, module: SourceFileId, name: Identifier, def_id: DefId) {
     self
       .module_exports_types
       .entry(module)
@@ -127,18 +128,26 @@ impl Resolver {
       .insert(name, def_id);
   }
 
-  pub fn lookup_module_value(&self, module: SourceFileId, name: &str) -> Option<DefId> {
+  pub fn lookup_module_value(
+    &self,
+    module: SourceFileId,
+    name: &Identifier,
+  ) -> Option<DefId> {
     let exports = self.module_exports_values.get(&module)?;
     exports.get(name).map(|r| *r)
   }
 
-  pub fn lookup_module_type(&self, module: SourceFileId, name: &str) -> Option<DefId> {
+  pub fn lookup_module_type(
+    &self,
+    module: SourceFileId,
+    name: &Identifier,
+  ) -> Option<DefId> {
     let exports = self.module_exports_types.get(&module)?;
     exports.get(name).map(|r| *r)
   }
 
   /// Export a value from an inline module (mod foo { ... })
-  pub fn export_inline_value(&self, module_def: DefId, name: String, def_id: DefId) {
+  pub fn export_inline_value(&self, module_def: DefId, name: Identifier, def_id: DefId) {
     self
       .inline_module_exports_values
       .entry(module_def)
@@ -147,7 +156,7 @@ impl Resolver {
   }
 
   /// Export a type from an inline module (mod foo { ... })
-  pub fn export_inline_type(&self, module_def: DefId, name: String, def_id: DefId) {
+  pub fn export_inline_type(&self, module_def: DefId, name: Identifier, def_id: DefId) {
     self
       .inline_module_exports_types
       .entry(module_def)
@@ -159,7 +168,7 @@ impl Resolver {
   pub fn lookup_inline_module_value(
     &self,
     module_def: DefId,
-    name: &str,
+    name: &Identifier,
   ) -> Option<DefId> {
     let exports = self.inline_module_exports_values.get(&module_def)?;
     exports.get(name).map(|r| *r)
@@ -169,7 +178,7 @@ impl Resolver {
   pub fn lookup_inline_module_type(
     &self,
     module_def: DefId,
-    name: &str,
+    name: &Identifier,
   ) -> Option<DefId> {
     let exports = self.inline_module_exports_types.get(&module_def)?;
     exports.get(name).map(|r| *r)

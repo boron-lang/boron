@@ -1,11 +1,12 @@
 use boron_diagnostic_macro::Diagnostic;
 use boron_source::span::Span;
+use boron_utils::ident_table::Identifier;
 
 #[derive(Diagnostic)]
 #[error("cannot find `{name}` in this scope")]
 #[code(RESOLVE_UNDEFINED_NAME)]
 pub struct UndefinedName {
-  pub name: String,
+  pub name: Identifier,
   #[error("not found in this scope")]
   pub span: Span,
 }
@@ -14,7 +15,7 @@ pub struct UndefinedName {
 #[error("cannot find `{name}` in module `{module_name}`")]
 #[code(RESOLVE_UNDEFINED_NAME_IN_MODULE)]
 pub struct UndefinedNameInModule {
-  pub name: String,
+  pub name: Identifier,
   pub module_name: String,
   #[error("not found in `{module_name}`")]
   pub span: Span,
@@ -24,7 +25,7 @@ pub struct UndefinedNameInModule {
 #[error("cannot find type `{name}` in this scope")]
 #[code(RESOLVE_UNDEFINED_TYPE)]
 pub struct UndefinedType {
-  pub name: String,
+  pub name: Identifier,
   #[error("not found in this scope")]
   pub span: Span,
 }
@@ -34,7 +35,7 @@ pub struct UndefinedType {
 #[code(RESOLVE_DUPLICATE_DEFINITION)]
 #[help("consider renaming one of the definitions")]
 pub struct DuplicateDefinition {
-  pub name: String,
+  pub name: Identifier,
   #[error("redefined here")]
   pub span: Span,
   #[error("previous definition here")]
@@ -64,7 +65,7 @@ pub struct CyclicImport {
 #[error("`{name}` exists, but it's private")]
 #[code(RESOLVE_PRIVATE_ITEM)]
 pub struct PrivateItem {
-  pub name: String,
+  pub name: Identifier,
   #[error("private item accessed here")]
   pub span: Span,
 }

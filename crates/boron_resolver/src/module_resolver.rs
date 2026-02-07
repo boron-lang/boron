@@ -3,6 +3,7 @@ use crate::resolver::Resolver;
 use crate::ribs::{Rib, RibKind};
 use crate::scope::{ScopeId, ScopeKind};
 use boron_source::prelude::SourceFileId;
+use boron_utils::prelude::Identifier;
 
 /// This holds the mutable state needed during resolution of a single module.
 pub struct ModuleResolver<'a> {
@@ -58,19 +59,19 @@ impl<'a> ModuleResolver<'a> {
     self.current_scope
   }
 
-  pub fn define_value(&mut self, name: String, def_id: DefId) {
+  pub fn define_value(&mut self, name: Identifier, def_id: DefId) {
     if let Some(rib) = self.rib_stack.last_mut() {
       rib.define_value(name, def_id);
     }
   }
 
-  pub fn define_type(&mut self, name: String, def_id: DefId) {
+  pub fn define_type(&mut self, name: Identifier, def_id: DefId) {
     if let Some(rib) = self.rib_stack.last_mut() {
       rib.define_type(name, def_id);
     }
   }
 
-  pub fn lookup_value(&self, name: &str) -> Option<DefId> {
+  pub fn lookup_value(&self, name: &Identifier) -> Option<DefId> {
     for rib in self.rib_stack.iter().rev() {
       if !rib.kind.allows_value_lookup() {
         continue;
@@ -82,7 +83,7 @@ impl<'a> ModuleResolver<'a> {
     None
   }
 
-  pub fn lookup_type(&self, name: &str) -> Option<DefId> {
+  pub fn lookup_type(&self, name: &Identifier) -> Option<DefId> {
     for rib in self.rib_stack.iter().rev() {
       if let Some(def_id) = rib.lookup_type(name) {
         return Some(def_id);
@@ -116,11 +117,11 @@ impl<'a> ModuleResolver<'a> {
     }
   }
 
-  pub fn export_value(&self, name: String, def_id: DefId) {
+  pub fn export_value(&self, name: Identifier, def_id: DefId) {
     self.resolver.export_value(self.current_file, name, def_id);
   }
 
-  pub fn export_type(&self, name: String, def_id: DefId) {
+  pub fn export_type(&self, name: Identifier, def_id: DefId) {
     self.resolver.export_type(self.current_file, name, def_id);
   }
 }

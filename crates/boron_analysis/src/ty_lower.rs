@@ -6,8 +6,6 @@ use crate::{InferTy, TyChecker, TypeEnv};
 use boron_hir::ty::ArrayLen;
 use boron_hir::{GenericParamKind, Generics, Ty, TyKind};
 use boron_resolver::DefKind;
-use boron_source::prelude::Span;
-use boron_utils::prelude::Identifier;
 
 impl TyChecker<'_> {
   pub fn lower_hir_ty(&self, ty: &Ty) -> InferTy {
@@ -20,8 +18,8 @@ impl TyChecker<'_> {
         {
           return InferTy::Param(TyParam {
             def_id: *def_id,
-            span: Span::dummy(), // todo: span
-            name: Identifier::new(&def.name, Span::dummy()),
+            span: def.span,
+            name: def.name,
           });
         }
 

@@ -1,7 +1,7 @@
 use boron_parser::ast::NodeId;
 use boron_source::new_id;
 use boron_source::prelude::SourceFileId;
-use boron_utils::prelude::Span;
+use boron_utils::prelude::{Identifier, Span};
 use std::fmt::{Display, Formatter};
 use boron_parser::Visibility;
 
@@ -10,7 +10,7 @@ new_id!(DefId);
 /// A definition in the program is the "thing" that a name refers to.
 #[derive(Debug, Clone)]
 pub struct Definition {
-  pub name: String,
+  pub name: Identifier,
   pub id: DefId,
   /// original ast node
   pub node_id: NodeId,
@@ -22,8 +22,7 @@ pub struct Definition {
 
 impl Definition {
   pub fn new(
-    // TODO: this probably should be an identifier
-    name: String,
+    name: Identifier,
     node_id: NodeId,
     source_file: SourceFileId,
     kind: DefKind,

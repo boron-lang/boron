@@ -1,14 +1,15 @@
 use crate::def::DefId;
 use crate::scope::ScopeId;
+use boron_utils::prelude::{get_or_intern, Identifier};
 use std::collections::HashMap;
+use boron_source::span::Span;
 
-/// A rib contains bindings introduced in a particular context.
 #[derive(Debug, Clone)]
 pub struct Rib {
   pub scope_id: ScopeId,
   pub kind: RibKind,
-  pub values: HashMap<String, DefId>,
-  pub types: HashMap<String, DefId>,
+  pub values: HashMap<Identifier, DefId>,
+  pub types: HashMap<Identifier, DefId>,
 }
 
 impl Rib {
@@ -16,17 +17,17 @@ impl Rib {
     Self { scope_id, kind, values: HashMap::new(), types: HashMap::new() }
   }
 
-  pub fn define_value(&mut self, name: String, def_id: DefId) {
+  pub fn define_value(&mut self, name: Identifier, def_id: DefId) {
     self.values.insert(name, def_id);
   }
-  pub fn define_type(&mut self, name: String, def_id: DefId) {
+  pub fn define_type(&mut self, name: Identifier, def_id: DefId) {
     self.types.insert(name, def_id);
   }
 
-  pub fn lookup_value(&self, name: &str) -> Option<DefId> {
+  pub fn lookup_value(&self, name: &Identifier) -> Option<DefId> {
     self.values.get(name).copied()
   }
-  pub fn lookup_type(&self, name: &str) -> Option<DefId> {
+  pub fn lookup_type(&self, name: &Identifier) -> Option<DefId> {
     self.types.get(name).copied()
   }
 }

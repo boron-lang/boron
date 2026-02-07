@@ -2,10 +2,11 @@ use crate::def::DefId;
 use crate::scope::ScopeId;
 use boron_parser::ast::NodeId;
 use dashmap::DashMap;
+use boron_utils::prelude::Identifier;
 
 #[derive(Debug, Clone)]
 pub struct Symbol {
-  pub name: String,
+  pub name: Identifier,
   pub def_id: DefId,
   pub kind: SymbolKind,
   /// The scope where this symbol is visible.
@@ -13,7 +14,7 @@ pub struct Symbol {
 }
 
 impl Symbol {
-  pub fn new(name: String, def_id: DefId, kind: SymbolKind, scope_id: ScopeId) -> Self {
+  pub fn new(name: Identifier, def_id: DefId, kind: SymbolKind, scope_id: ScopeId) -> Self {
     Self { name, def_id, kind, scope_id }
   }
 }
@@ -28,11 +29,11 @@ pub enum SymbolKind {
 #[derive(Debug, Default)]
 pub struct SymbolTable {
   /// Maps (scope, name) -> Symbol for value namespace.
-  values: DashMap<(ScopeId, String), Symbol>,
+  values: DashMap<(ScopeId, Identifier), Symbol>,
   /// Maps (scope, name) -> Symbol for type namespace.
-  types: DashMap<(ScopeId, String), Symbol>,
+  types: DashMap<(ScopeId, Identifier), Symbol>,
   /// Maps (scope, name) -> Symbol for module namespace.
-  modules: DashMap<(ScopeId, String), Symbol>,
+  modules: DashMap<(ScopeId, Identifier), Symbol>,
   /// Maps `NodeId` -> `DefId` for quick lookup of what a node resolved to.
   pub resolutions: DashMap<NodeId, DefId>,
 }
@@ -57,27 +58,27 @@ impl SymbolTable {
     }
   }
 
-  pub fn lookup_value(&self, scope: ScopeId, name: &str) -> Option<Symbol> {
+  pub fn lookup_value(&self, scope: ScopeId, name: Identifier) -> Option<Symbol> {
     self.values.get(&(scope, name.to_owned())).map(|r| r.clone())
   }
 
-  pub fn lookup_type(&self, scope: ScopeId, name: &str) -> Option<Symbol> {
+  pub fn lookup_type(&self, scope: ScopeId, name: Identifier) -> Option<Symbol> {
     self.types.get(&(scope, name.to_owned())).map(|r| r.clone())
   }
 
-  pub fn lookup_module(&self, scope: ScopeId, name: &str) -> Option<Symbol> {
+  pub fn lookup_module(&self, scope: ScopeId, name: Identifier) -> Option<Symbol> {
     self.modules.get(&(scope, name.to_owned())).map(|r| r.clone())
   }
 
-  pub fn has_value(&self, scope: ScopeId, name: &str) -> bool {
+  pub fn has_value(&self, scope: ScopeId, name: Identifier) -> bool {
     self.values.contains_key(&(scope, name.to_owned()))
   }
 
-  pub fn has_type(&self, scope: ScopeId, name: &str) -> bool {
+  pub fn has_type(&self, scope: ScopeId, name: Identifier) -> bool {
     self.types.contains_key(&(scope, name.to_owned()))
   }
 
-  pub fn has_module(&self, scope: ScopeId, name: &str) -> bool {
+  pub fn has_module(&self, scope: ScopeId, name: Identifier) -> bool {
     self.modules.contains_key(&(scope, name.to_owned()))
   }
 
