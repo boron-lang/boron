@@ -1,0 +1,4 @@
+//#error: cannot find module `{}`
+import utils from used_by_resolver;
+
+func main() {}

@@ -1,0 +1,4 @@
+func main() {
+    //#error: cannot find `ty` in this scope
+    var test: ty = 10;
+}

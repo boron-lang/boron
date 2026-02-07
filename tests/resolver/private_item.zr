@@ -1,0 +1,10 @@
+mod used_by_resolver;
+
+import utils from used_by_resolver;
+//#error: `Vec3` exists, but it's private
+import { Vec3 } from used_by_resolver;
+
+func main() {
+    //#error: `Vec3` exists, but it's private
+    var val = utils::Vec3 { .x = 10.0, .y = 15.0, .z = 7.0 };
+}

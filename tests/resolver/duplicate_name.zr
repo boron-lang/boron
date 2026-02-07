@@ -1,0 +1,5 @@
+//#error: the name `Value` is defined multiple times
+struct Value;
+struct Value;
+
+func main() {}

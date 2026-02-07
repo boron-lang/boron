@@ -1,4 +1,4 @@
-pub struct Vec2<T> {
+struct Vec2<T> {
     x: T,
     y: T,
 
@@ -9,9 +9,4 @@ pub struct Vec2<T> {
 
 func identity<T>(value: T) -> T {
     return T;
-}
-
-func main() {
-    var test = identity(Vec2 { .x = 10.0, .y = 15.0 });
-    //var x = Vec2 { .x = 10, .y = 15 };
 }

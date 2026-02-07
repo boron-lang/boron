@@ -1,3 +1,5 @@
+mod vec;
+
 func main() {
-    10 = 20;
+    var vec = package::vec::Vec2 { .x = 10.0, .y = 15.0 };
 }

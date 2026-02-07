@@ -61,7 +61,7 @@ pub struct CyclicImport {
 }
 
 #[derive(Diagnostic)]
-#[error("`{name}` is private")]
+#[error("`{name}` exists, but it's private")]
 #[code(RESOLVE_PRIVATE_ITEM)]
 pub struct PrivateItem {
   pub name: String,

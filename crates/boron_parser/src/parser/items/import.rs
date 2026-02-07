@@ -8,16 +8,19 @@ impl Parser<'_> {
     let span = self.previous().span;
 
     let kind = match self.peek().kind {
-      TokenType::Star => ImportKind::Wildcard,
+      TokenType::Star => {
+        self.advance();
+        ImportKind::Wildcard
+      },
       TokenType::LeftBrace => {
         let mut specs = vec![];
         self.expect(TokenType::LeftBrace, "to open import list");
-
+        
         loop {
           if self.check(TokenType::RightBrace) || self.is_at_end() {
             break;
           }
-
+          let span = self.current_span();
           let name = self.parse_identifier();
 
           let alias = if self.check(TokenType::As) {

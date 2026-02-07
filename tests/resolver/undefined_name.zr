@@ -1,0 +1,4 @@
+func main() {
+    //#error: cannot find `y` in this scope
+    var x = y;
+}

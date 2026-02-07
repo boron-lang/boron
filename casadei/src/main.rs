@@ -7,16 +7,16 @@ mod test;
 use crate::app::{App, AppState};
 use crate::directives::LineDirection;
 use crate::output::{FailureType, TestResultPayload, TestStatus};
-use crate::runner::{TestRunner, run_single_test_in_process};
+use crate::runner::{run_single_test_in_process, TestRunner};
 use crate::test::Test;
-use boron_core::prelude::{Colorize, canonicalize_with_strip};
+use boron_core::prelude::{canonicalize_with_strip, Colorize};
 use boron_core::vars::FILE_EXTENSION;
 use color_eyre::owo_colors::OwoColorize;
 use glob::glob;
 use serde_json;
 use spinners::{Spinner, Spinners};
 use std::env;
-use std::io::{Write, stderr, stdout};
+use std::io::{stderr, stdout, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::thread::Builder;
@@ -155,8 +155,7 @@ fn parse_single_test_arg() -> Option<PathBuf> {
 fn build_compiler() {
   let mut spinner = Spinner::new(Spinners::Aesthetic, "Building compiler".to_string());
 
-  let output =
-    Command::new("cargo").arg("build").arg("-p").arg("boron").arg("--release").output();
+  let output = Command::new("cargo").arg("build").arg("-p").arg("boron").output();
 
   match output {
     Ok(output) if output.status.success() => {

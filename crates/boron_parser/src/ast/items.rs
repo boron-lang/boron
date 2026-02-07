@@ -22,6 +22,12 @@ pub enum Visibility {
   Private,
 }
 
+impl Visibility {
+  pub fn is_private(&self) -> bool {
+    matches!(self, Visibility::Private)
+  }
+}
+
 #[derive(Debug, Clone)]
 pub enum ItemKind {
   Const(ConstItem),

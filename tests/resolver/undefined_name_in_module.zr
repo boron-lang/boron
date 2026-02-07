@@ -1,0 +1,10 @@
+mod used_by_resolver;
+
+import utils from used_by_resolver;
+//#error: cannot find `Vec4` in module `used_by_resolver`
+import { Vec4 } from used_by_resolver;
+
+func main() {
+    //#error: cannot find `{}` in module `{}`
+    var val = utils::Value { .value = 10 };
+}
