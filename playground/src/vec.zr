@@ -1,12 +1,8 @@
-struct Vec2<T> {
+pub struct Vec2<T> {
     x: T,
     y: T,
 
     func new(x: T, y: T) -> Vec2<T> {
         Vec2 { .x, .y }
     }
-}
-
-func identity<T>(value: T) -> T {
-    return T;
 }

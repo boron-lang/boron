@@ -146,7 +146,7 @@ impl Resolver {
     exports.get(name).map(|r| *r)
   }
 
-  /// Export a value from an inline module (mod foo { ... })
+  /// Export a value from an inline module
   pub fn export_inline_value(&self, module_def: DefId, name: Identifier, def_id: DefId) {
     self
       .inline_module_exports_values
@@ -155,7 +155,7 @@ impl Resolver {
       .insert(name, def_id);
   }
 
-  /// Export a type from an inline module (mod foo { ... })
+  /// Export a type from an inline module
   pub fn export_inline_type(&self, module_def: DefId, name: Identifier, def_id: DefId) {
     self
       .inline_module_exports_types

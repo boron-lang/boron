@@ -1,8 +1,7 @@
 use crate::builtin_kind::BuiltInKind;
 use crate::def::{DefKind, Definition};
 use crate::errors::{
-  DuplicateDefinition, InvalidPathRoot, PrivateItem, UndefinedModule, UndefinedName,
-  UndefinedNameInModule,
+  DuplicateDefinition, InvalidPathRoot, PrivateItem, UndefinedName, UndefinedNameInModule,
 };
 use crate::module_resolver::ModuleResolver;
 use crate::resolver::Resolver;
@@ -17,16 +16,14 @@ use boron_parser::ast::params::Param;
 use boron_parser::ast::statements::{Block, Statement};
 use boron_parser::ast::types::Type;
 use boron_parser::ast::ProgramNode;
-use boron_parser::import::ImportDecl;
 use boron_parser::module::Modules;
 use boron_parser::{
-  ComptimeArg, ElseBranch, IfExpr, ImportKind, ImportSpec, NodeId, Path, StructMember,
+  ComptimeArg, ElseBranch, GenericParams, IfExpr, NodeId, Path, StructMember,
   VariantField, VariantPayload,
 };
 use boron_source::prelude::{SourceFileId, Span};
 use boron_utils::context::Context;
-use boron_utils::prelude::{debug, get_or_intern, Identifier};
-use dashmap::DashMap;
+use boron_utils::prelude::{get_or_intern, Identifier};
 
 #[derive(Clone, Debug, Copy, Hash, PartialEq, Eq)]
 pub enum Namespace {
@@ -78,7 +75,7 @@ impl<'a> ResolveVisitor<'a> {
     }
   }
 
-  fn current_file(&self) -> SourceFileId {
+  pub fn current_file(&self) -> SourceFileId {
     self.module_resolver.current_file
   }
 
@@ -94,169 +91,6 @@ impl<'a> ResolveVisitor<'a> {
     }
 
     self.module_resolver.save_module_rib();
-  }
-
-  fn collect_import(&self, import: &ImportDecl) {
-    let sess = self.ctx.session;
-
-    let current = sess.dcx().sources().get_unchecked(self.current_file());
-    let path = import.path.construct_file(sess.root(), current.path().clone());
-
-    let Some(path) = path else { todo!("add proper diagnostic") };
-
-    let importing_from = sess.dcx().sources().get_by_path(&path);
-
-    if let Some(source_id) = importing_from {
-      let src_id = *source_id.value();
-      self.resolver().add_path_mapping(&import.path, src_id);
-      self.resolver().add_import_edge(src_id, self.current_file());
-    } else {
-      self
-        .ctx
-        .dcx()
-        .emit(UndefinedModule { name: import.path.to_string(), span: import.path.span });
-    }
-  }
-
-  fn resolve_import(&mut self, import: &ImportDecl) {
-    let target_file = self.resolver().lookup_file_for_path(&import.path);
-
-    let Some(target_file) = target_file else {
-      debug!("skipping {import:?} because path couldn't be resolved");
-      return;
-    };
-
-    match &import.kind {
-      ImportKind::Wildcard => self.resolve_wildcard_import(target_file, import),
-      ImportKind::Items(items) => self.resolve_items_import(target_file, items, import),
-      ImportKind::Binding(name) => {
-        self.resolve_binding_import(target_file, *name, import);
-      }
-    }
-  }
-
-  fn resolve_binding_import(
-    &mut self,
-    target_file: SourceFileId,
-    binding: Identifier,
-    import: &ImportDecl,
-  ) {
-    let def = Definition::new(
-      binding,
-      import.id,
-      target_file,
-      DefKind::Module,
-      *binding.span(),
-      Visibility::Public(Span::dummy()),
-    );
-    let def_id = self.resolver().add_definition(def);
-
-    self.module_resolver.define_value(binding, def_id);
-    self.module_resolver.define_type(binding, def_id);
-
-    self.resolver().symbols.record_resolution(import.id, def_id);
-
-    if let Some(scope_id) = self.module_resolver.current_scope() {
-      let symbol = Symbol::new(binding, def_id, SymbolKind::Module, scope_id);
-      self.resolver().symbols.insert(symbol);
-    }
-  }
-
-  fn resolve_items_import(
-    &mut self,
-    target_file: SourceFileId,
-    specs: &Vec<ImportSpec>,
-    import: &ImportDecl,
-  ) {
-    for spec in specs {
-      let (orig_name, local_name) = (spec.name, spec.alias.unwrap_or(spec.name));
-
-      let mut last_def = None;
-      let mut recorded = false;
-
-      if let Some(def_id) = self.resolver().lookup_module_value(target_file, &orig_name) {
-        self.handle_import_resolution(
-          &local_name,
-          spec.id,
-          def_id,
-          &mut recorded,
-          ModuleResolver::define_value,
-        );
-        last_def = Some(def_id);
-      }
-
-      if let Some(def_id) = self.resolver().lookup_module_type(target_file, &orig_name) {
-        self.handle_import_resolution(
-          &local_name,
-          spec.id,
-          def_id,
-          &mut recorded,
-          ModuleResolver::define_type,
-        );
-        last_def = Some(def_id);
-      }
-
-      if let Some(def_id) = last_def {
-        let def = self.resolver().get_definition(def_id).expect("should exist");
-
-        if def.visibility.is_private() {
-          self.ctx.dcx().emit(PrivateItem { name: def.name, span: spec.span });
-        }
-      } else {
-        self.ctx.dcx().emit(UndefinedNameInModule {
-          name: orig_name,
-          span: spec.span,
-          module_name: import.path.to_string(),
-        });
-      }
-    }
-  }
-
-  fn resolve_wildcard_import(&mut self, target_file: SourceFileId, _import: &ImportDecl) {
-    if let Some(exports) =
-      self.resolver().module_exports_values.get(&target_file).map(|v| v.clone())
-    {
-      self.define_public_exports(&exports, ModuleResolver::define_value);
-    }
-
-    if let Some(exports) =
-      self.resolver().module_exports_types.get(&target_file).map(|v| v.clone())
-    {
-      self.define_public_exports(&exports, ModuleResolver::define_type);
-    }
-  }
-
-  fn define_public_exports<F>(
-    &mut self,
-    exports: &DashMap<Identifier, DefId>,
-    mut define: F,
-  ) where
-    F: FnMut(&mut ModuleResolver<'a>, Identifier, DefId),
-  {
-    for entry in exports.iter() {
-      let name = entry.key().clone();
-      let def_id = *entry.value();
-      let def = self.resolver().get_definition(def_id).expect("should be known");
-
-      if !def.visibility.is_private() {
-        define(&mut self.module_resolver, name, def_id);
-      }
-    }
-  }
-
-  fn handle_import_resolution(
-    &mut self,
-    local_name: &Identifier,
-    spec_id: NodeId,
-    def_id: DefId,
-    recorded: &mut bool,
-    define: fn(&mut ModuleResolver<'a>, Identifier, DefId),
-  ) {
-    define(&mut self.module_resolver, local_name.to_owned(), def_id);
-    if !*recorded {
-      self.resolver().symbols.record_resolution(spec_id, def_id);
-      *recorded = true;
-    }
   }
 
   fn collect_item(&mut self, item: &Item) {
@@ -279,7 +113,7 @@ impl<'a> ResolveVisitor<'a> {
     }
   }
 
-  fn resolver(&self) -> &Resolver {
+  pub fn resolver(&self) -> &Resolver {
     self.module_resolver.resolver
   }
 
@@ -478,23 +312,7 @@ impl<'a> ResolveVisitor<'a> {
   fn resolve_function(&mut self, func: &FunctionItem, item: &Item) {
     let func_def = self.module_resolver.lookup_value(&func.name);
     self.module_resolver.enter_scope(ScopeKind::Function, func_def);
-
-    if let Some(generics) = &func.generics {
-      for param in &generics.params {
-        let span = *param.name.span();
-        let def = Definition::new(
-          param.name,
-          param.id,
-          self.current_file(),
-          DefKind::TypeParam,
-          span,
-          item.visibility,
-        );
-        let def_id = self.resolver().add_definition(def);
-        self.resolver().symbols.record_resolution(param.id, def_id);
-        self.module_resolver.define_type(param.name, def_id);
-      }
-    }
+    self.resolve_generics(item, &func.generics);
 
     for param in &func.params {
       self.resolve_param(param);
@@ -521,11 +339,8 @@ impl<'a> ResolveVisitor<'a> {
     }
   }
 
-  fn resolve_struct(&mut self, s: &StructItem, item: &Item) {
-    let struct_def = self.module_resolver.lookup_type(&s.name);
-    self.module_resolver.enter_scope(ScopeKind::Struct, struct_def);
-
-    if let Some(generics) = &s.generics {
+  fn resolve_generics(&mut self, item: &Item, generics: &Option<GenericParams>) {
+    if let Some(generics) = &generics {
       for param in &generics.params {
         let span = *param.name.span();
         let def = Definition::new(
@@ -541,6 +356,12 @@ impl<'a> ResolveVisitor<'a> {
         self.module_resolver.define_type(param.name, def_id);
       }
     }
+  }
+
+  fn resolve_struct(&mut self, s: &StructItem, item: &Item) {
+    let struct_def = self.module_resolver.lookup_type(&s.name);
+    self.module_resolver.enter_scope(ScopeKind::Struct, struct_def);
+    self.resolve_generics(item, &s.generics);
 
     for member in &s.members {
       match member {
@@ -557,23 +378,7 @@ impl<'a> ResolveVisitor<'a> {
   fn resolve_enum(&mut self, e: &EnumItem, item: &Item) {
     let enum_def = self.module_resolver.lookup_type(&e.name);
     self.module_resolver.enter_scope(ScopeKind::Enum, enum_def);
-
-    if let Some(generics) = &e.generics {
-      for param in &generics.params {
-        let span = *param.name.span();
-        let def = Definition::new(
-          param.name,
-          param.id,
-          self.current_file(),
-          DefKind::TypeParam,
-          span,
-          item.visibility,
-        );
-        let def_id = self.resolver().add_definition(def);
-        self.resolver().symbols.record_resolution(param.id, def_id);
-        self.module_resolver.define_type(param.name, def_id);
-      }
-    }
+    self.resolve_generics(item, &e.generics);
 
     for variant in &e.variants {
       if let Some(payload) = &variant.payload {
@@ -632,7 +437,6 @@ impl<'a> ResolveVisitor<'a> {
           self.resolve_type(ty);
         }
 
-        let name = var.name.text();
         let span = *var.name.span();
         let def = Definition::new(
           var.name,

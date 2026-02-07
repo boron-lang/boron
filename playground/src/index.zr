@@ -1,5 +1,6 @@
 mod vec;
+import vec from vec;
 
 func main() {
-    var vec = package::vec::Vec2 { .x = 10.0, .y = 15.0 };
+    var vec = vec::Vec2 { .x = 10.0, .y = 15.0 };
 }
