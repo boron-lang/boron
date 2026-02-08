@@ -4,7 +4,5 @@ import * from vec;
 extern func printf(format: *const u8) -> i32;
 
 func main() {
-    var x: [i32; "hello"] = [10, 20, 30, 40, 50];
-
     printf("hello");
 }

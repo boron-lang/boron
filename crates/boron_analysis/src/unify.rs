@@ -71,7 +71,6 @@ impl TyChecker<'_> {
         InferTy::Ptr { mutability: m2, ty: t2, .. },
       ) => {
         if m1 != m2 {
-          //todo: with span
           return UnifyResult::Err(UnifyError::MutabilityMismatch {
             expected: *m1,
             found: *m2,
