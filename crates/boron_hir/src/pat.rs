@@ -22,35 +22,51 @@ pub enum PatKind {
     def_id: DefId,
     name: Identifier,
     is_mut: bool,
-    /// Optional subpattern: `x @ Some(_)`
+    /// `x @ Some(_)`
     subpat: Option<Box<Pat>>,
   },
 
-  /// Literal pattern: `42`, `"hello"`, `true`
+  /// `42`, `"hello"`, `true`
   Literal(Literal),
 
   /// Tuple pattern: `(a, b, c)`
   Tuple(Vec<Pat>),
 
   /// Struct pattern: `Point { x, y }`
-  Struct { def_id: DefId, fields: Vec<FieldPat>, rest: bool },
+  Struct {
+    def_id: DefId,
+    fields: Vec<FieldPat>,
+    rest: bool,
+  },
 
   /// Tuple struct / enum variant pattern: `Some(x)`, `None`
-  TupleStruct { def_id: DefId, pats: Vec<Pat> },
+  TupleStruct {
+    def_id: DefId,
+    pats: Vec<Pat>,
+  },
 
   /// Path pattern (unit variant, const): `None`, `CONST_VALUE`
-  Path { def_id: DefId },
+  Path {
+    def_id: DefId,
+  },
 
-  /// Or pattern: `A | B | C`
+  /// `A | B | C`
   Or(Vec<Pat>),
 
-  /// Slice pattern: `[first, .., last]`
-  Slice { prefix: Vec<Pat>, middle: Option<Box<Pat>>, suffix: Vec<Pat> },
+  /// `[first, .., last]`
+  Slice {
+    prefix: Vec<Pat>,
+    middle: Option<Box<Pat>>,
+    suffix: Vec<Pat>,
+  },
 
-  /// Range pattern: `1..=10`
-  Range { start: Option<Box<Expr>>, end: Option<Box<Expr>>, inclusive: bool },
+  /// `1..=10`
+  Range {
+    start: Option<Box<Expr>>,
+    end: Option<Box<Expr>>,
+    inclusive: bool,
+  },
 
-  /// Error recovery
   Err,
 }
 

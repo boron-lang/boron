@@ -314,53 +314,71 @@ pub enum AssignOp {
   ShrAssign,    // >>=
 }
 
-// Patterns
 #[derive(Debug, Clone)]
-pub enum Pattern {
-  Wildcard(WildcardPat),
+pub struct Pattern {
+  pub id: NodeId,
+  pub span: Span,
+  pub kind: PatternKind,
+}
+
+#[derive(Debug, Clone)]
+pub enum PatternKind {
+  /// Wildcard: `_`
+  Wildcard,
+
+  /// Binding: `x`, `mut x`
+  Binding {
+    name: Identifier,
+    is_mut: bool,
+    /// `x @ Some(_)`
+    subpat: Option<Box<Pattern>>,
+  },
+
+  /// `42`, `"hello"`, `true`
   Literal(Literal),
-  Ident(Identifier),
-  Struct(StructPattern),
-  Tuple(TuplePattern),
-  Enum(EnumPattern),
+
+  /// Tuple pattern: `(a, b, c)`
+  Tuple(Vec<Pattern>),
+
+  Struct {
+    path: Path,
+    fields: Vec<FieldPat>,
+    rest: bool,
+  },
+
+  TupleStruct {
+    path: Path,
+    patterns: Vec<Pattern>,
+    rest: bool,
+  },
+
+  /// Path pattern (unit variant, const): `None`, `CONST_VALUE`
+  Path(Path),
+
+  /// `A | B | C`
+  Or(Vec<Pattern>),
+
+  /// `[first, .., last]`
+  Slice {
+    prefix: Vec<Pattern>,
+    middle: Option<Box<Pattern>>,
+    suffix: Vec<Pattern>,
+  },
+
+  /// `1..=10`
+  Range(RangeExpr),
+
+  Err,
 }
 
 #[derive(Debug, Clone)]
-pub struct WildcardPat {
+pub struct FieldPat {
   pub id: NodeId,
+  pub name: Identifier,
+  pub pat: Pattern,
   pub span: Span,
 }
 
-#[derive(Debug, Clone)]
-pub struct StructPattern {
-  pub id: NodeId,
-  pub path: Path,
-  pub fields: Vec<StructPatternField>,
-  pub span: Span,
-}
-
-#[derive(Debug, Clone)]
-pub enum StructPatternField {
-  Full { name: Identifier, pattern: Pattern },
-  Shorthand(Identifier),
-}
-
-#[derive(Debug, Clone)]
-pub struct TuplePattern {
-  pub id: NodeId,
-  pub patterns: Vec<Pattern>,
-  pub span: Span,
-}
-
-#[derive(Debug, Clone)]
-pub struct EnumPattern {
-  pub id: NodeId,
-  pub path: Path,
-  pub patterns: Vec<Pattern>,
-  pub span: Span,
-}
-
-// Literals
 #[derive(Debug, Clone)]
 pub enum Literal {
   Int(IntLit),

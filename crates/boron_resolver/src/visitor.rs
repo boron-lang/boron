@@ -18,8 +18,8 @@ use boron_parser::ast::types::Type;
 use boron_parser::ast::ProgramNode;
 use boron_parser::module::Modules;
 use boron_parser::{
-  ComptimeArg, ElseBranch, GenericParams, IfExpr, NodeId, Path, StructMember,
-  VariantField, VariantPayload,
+  ComptimeArg, ElseBranch, GenericParams, IfExpr, NodeId, Path, Pattern, PatternKind,
+  StructMember, VariantField, VariantPayload,
 };
 use boron_source::prelude::{SourceFileId, Span};
 use boron_utils::context::Context;
@@ -437,35 +437,7 @@ impl<'a> ResolveVisitor<'a> {
           self.resolve_type(ty);
         }
 
-        let span = *var.name.span();
-        let def = Definition::new(
-          var.name,
-          var.id,
-          self.current_file(),
-          DefKind::Local,
-          span,
-          Visibility::Public(Span::dummy()),
-        );
-        let def_id = self.resolver().add_definition(def);
-        self.module_resolver.define_value(var.name, def_id);
-      }
-      Statement::ConstDecl(c) => {
-        self.resolve_expr(&c.value);
-        if let Some(ty) = &c.ty {
-          self.resolve_type(ty);
-        }
-
-        let span = *c.name.span();
-        let def = Definition::new(
-          c.name,
-          c.id,
-          self.current_file(),
-          DefKind::Const,
-          span,
-          Visibility::Public(Span::dummy()),
-        );
-        let def_id = self.resolver().add_definition(def);
-        self.module_resolver.define_value(c.name, def_id);
+        self.resolve_pattern(&var.pat);
       }
       Statement::Expr(expr_stmt) => {
         self.resolve_expr(&expr_stmt.expr);
@@ -473,6 +445,49 @@ impl<'a> ResolveVisitor<'a> {
       Statement::Block(block) => {
         self.resolve_block(block);
       }
+    }
+  }
+
+  fn resolve_pattern(&mut self, pat: &Pattern) {
+    match &pat.kind {
+      PatternKind::Binding { subpat, name, .. } => {
+        let def = Definition::new(
+          *name,
+          pat.id,
+          self.current_file(),
+          DefKind::Local,
+          pat.span.clone(),
+          Visibility::Public(Span::dummy()),
+        );
+        let def_id = self.resolver().add_definition(def);
+        self.module_resolver.define_value(*name, def_id);
+
+        if let Some(subpat) = subpat {
+          self.resolve_pattern(subpat)
+        }
+      }
+      PatternKind::Tuple(patterns) => {
+        for p in patterns {
+          self.resolve_pattern(p)
+        }
+      }
+      PatternKind::Struct { path, fields, rest } => {
+        self.resolve_path(path);
+
+        for field in fields {
+          self.resolve_pattern(&field.pat)
+        }
+      }
+      PatternKind::TupleStruct { path, patterns, rest } => {
+        self.resolve_path(path);
+        for p in patterns {
+          self.resolve_pattern(p)
+        }
+      }
+      PatternKind::Path(path) => self.resolve_path(path),
+      // no bindings
+      PatternKind::Wildcard | PatternKind::Range(..) | PatternKind::Literal(..) => {}
+      _ => todo!("unimplemented {:#?}", pat),
     }
   }
 

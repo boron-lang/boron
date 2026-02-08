@@ -439,3 +439,13 @@ pub struct InvalidFieldInit {
   #[error("in this field init")]
   pub span: Span,
 }
+
+#[derive(Diagnostic)]
+#[error(
+  "`const` is used to define compile-time values. use `var` to create an immutable variable"
+)]
+#[code(PARSE_USE_VAR_NOT_CONST)]
+pub struct UseVarNotConst {
+  #[error("invalid usage here")]
+  pub span: Span,
+}

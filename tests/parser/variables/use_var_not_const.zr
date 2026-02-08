@@ -1,0 +1,4 @@
+func main() {
+    //#error: `const` is used to define compile-time values. use `var` to create an immutable variable
+    const vec = 10;
+}

@@ -1,5 +1,5 @@
+use crate::parser::errors::{AllVarsInitialized, UseVarNotConst};
 use crate::parser::Parser;
-use crate::parser::errors::AllVarsInitialized;
 use crate::{Block, ExprStmt, NodeId, Statement, TokenType, VarDecl};
 
 impl Parser<'_> {
@@ -47,14 +47,25 @@ impl Parser<'_> {
 
   pub fn parse_statement(&mut self) -> Option<Statement> {
     use TokenType::{Assign, Colon, Const, Semicolon, Var};
-    let span = self.peek().span;
+    let start_span = self.peek().span;
 
     match self.peek().kind {
+      Const => {
+        self.stmt_safe_boundary();
+
+        let span = if self.peek().kind == Semicolon {
+          self.span_from(start_span)
+        } else {
+          start_span
+        };
+        self.emit(UseVarNotConst { span });
+        None
+      }
+
       // in this context const just means the value isn't mutable
-      Var | Const => {
+      Var => {
         self.advance();
-        let is_mut = self.previous().kind == Var;
-        let name = self.parse_identifier();
+        let pat = self.parse_pattern();
         let ty = if self.check(Colon) {
           self.advance();
           Some(self.parse_type())
@@ -63,19 +74,18 @@ impl Parser<'_> {
         };
 
         if !self.check(Assign) {
-          self.emit(AllVarsInitialized { span: self.span_from(span) });
+          self.emit(AllVarsInitialized { span: self.span_from(start_span) });
           self.stmt_safe_boundary();
           return None;
         }
-        self.advance(); // consume the '='
+        self.eat(Assign);
         let value = self.parse_expr();
 
         Some(Statement::VarDecl(VarDecl {
-          span: self.span_from(span),
+          span: self.span_from(start_span),
           id: NodeId::new(),
-          name,
+          pat,
           value,
-          is_mut,
           ty,
         }))
       }
@@ -90,7 +100,7 @@ impl Parser<'_> {
         Some(Statement::Expr(ExprStmt {
           id: NodeId::new(),
           expr,
-          span: self.span_from(span),
+          span: self.span_from(start_span),
           has_semicolon,
         }))
       }

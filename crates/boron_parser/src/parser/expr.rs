@@ -4,8 +4,8 @@ use crate::lexer::IntBase as LexIntBase;
 use crate::parser::Parser;
 use crate::parser::errors::{
   DuplicateNamedArg, EmptyMatch, ExpectedExpressionFound, ExpectedFatArrow,
-  ExpectedFieldName, ExpectedPattern, InvalidAssignTarget, InvalidFieldInit,
-  InvalidRepeatSyntax, MissingColonInTernary, MissingInKeyword, RepeatSyntaxOnlyAtStart,
+  ExpectedFieldName, InvalidAssignTarget, InvalidFieldInit, InvalidRepeatSyntax,
+  MissingColonInTernary, MissingInKeyword, RepeatSyntaxOnlyAtStart,
   RepeatSyntaxRequiredValue,
 };
 use crate::{IntBase, NodeId, Path, PathParsingContext, PathSegment, TokenType};
@@ -101,7 +101,7 @@ impl Parser<'_> {
     )
   }
 
-  fn parse_unary_expr(&mut self) -> Expr {
+  pub(crate) fn parse_unary_expr(&mut self) -> Expr {
     let start = self.current_span();
 
     if let Some(op) = self.peek_unary_op() {
@@ -276,7 +276,7 @@ impl Parser<'_> {
     }
   }
 
-  fn parse_int_literal(&mut self) -> Expr {
+  pub fn parse_int_literal(&mut self) -> Expr {
     let start = self.current_span();
     let token = self.advance();
 
@@ -304,7 +304,7 @@ impl Parser<'_> {
     }
   }
 
-  fn parse_float_literal(&mut self) -> Expr {
+  pub fn parse_float_literal(&mut self) -> Expr {
     let start = self.current_span();
     let token = self.advance();
 
@@ -331,7 +331,7 @@ impl Parser<'_> {
     }
   }
 
-  fn parse_string_literal(&mut self) -> Expr {
+  pub fn parse_string_literal(&mut self) -> Expr {
     let start = self.current_span();
     let token = self.advance();
 
@@ -350,7 +350,7 @@ impl Parser<'_> {
     }
   }
 
-  fn parse_char_literal(&mut self) -> Expr {
+  pub fn parse_char_literal(&mut self) -> Expr {
     let start = self.current_span();
     let token = self.advance();
 
@@ -369,7 +369,7 @@ impl Parser<'_> {
     }
   }
 
-  fn parse_byte_literal(&mut self) -> Expr {
+  pub fn parse_byte_literal(&mut self) -> Expr {
     let start = self.current_span();
     let token = self.advance();
 
@@ -388,7 +388,7 @@ impl Parser<'_> {
     }
   }
 
-  fn parse_bool_literal(&mut self) -> Expr {
+  pub fn parse_bool_literal(&mut self) -> Expr {
     let start = self.current_span();
     let token = self.advance();
     let value = matches!(token.kind, TokenType::True);
@@ -681,138 +681,6 @@ impl Parser<'_> {
     )
   }
 
-  fn parse_pattern(&mut self) -> Pattern {
-    let start = self.current_span();
-    let token = self.peek().clone();
-
-    match &token.kind {
-      TokenType::Underscore => {
-        self.advance();
-        Pattern::Wildcard(WildcardPat { id: NodeId::new(), span: token.span })
-      }
-      TokenType::True | TokenType::False => {
-        let value = matches!(token.kind, TokenType::True);
-        self.advance();
-        Pattern::Literal(Literal::Bool(BoolLit {
-          id: NodeId::new(),
-          value,
-          span: token.span,
-        }))
-      }
-      TokenType::IntegerLiteral(..) => {
-        let expr = self.parse_int_literal();
-        if let ExprKind::Literal(lit) = expr.kind {
-          Pattern::Literal(lit)
-        } else {
-          Pattern::Wildcard(WildcardPat { id: NodeId::new(), span: token.span })
-        }
-      }
-      TokenType::StringLiteral(_) => {
-        let expr = self.parse_string_literal();
-        if let ExprKind::Literal(lit) = expr.kind {
-          Pattern::Literal(lit)
-        } else {
-          Pattern::Wildcard(WildcardPat { id: NodeId::new(), span: token.span })
-        }
-      }
-      TokenType::CharLiteral(_) => {
-        let expr = self.parse_char_literal();
-        if let ExprKind::Literal(lit) = expr.kind {
-          Pattern::Literal(lit)
-        } else {
-          Pattern::Wildcard(WildcardPat { id: NodeId::new(), span: token.span })
-        }
-      }
-      TokenType::LeftParen => {
-        self.advance();
-        let mut patterns = vec![];
-
-        while !self.check(TokenType::RightParen) && !self.is_at_end() {
-          patterns.push(self.parse_pattern());
-          if !self.eat(TokenType::Comma) {
-            break;
-          }
-        }
-
-        self.expect(TokenType::RightParen, "to close tuple pattern");
-
-        Pattern::Tuple(TuplePattern {
-          id: NodeId::new(),
-          patterns,
-          span: self.span_from(start),
-        })
-      }
-      TokenType::Identifier(_) => {
-        let path = self.parse_path(PathParsingContext::Normal);
-
-        if self.eat(TokenType::LeftBrace) {
-          let mut fields = vec![];
-
-          while !self.check(TokenType::RightBrace) && !self.is_at_end() {
-            if !self.eat(TokenType::Dot) {
-              break;
-            }
-
-            let name = self.parse_identifier();
-
-            if self.eat(TokenType::Assign) {
-              let pattern = self.parse_pattern();
-              fields.push(StructPatternField::Full { name, pattern });
-            } else {
-              fields.push(StructPatternField::Shorthand(name));
-            }
-
-            if !self.eat(TokenType::Comma) {
-              break;
-            }
-          }
-
-          self.expect(TokenType::RightBrace, "to close struct pattern");
-
-          Pattern::Struct(StructPattern {
-            id: NodeId::new(),
-            path,
-            fields,
-            span: self.span_from(start),
-          })
-        } else if self.eat(TokenType::LeftParen) {
-          // Enum pattern
-          let mut patterns = vec![];
-
-          while !self.check(TokenType::RightParen) && !self.is_at_end() {
-            patterns.push(self.parse_pattern());
-            if !self.eat(TokenType::Comma) {
-              break;
-            }
-          }
-
-          self.expect(TokenType::RightParen, "to close enum pattern");
-
-          Pattern::Enum(EnumPattern {
-            id: NodeId::new(),
-            path,
-            patterns,
-            span: self.span_from(start),
-          })
-        } else if path.segments.len() == 1 && path.root.is_none() {
-          // Pattern::Ident(path.segments.into_iter().next().unwrap())
-          todo!("fix this")
-        } else {
-          Pattern::Enum(EnumPattern {
-            id: NodeId::new(),
-            path,
-            patterns: vec![],
-            span: self.span_from(start),
-          })
-        }
-      }
-      _ => {
-        self.emit(ExpectedPattern { found: token.kind.clone(), span: token.span });
-        Pattern::Wildcard(WildcardPat { id: NodeId::new(), span: token.span })
-      }
-    }
-  }
-
   fn parse_loop_expr(&mut self) -> Expr {
     let start = self.current_span();
     self.eat(TokenType::Loop);
@@ -937,7 +805,7 @@ impl Parser<'_> {
     )
   }
 
-  fn is_range_end_start(&self) -> bool {
+  pub(crate) fn is_range_end_start(&self) -> bool {
     matches!(
       self.peek().kind,
       TokenType::IntegerLiteral(..)

@@ -10,7 +10,7 @@ use boron_parser::ast::expressions::{
 use boron_parser::ast::statements;
 use boron_parser::{IntBase, IntSuffix};
 use boron_source::prelude::Span;
-use boron_utils::prelude::{Identifier, debug};
+use boron_utils::prelude::{debug, Identifier};
 use expressions::Literal as AstLiteral;
 use itertools::Itertools as _;
 
@@ -271,41 +271,13 @@ impl LoweringContext<'_> {
         let local = Local {
           hir_id: self.next_hir_id(),
           def_id,
-          pat: Pat {
-            hir_id: self.next_hir_id(),
-            kind: PatKind::Binding {
-              def_id,
-              name: var.name,
-              is_mut: var.is_mut,
-              subpat: None,
-            },
-            span: *var.name.span(),
-          },
+          pat: self.lower_ast_pattern(&var.pat),
           ty: var.ty.as_ref().map(|t| self.lower_type(t)),
           init: Some(self.lower_expr(&var.value)),
           span: var.span,
         };
 
         (StmtKind::Local(Box::new(local)), var.span)
-      }
-
-      statements::Statement::ConstDecl(c) => {
-        let def_id = self.get_def_id(c.id).unwrap_or(boron_resolver::DefId(0));
-
-        let local = Local {
-          hir_id: self.next_hir_id(),
-          def_id,
-          pat: Pat {
-            hir_id: self.next_hir_id(),
-            kind: PatKind::Binding { def_id, name: c.name, is_mut: false, subpat: None },
-            span: *c.name.span(),
-          },
-          ty: c.ty.as_ref().map(|t| self.lower_type(t)),
-          init: Some(self.lower_expr(&c.value)),
-          span: c.span,
-        };
-
-        (StmtKind::Local(Box::new(local)), c.span)
       }
 
       statements::Statement::Expr(expr_stmt) => {
@@ -339,6 +311,12 @@ impl LoweringContext<'_> {
         Literal::Int { value: i.value.clone(), base: i.base, suffix: i.suffix }
       }
       AstLiteral::Float(f) => Literal::Float { value: f.value.clone(), suffix: f.suffix },
+      AstLiteral::Byte(b) => Literal::Int {
+        value: b.value.to_string(),
+        base: IntBase::Decimal,
+        suffix: Some(IntSuffix::U8),
+      },
+      AstLiteral::ByteString(b) => todo!("byte strings"),
       AstLiteral::Bool(b) => Literal::Bool(b.value),
       AstLiteral::Char(c) => Literal::Char(c.value),
       AstLiteral::String(s) => Literal::String(s.value.clone()),

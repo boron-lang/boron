@@ -1,7 +1,7 @@
 use crate::ast::expressions::Expr;
 use crate::ast::program::NodeId;
 use crate::ast::types::Type;
-use boron_utils::ident_table::Identifier;
+use crate::Pattern;
 use boron_utils::prelude::Span;
 
 #[derive(Debug, Clone)]
@@ -14,7 +14,6 @@ pub struct Block {
 #[derive(Debug, Clone)]
 pub enum Statement {
   VarDecl(VarDecl),
-  ConstDecl(ConstDecl),
   Expr(ExprStmt),
   Block(Block),
 }
@@ -22,17 +21,7 @@ pub enum Statement {
 #[derive(Debug, Clone)]
 pub struct VarDecl {
   pub id: NodeId,
-  pub is_mut: bool,
-  pub name: Identifier,
-  pub ty: Option<Type>,
-  pub value: Expr,
-  pub span: Span,
-}
-
-#[derive(Debug, Clone)]
-pub struct ConstDecl {
-  pub id: NodeId,
-  pub name: Identifier,
+  pub pat: Pattern,
   pub ty: Option<Type>,
   pub value: Expr,
   pub span: Span,

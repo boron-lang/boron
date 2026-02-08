@@ -4,6 +4,7 @@ mod items;
 mod parameters;
 mod parser;
 mod path;
+mod patterns;
 mod program;
 mod statements;
 mod ty;
