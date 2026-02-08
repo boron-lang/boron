@@ -1,3 +1,4 @@
+use crate::ty::ArrayLength;
 use crate::{InferTy, TyChecker, TyVarKind};
 use std::fmt::Write as _;
 
@@ -70,7 +71,14 @@ impl TyChecker<'_> {
       InferTy::Array { ty, len, .. } => {
         write!(f, "[")?;
         self._format_into(f, ty)?;
-        write!(f, "; {len}]")?;
+        write!(
+          f,
+          "; {}]",
+          match len {
+            ArrayLength::Len(val) => val.to_string(),
+            ArrayLength::Poisoned => "<error>".to_string(),
+          }
+        )?;
       }
 
       InferTy::Slice(ty, _) => {

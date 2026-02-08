@@ -321,7 +321,7 @@ impl<'a> IrLowerer<'a> {
       }
 
       InferTy::Array { ty: inner, len, .. } => {
-        SemanticTy::Array { elem: Box::new(Self::lower_type(inner)), len: *len }
+        SemanticTy::Array { elem: Box::new(Self::lower_type(inner)), len: len.expect_len() }
       }
 
       InferTy::Slice(inner, _) => SemanticTy::Slice(Box::new(Self::lower_type(inner))),

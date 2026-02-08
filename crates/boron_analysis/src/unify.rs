@@ -1,3 +1,4 @@
+use crate::ty::ArrayLength;
 use crate::{InferTy, TyChecker, TyVar, TyVarKind};
 use boron_parser::Mutability;
 
@@ -86,14 +87,19 @@ impl TyChecker<'_> {
         InferTy::Array { ty: t1, len: l1, .. },
         InferTy::Array { ty: t2, len: l2, .. },
       ) => {
-        if l1 != l2 {
-          // todo: carry span
-          return UnifyResult::Err(UnifyError::ArrayLenMismatch {
-            expected: *l1,
-            found: *l2,
-          });
+        if let ArrayLength::Len(l1) = l1
+          && let ArrayLength::Len(l2) = l2
+        {
+          if l1 != l2 {
+            return UnifyResult::Err(UnifyError::ArrayLenMismatch {
+              expected: *l1,
+              found: *l2,
+            });
+          }
+          self.unify(t1, t2)
+        } else {
+          return UnifyResult::Ok;
         }
-        self.unify(t1, t2)
       }
 
       (InferTy::Tuple(ts1, ..), InferTy::Tuple(ts2, ..)) => {

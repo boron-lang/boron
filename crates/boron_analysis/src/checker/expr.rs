@@ -1,5 +1,4 @@
-use crate::TyVarKind;
-use crate::builtins::{BuiltInParam, get_builtin};
+use crate::builtins::{get_builtin, BuiltInParam};
 use crate::checker::TyChecker;
 use crate::errors::{
   ArityMismatch, ArrayRepeatNotANumber, AssignTypeMismatch, FuncArgMismatch,
@@ -9,13 +8,14 @@ use crate::functions::FinalComptimeArg;
 use crate::interpreter::values::ConstValue;
 use crate::interpreter::{InterpreterContext, InterpreterMode};
 use crate::table::TypeEnv;
-use crate::ty::InferTy;
+use crate::ty::{ArrayLength, InferTy};
 use crate::unify::{Expectation, UnifyError, UnifyResult};
+use crate::TyVarKind;
 use boron_hir::expr::ComptimeArg;
 use boron_hir::{Expr, ExprKind, Literal};
 use boron_parser::ast::types::PrimitiveKind;
 use boron_parser::{Mutability, UnaryOp};
-use boron_utils::prelude::{Span, warn};
+use boron_utils::prelude::{warn, Span};
 
 impl TyChecker<'_> {
   pub(crate) fn check_expr(
@@ -110,7 +110,7 @@ impl TyChecker<'_> {
         if exprs.is_empty() {
           InferTy::Array {
             ty: Box::new(self.infcx.fresh(expr.span)),
-            len: 0,
+            len: ArrayLength::Len(0),
             span: expr.span,
           }
         } else {
@@ -122,26 +122,15 @@ impl TyChecker<'_> {
           }
 
           if let Some(repeat) = repeat {
-            let value = self
-              .new_interpreter(InterpreterMode::Const, InterpreterContext::ArrayLen)
-              .evaluate_expr(repeat);
-
-            let len = match value {
-              ConstValue::Int(i) => i as usize,
-              ConstValue::Poison => 0,
-              _ => {
-                self.dcx().emit(ArrayRepeatNotANumber {
-                  found: value.to_string(),
-                  span: expr.span,
-                });
-                0
-              }
-            };
-
+            let len = self.interpret_array_len(repeat);
             return InferTy::Array { ty: Box::new(elem_ty), len, span: expr.span };
           }
 
-          InferTy::Array { ty: Box::new(elem_ty), len: exprs.len(), span: expr.span }
+          InferTy::Array {
+            ty: Box::new(elem_ty),
+            len: ArrayLength::Len(exprs.len()),
+            span: expr.span,
+          }
         }
       }
 

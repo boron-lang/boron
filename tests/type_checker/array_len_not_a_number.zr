@@ -1,0 +1,6 @@
+func main() {
+    //#error: array length needs to be a number found `hello`
+    var x: [i32; "hello"] = [10, 20, 30, 40, 50];
+    //#error: array length needs to be a number found `welcome`
+    var y = [10; "welcome"];
+}

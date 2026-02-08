@@ -59,7 +59,7 @@ pub enum InferTy {
   Adt { def_id: DefId, args: Vec<InferTy>, span: Span },
   Ptr { mutability: Mutability, ty: Box<InferTy>, span: Span },
   Optional(Box<InferTy>, Span),
-  Array { ty: Box<InferTy>, len: usize, span: Span },
+  Array { ty: Box<InferTy>, len: ArrayLength, span: Span },
   Slice(Box<InferTy>, Span),
   Tuple(Vec<InferTy>, Span),
   Fn { params: Vec<InferTy>, ret: Box<InferTy>, span: Span },
@@ -68,6 +68,28 @@ pub enum InferTy {
   Param(TyParam),
   Var(TyVar, Span),
   Err(Span),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Copy)]
+pub enum ArrayLength {
+  Len(usize),
+  Poisoned,
+}
+
+impl ArrayLength {
+  pub fn len(&self) -> usize {
+    match self {
+      ArrayLength::Len(num) => *num,
+      ArrayLength::Poisoned => 0,
+    }
+  }
+
+  pub fn expect_len(&self) -> usize {
+    match self {
+      ArrayLength::Len(len) => *len,
+      _ => unreachable!("compilation should be stopped before"),
+    }
+  }
 }
 
 impl InferTy {

@@ -1,10 +1,10 @@
 use crate::errors::ArrayLenNotANumber;
 use crate::interpreter::values::ConstValue;
 use crate::interpreter::{InterpreterContext, InterpreterMode};
-use crate::ty::TyParam;
+use crate::ty::{ArrayLength, TyParam};
 use crate::{InferTy, TyChecker, TypeEnv};
 use boron_hir::ty::ArrayLen;
-use boron_hir::{GenericParamKind, Generics, Ty, TyKind};
+use boron_hir::{Expr, GenericParamKind, Generics, Ty, TyKind};
 use boron_resolver::DefKind;
 
 impl TyChecker<'_> {
@@ -43,30 +43,12 @@ impl TyChecker<'_> {
         InferTy::Optional(Box::new(self.lower_hir_ty(inner)), ty.span)
       }
       TyKind::Array { ty: inner, len } => {
-        let array_len = match len {
-          ArrayLen::Const(n) => *n,
-          ArrayLen::ConstExpr(expr) => {
-            let value = self
-              .new_interpreter(InterpreterMode::Const, InterpreterContext::ArrayLen)
-              .evaluate_expr(expr);
-
-            match value {
-              ConstValue::Int(i) => i as usize,
-              ConstValue::Poison => 0,
-              _ => {
-                self
-                  .dcx()
-                  .emit(ArrayLenNotANumber { found: value.to_string(), span: expr.span });
-                0
-              }
-            }
-          }
+        let len = match len {
+          ArrayLen::Const(n) => ArrayLength::Len(*n),
+          ArrayLen::ConstExpr(expr) => self.interpret_array_len(expr),
         };
-        InferTy::Array {
-          ty: Box::new(self.lower_hir_ty(inner)),
-          len: array_len,
-          span: ty.span,
-        }
+
+        InferTy::Array { ty: Box::new(self.lower_hir_ty(inner)), len, span: ty.span }
       }
       TyKind::Slice(inner) => InferTy::Slice(Box::new(self.lower_hir_ty(inner)), ty.span),
       TyKind::Tuple(tys) => {
@@ -80,6 +62,21 @@ impl TyChecker<'_> {
         ret: Box::new(self.lower_hir_ty(ret)),
         span: ty.span,
       },
+    }
+  }
+
+  pub fn interpret_array_len(&self, expr: &Expr) -> ArrayLength {
+    let value = self
+      .new_interpreter(InterpreterMode::Const, InterpreterContext::ArrayLen)
+      .evaluate_expr(expr);
+
+    match value {
+      ConstValue::Int(i) => ArrayLength::Len(i as usize),
+      ConstValue::Poison => ArrayLength::Poisoned,
+      _ => {
+        self.dcx().emit(ArrayLenNotANumber { found: value.to_string(), span: expr.span });
+        ArrayLength::Poisoned
+      }
     }
   }
 
