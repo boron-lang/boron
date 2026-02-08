@@ -28,7 +28,7 @@ pub fn run_codegen<'a>(ctx: &'a Context<'a>, ir: &Ir) -> anyhow::Result<()> {
       &triple,
       "generic",
       "",
-      OptimizationLevel::None,
+      OptimizationLevel::Aggressive,
       RelocMode::Default,
       CodeModel::Default,
     )

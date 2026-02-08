@@ -15,7 +15,6 @@ impl BuiltInKind {
       "typeOf" => Some(Self::TypeOf),
       "compileError" => Some(Self::CompileError),
       "unreachable" => Some(Self::Unreachable),
-
       _ => None,
     }
   }
