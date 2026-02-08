@@ -1,5 +1,5 @@
-use crate::llvm::LLVMCodegen;
 use crate::llvm::blocks::BlockGeneratorContext;
+use crate::llvm::LLVMCodegen;
 use boron_ir::{IrStmt, IrStmtKind, IrTerminator};
 use boron_utils::prelude::compiler_bug;
 
@@ -68,6 +68,9 @@ impl<'ctx> LLVMCodegen<'ctx> {
             compiler_bug!(self.ctx.dcx(), "failed to build store instruction {}", err)
           }
         }
+      }
+      IrStmtKind::Expr(expr) => {
+        self.generate_expr(expr);
       }
       _ => unreachable!(),
     }

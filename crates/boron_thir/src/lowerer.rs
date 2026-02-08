@@ -1,6 +1,6 @@
-use crate::Param;
 use crate::exprs::{Block, Expr, ExprKind, FieldInit, Local, MatchArm, Stmt, StmtKind};
 use crate::items::{Field, Function, Struct};
+use crate::Param;
 use boron_analysis::float::construct_float;
 use boron_analysis::int::construct_i128;
 use boron_analysis::interpreter::{
@@ -161,7 +161,6 @@ impl<'a> ThirLowerer<'a> {
     let kind = match &stmt.kind {
       HirStmtKind::Local(local) => StmtKind::Local(Box::new(self.lower_local(local))),
       HirStmtKind::Expr(expr) => StmtKind::Expr(self.lower_expr(expr)),
-      HirStmtKind::Semi(expr) => StmtKind::Semi(self.lower_expr(expr)),
     };
 
     Stmt { hir_id: stmt.hir_id, kind, span: stmt.span }

@@ -6,7 +6,7 @@ mod structs;
 mod types;
 
 use crate::Codegen;
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use boron_ir::{Ir, IrId};
 use boron_resolver::DefId;
 use boron_utils::context::Context;
@@ -41,7 +41,6 @@ impl<'ctx> Codegen for LLVMCodegen<'ctx> {
     for strukt in &ir.structs {
       self.create_struct_type(strukt);
     }
-
     for strukt in &ir.structs {
       self.generate_struct_body(strukt);
     }
@@ -49,7 +48,6 @@ impl<'ctx> Codegen for LLVMCodegen<'ctx> {
     for func in &ir.functions {
       self.create_function_body(&func);
     }
-
     for func in &ir.functions {
       self.generate_function_body(&func)
     }

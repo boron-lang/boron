@@ -72,7 +72,6 @@ impl TyChecker<'_> {
           InferTy::Unit(expr.span)
         }
       }
-      StmtKind::Semi(expr) => self.check_expr(expr, env, &Expectation::none()),
     }
   }
 }

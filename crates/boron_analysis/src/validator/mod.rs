@@ -4,7 +4,7 @@ mod types;
 use crate::validator::errors::ComptimeNoGenerics;
 use boron_hir::{Block, Expr, ExprKind, Function, Hir, Stmt, StmtKind};
 use boron_resolver::{DefId, Resolver};
-use boron_utils::prelude::{DiagnosticCtx, debug};
+use boron_utils::prelude::{debug, DiagnosticCtx};
 
 pub struct ComptimeValidator<'a> {
   pub hir: &'a Hir,
@@ -124,7 +124,7 @@ impl ComptimeValidator<'_> {
           self.validate_expr(init);
         }
       }
-      StmtKind::Expr(expr) | StmtKind::Semi(expr) => {
+      StmtKind::Expr(expr) => {
         self.validate_expr(expr);
       }
     }

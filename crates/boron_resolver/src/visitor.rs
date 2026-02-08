@@ -462,6 +462,7 @@ impl<'a> ResolveVisitor<'a> {
         let def_id = self.resolver().add_definition(def);
         self.module_resolver.define_value(*name, def_id);
 
+        self.resolver().symbols.record_resolution(pat.id, def_id);
         if let Some(subpat) = subpat {
           self.resolve_pattern(subpat)
         }

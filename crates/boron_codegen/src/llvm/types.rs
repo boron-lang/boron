@@ -50,6 +50,10 @@ impl<'ctx> LLVMCodegen<'ctx> {
         self.context.ptr_type(AddressSpace::default()).as_basic_type_enum()
       }
       SemanticTy::Unit => panic!("unit has no value"),
+      SemanticTy::Array { elem, len }=> {
+        let elem_ty = self.ty(elem);
+        elem_ty.array_type(*len as u32).as_basic_type_enum()
+      }
 
       _ => {
         warn!("not handled: {:#?}", ty);

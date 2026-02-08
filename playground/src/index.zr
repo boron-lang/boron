@@ -1,6 +1,9 @@
 mod vec;
 import * from vec;
 
+//extern func printf(format: *const u8) -> i32;
+
 func main() {
-    var w = Vec2 { .x = 10.0, .y = 15.0 };
+    var arr = [10.5, 50.2, 12000.6];
+    var y = arr;
 }

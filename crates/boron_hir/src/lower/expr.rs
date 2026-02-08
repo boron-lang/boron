@@ -3,12 +3,13 @@ use crate::expr::{
   PathSegment, Stmt, StmtKind,
 };
 use crate::lower::context::LoweringContext;
-use crate::pat::{Pat, PatKind};
+use crate::{Pat, PatKind};
 use boron_parser::ast::expressions::{
   self, ComptimeArg as AstComptimeArg, ExprKind as AstExprKind,
 };
 use boron_parser::ast::statements;
 use boron_parser::{IntBase, IntSuffix};
+use boron_resolver::DefId;
 use boron_source::prelude::Span;
 use boron_utils::prelude::{debug, Identifier};
 use expressions::Literal as AstLiteral;
@@ -266,12 +267,12 @@ impl LoweringContext<'_> {
   fn lower_stmt(&mut self, stmt: &statements::Statement) -> Stmt {
     let (kind, span) = match stmt {
       statements::Statement::VarDecl(var) => {
-        let def_id = self.get_def_id(var.id).unwrap_or(boron_resolver::DefId(0));
-
+        let pat = self.lower_ast_pattern(&var.pat);
+        let def_id = Self::local_def_id_from_pat(&pat, var.span);
         let local = Local {
           hir_id: self.next_hir_id(),
           def_id,
-          pat: self.lower_ast_pattern(&var.pat),
+          pat,
           ty: var.ty.as_ref().map(|t| self.lower_type(t)),
           init: Some(self.lower_expr(&var.value)),
           span: var.span,
@@ -283,9 +284,16 @@ impl LoweringContext<'_> {
       statements::Statement::Expr(expr_stmt) => {
         let expr = self.lower_expr(&expr_stmt.expr);
         if expr_stmt.has_semicolon {
-          (StmtKind::Semi(expr), expr_stmt.span)
-        } else {
           (StmtKind::Expr(expr), expr_stmt.span)
+        } else {
+          (
+            StmtKind::Expr(Expr {
+              hir_id: self.next_hir_id(),
+              span: expr.span,
+              kind: ExprKind::Return { value: Some(Box::new(expr)) },
+            }),
+            expr_stmt.span,
+          )
         }
       }
 
@@ -303,6 +311,16 @@ impl LoweringContext<'_> {
     };
 
     Stmt { hir_id: self.next_hir_id(), kind, span }
+  }
+
+  fn local_def_id_from_pat(pat: &Pat, span: Span) -> DefId {
+    match &pat.kind {
+      PatKind::Binding { def_id, subpat, .. } if subpat.is_none() => *def_id,
+      PatKind::Binding { .. } => {
+        panic!("local bindings with subpatterns are not supported yet at {span:?}")
+      }
+      _ => panic!("local pattern is not a simple binding at {span:?}"),
+    }
   }
 
   pub fn lower_literal(lit: &AstLiteral) -> Literal {

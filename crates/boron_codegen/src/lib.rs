@@ -4,11 +4,11 @@ use crate::llvm::LLVMCodegen;
 use boron_ir::Ir;
 use boron_utils::context::Context;
 use dashmap::DashMap;
-use inkwell::OptimizationLevel;
 use inkwell::context::Context as LLVMContext;
 use inkwell::targets::{
   CodeModel, InitializationConfig, RelocMode, Target, TargetTriple,
 };
+use inkwell::OptimizationLevel;
 
 pub trait Codegen {
   fn backend_name(&self) -> &str;
@@ -28,7 +28,7 @@ pub fn run_codegen<'a>(ctx: &'a Context<'a>, ir: &Ir) -> anyhow::Result<()> {
       &triple,
       "generic",
       "",
-      OptimizationLevel::Aggressive,
+      OptimizationLevel::None,
       RelocMode::Default,
       CodeModel::Default,
     )

@@ -21,6 +21,38 @@ impl<'ctx> LLVMCodegen<'ctx> {
           .build_load(self.ty(&expr.ty), *ptr, &format!("load_{}", def_id.index()))
           .expect("load local")
       }
+      IrExprKind::Array(exprs) => {
+        let array_ty = self.ty(&expr.ty);
+        let arr_id = expr.hir_id.local_id.0;
+
+        let array_alloca = self
+          .builder
+          .build_alloca(array_ty, &format!("array_expr_{}", arr_id))
+          .expect("alloca failed");
+
+        for (i, elem_expr) in exprs.iter().enumerate() {
+          let elem_value = self.generate_expr(elem_expr);
+
+          let elem_ptr = unsafe {
+            self
+              .builder
+              .build_gep(
+                array_ty,
+                array_alloca,
+                &[
+                  self.context.i32_type().const_int(0, false),
+                  self.context.i32_type().const_int(i as u64, false),
+                ],
+                &format!("array_elem_ptr_{}_{}", arr_id, i),
+              )
+              .expect("gep failed")
+          };
+
+          self.builder.build_store(elem_ptr, elem_value).expect("store failed");
+        }
+
+        array_alloca.into()
+      }
       _ => todo!("{:#?}", expr),
     }
   }

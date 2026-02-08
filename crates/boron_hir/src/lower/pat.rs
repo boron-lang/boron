@@ -9,7 +9,7 @@ impl LoweringContext<'_> {
       PatternKind::Wildcard => (PatKind::Wild, pat.span),
 
       PatternKind::Binding { name, is_mut, subpat } => {
-        let def_id = self.get_def_id(pat.id).unwrap_or(boron_resolver::DefId(0));
+        let def_id = self.get_def_id(pat.id).expect("should have an id");
         let subpat = subpat.as_ref().map(|p| Box::new(self.lower_ast_pattern(p)));
 
         (PatKind::Binding { def_id, name: *name, is_mut: *is_mut, subpat }, pat.span)
