@@ -27,7 +27,6 @@ impl<'ctx> LLVMCodegen<'ctx> {
         };
 
         let float_str = fl.to_string();
-
         match prim {
           PrimitiveKind::F32 => unsafe {
             self.context.f32_type().const_float_from_string(&float_str).into()
@@ -37,6 +36,9 @@ impl<'ctx> LLVMCodegen<'ctx> {
           },
           _ => unreachable!("Float literal should be f32 or f64"),
         }
+      }
+      FullLiteral::String(string) => {
+        self.context.const_string(string.as_bytes(), false).into()
       }
       _ => todo!(),
     }
