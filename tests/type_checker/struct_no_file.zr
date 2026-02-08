@@ -4,6 +4,6 @@ pub struct Vec2<T> {
 }
 
 func main() {
-    //#error: no field to initialize named `w` on type `Vec2<float>`
+    //#error: no field to initialize named `w` on type `Vec2<<float>>`
     var vec = Vec2 { .x = 10.0, .w = 15.0 };
 }

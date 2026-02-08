@@ -36,6 +36,7 @@ define_codes! {
   LEX_JOIN_CONTROL_IN_IDENTIFIER => 17,
   LEX_UNATTACHED_DOC_COMMENT => 18,
   LEX_UNEXPECTED_CHARACTER => 19,
+  LEX_TOO_MANY_CHARS_IN_BYTE_LITERAL => 20,
 
   // Parser (0100..0199)
   PARSE_UNEXPECTED_TOKEN => 100,
@@ -139,10 +140,10 @@ define_codes! {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::collections::HashSet;
+  use super::*;
+  use std::collections::HashSet;
 
-    #[test]
+  #[test]
   fn codes_are_unique_and_in_range() {
     let mut seen = HashSet::new();
 

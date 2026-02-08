@@ -4,5 +4,6 @@ import * from vec;
 extern func printf(format: *const u8) -> i32;
 
 func main() {
+    var val = b'WWW';
     printf("hello");
 }

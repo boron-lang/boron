@@ -1,6 +1,6 @@
-use boron_diagnostics::ToDiagnostic;
 use boron_diagnostics::codes as diag_codes;
 use boron_diagnostics::prelude::{Diag, DiagnosticCode, DiagnosticLevel, Label};
+use boron_diagnostics::ToDiagnostic;
 use boron_utils::prelude::Span;
 use std::fmt;
 
@@ -18,6 +18,7 @@ pub enum LexErrorKind {
   UnterminatedBlockComment,
   InvalidEscape { escape: String },
   InvalidByteValue { value: u32 },
+  TooManyCharsInByteLiteral,
   EmptyCharLiteral,
   MultiCharLiteral,
 
@@ -58,6 +59,9 @@ impl LexError {
       }
       LexErrorKind::InvalidEscape { .. } => diag_codes::LEX_INVALID_ESCAPE,
       LexErrorKind::InvalidByteValue { .. } => diag_codes::LEX_INVALID_BYTE_VALUE,
+      LexErrorKind::TooManyCharsInByteLiteral => {
+        diag_codes::LEX_TOO_MANY_CHARS_IN_BYTE_LITERAL
+      }
       LexErrorKind::EmptyCharLiteral => diag_codes::LEX_EMPTY_CHAR_LITERAL,
       LexErrorKind::MultiCharLiteral => diag_codes::LEX_MULTI_CHAR_LITERAL,
       LexErrorKind::MissingDigitsAfterBase { .. } => {
@@ -91,6 +95,9 @@ impl LexError {
       }
       LexErrorKind::InvalidByteValue { value } => {
         format!("byte value {value} is out of range (must be 0-255)")
+      }
+      LexErrorKind::TooManyCharsInByteLiteral => {
+        "byte literal may only contain one codepoint".to_string()
       }
       LexErrorKind::EmptyCharLiteral => "empty character literal".to_owned(),
       LexErrorKind::MultiCharLiteral => {
@@ -164,6 +171,9 @@ impl LexError {
       }
       LexErrorKind::MissingDigitsAfterBase { base } => {
         Some(format!("add at least one digit after '{base}'"))
+      }
+      LexErrorKind::TooManyCharsInByteLiteral => {
+        Some("use b\"...\" if you meant to write a byte string literal".to_string())
       }
       _ => None,
     }

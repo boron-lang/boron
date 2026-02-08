@@ -211,52 +211,59 @@ impl Lexer<'_> {
     self.advance();
     self.advance();
 
-    let value = match self.peek() {
-      None | Some('\n' | '\r') => {
-        let span = self.make_span(start_offset);
-        return Err(LexError::new(LexErrorKind::UnterminatedChar, span));
-      }
-      Some('\'') => {
-        let span = self.make_span(start_offset);
-        return Err(LexError::new(LexErrorKind::EmptyCharLiteral, span));
-      }
-      Some('\\') => {
-        lexeme.push('\\');
-        self.advance();
-        match self.parse_escape_sequence(false) {
-          // No \u or \U
-          Ok(escaped) => {
-            lexeme.push_str(&escaped);
-            let ch = escaped.chars().next().unwrap();
-            ch as u32
-          }
-          Err(err) => {
-            self.dcx.emit(err);
-            0
+    if self.peek() == Some('\'') {
+      let span = self.make_span(start_offset);
+      return Err(LexError::new(LexErrorKind::EmptyCharLiteral, span));
+    }
+
+    let mut values = Vec::new();
+
+    loop {
+      match self.peek() {
+        None | Some('\n' | '\r') => {
+          let span = self.make_span(start_offset);
+          return Err(LexError::new(LexErrorKind::UnterminatedChar, span));
+        }
+        Some('\'') => {
+          break;
+        }
+        Some('\\') => {
+          lexeme.push('\\');
+          self.advance();
+          match self.parse_escape_sequence(false) {
+            Ok(escaped) => {
+              lexeme.push_str(&escaped);
+              let ch = escaped.chars().next().unwrap();
+              values.push(ch as u32);
+            }
+            Err(err) => {
+              self.dcx.emit(err);
+              values.push(0);
+            }
           }
         }
+        Some(ch) => {
+          lexeme.push(ch);
+          self.advance();
+          values.push(ch as u32);
+        }
       }
-      Some(ch) => {
-        lexeme.push(ch);
-        self.advance();
-        ch as u32
-      }
-    };
-
-    if value > 255 {
-      let span = self.make_span(start_offset);
-      return Err(LexError::new(LexErrorKind::InvalidByteValue { value }, span));
     }
 
-    if self.peek() == Some('\'') {
-      lexeme.push('\'');
-      self.advance();
-    } else {
-      let span = self.make_span(start_offset);
-      return Err(LexError::new(LexErrorKind::UnterminatedChar, span));
-    }
+    lexeme.push('\'');
+    self.advance();
 
     let span = self.make_span(start_offset);
+
+    if values.len() > 1 {
+      return Err(LexError::new(LexErrorKind::TooManyCharsInByteLiteral, span));
+    }
+
+    let value = values[0];
+
+    if value > 255 {
+      return Err(LexError::new(LexErrorKind::InvalidByteValue { value }, span));
+    }
 
     Ok(Token::new(TokenType::ByteLiteral(value as u8), span, lexeme))
   }

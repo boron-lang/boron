@@ -1,0 +1,4 @@
+func main() {
+    //#error: byte literal may only contain one codepoint
+    var val = b'WWW';
+}

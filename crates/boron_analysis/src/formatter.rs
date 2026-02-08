@@ -13,7 +13,7 @@ impl TyChecker<'_> {
   }
 
   fn _format_into(&self, f: &mut String, ty: &InferTy) -> Result<(), std::fmt::Error> {
-    match ty {
+    match &self.infcx.resolve(ty) {
       InferTy::Var(var, _) => match self.infcx.var_kinds.get(var).map(|k| *k.value()) {
         Some(TyVarKind::Integer) => write!(f, "<integer>")?,
         Some(TyVarKind::Float) => write!(f, "<float>")?,
