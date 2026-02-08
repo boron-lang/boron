@@ -1,5 +1,5 @@
+use crate::parser::errors::{ExpectedPattern, InvalidFieldPattern};
 use crate::parser::Parser;
-use crate::parser::errors::ExpectedPattern;
 use crate::{
   BoolLit, Expr, ExprKind, FieldPat, Literal, NodeId, Path, PathParsingContext, Pattern,
   PatternKind, RangeExpr, TokenType,
@@ -168,23 +168,32 @@ impl<'a> Parser<'a> {
       PatternKind::Struct { path, fields, rest: true }
     } else {
       while !self.check(TokenType::RightBrace) && !self.is_at_end() {
-        if !self.eat(TokenType::Dot) {
-          break;
-        }
-        let name = self.parse_identifier();
+        let field_start = self.current_span();
 
-        if self.eat(TokenType::Assign) {
+        let has_dot = self.eat(TokenType::Dot);
+        if !has_dot && matches!(self.peek().kind, TokenType::Identifier(_)) {
+          self.emit(InvalidFieldPattern { span: self.span_from(field_start) });
+        }
+
+        let name = match &self.peek().kind {
+          TokenType::Identifier(_) => self.parse_identifier(),
+          _ => break,
+        };
+
+        let separator = if has_dot { TokenType::Assign } else { TokenType::Colon };
+
+        if self.eat(separator) {
           let pat = self.parse_pattern();
           fields.push(FieldPat {
             name,
             pat,
             id: NodeId::new(),
-            span: self.span_from(*name.span()),
+            span: self.span_from(field_start),
           });
         } else {
           fields.push(FieldPat {
             id: NodeId::new(),
-            span: self.span_from(*name.span()),
+            span: self.span_from(field_start),
             name,
             pat: Pattern {
               id: NodeId::new(),
@@ -198,10 +207,8 @@ impl<'a> Parser<'a> {
           break;
         }
       }
-
       PatternKind::Struct { path, fields, rest: false }
     };
-
     self.expect(TokenType::RightBrace, "to close struct pattern");
     kind
   }

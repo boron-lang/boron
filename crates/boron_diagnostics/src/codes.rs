@@ -84,6 +84,7 @@ define_codes! {
   PARSE_SUPER_ONLY_IN_MOD_OR_IMPORT => 143,
   PARSE_INVALID_FIELD_INIT => 144,
   PARSE_USE_VAR_NOT_CONST => 145,
+  PARSE_INVALID_FIELD_PATTERN => 146,
 
   // Resolver (0200..0299)
   RESOLVE_UNDEFINED_NAME => 200,
@@ -138,10 +139,10 @@ define_codes! {
 
 #[cfg(test)]
 mod tests {
-  use super::*;
-  use std::collections::HashSet;
+    use super::*;
+    use std::collections::HashSet;
 
-  #[test]
+    #[test]
   fn codes_are_unique_and_in_range() {
     let mut seen = HashSet::new();
 

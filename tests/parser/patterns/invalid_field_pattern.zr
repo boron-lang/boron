@@ -1,0 +1,9 @@
+pub struct Vec2<T> {
+    x: T,
+    y: T
+}
+
+func main() {
+    //#error: struct pattern fields init follow this format: .name = pattern, but found name: pattern
+    var Vec2 { x, y } = Vec2 { .x = 10, .y = 15 };
+}

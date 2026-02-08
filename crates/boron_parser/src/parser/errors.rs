@@ -449,3 +449,14 @@ pub struct UseVarNotConst {
   #[error("invalid usage here")]
   pub span: Span,
 }
+
+#[derive(Diagnostic)]
+#[error(
+  "struct pattern fields init follow this format: .name = pattern, but found name: pattern"
+)]
+#[note("`.x` is a shorthand `.x = x`")]
+#[code(PARSE_INVALID_FIELD_PATTERN)]
+pub struct InvalidFieldPattern {
+  #[error("in this field init")]
+  pub span: Span,
+}
