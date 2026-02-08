@@ -1,7 +1,7 @@
 use crate::ids::HirId;
 use crate::pat::Pat;
 use crate::ty::Ty;
-use boron_parser::ast::expressions::{AssignOp, BinaryOp, UnaryOp};
+use boron_parser::ast::expressions::{BinaryOp, UnaryOp};
 use boron_parser::ast::types::Mutability;
 use boron_parser::{FloatSuffix, IntBase, IntSuffix};
 use boron_resolver::DefId;
@@ -33,7 +33,6 @@ pub enum ExprKind {
   },
 
   Assign {
-    op: AssignOp,
     target: Box<Expr>,
     value: Box<Expr>,
   },

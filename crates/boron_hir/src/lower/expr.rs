@@ -8,7 +8,7 @@ use boron_parser::ast::expressions::{
   self, ComptimeArg as AstComptimeArg, ExprKind as AstExprKind,
 };
 use boron_parser::ast::statements;
-use boron_parser::{IntBase, IntSuffix};
+use boron_parser::{AssignOp, IntBase, IntSuffix};
 use boron_resolver::DefId;
 use boron_source::prelude::Span;
 use boron_utils::prelude::{debug, Identifier};
@@ -93,11 +93,25 @@ impl LoweringContext<'_> {
         ExprKind::Unary { op: *op, operand: Box::new(self.lower_expr(operand)) }
       }
 
-      AstExprKind::Assign { op, target, value } => ExprKind::Assign {
-        op: *op,
-        target: Box::new(self.lower_expr(target)),
-        value: Box::new(self.lower_expr(value)),
-      },
+      AstExprKind::Assign { op, target, value } => {
+        let target = self.lower_expr(target);
+        let lowered_value = self.lower_expr(value);
+        let value = if let AssignOp::Assign = op {
+          lowered_value
+        } else {
+          Expr {
+            hir_id: self.next_hir_id(),
+            kind: ExprKind::Binary {
+              op: op.binary_op(),
+              lhs: Box::new(target.clone()),
+              rhs: Box::new(lowered_value),
+            },
+            span: value.span,
+          }
+        };
+
+        ExprKind::Assign { target: Box::new(target), value: Box::new(value) }
+      }
 
       AstExprKind::Cast { expr, target_type } => ExprKind::Cast {
         expr: Box::new(self.lower_expr(expr)),

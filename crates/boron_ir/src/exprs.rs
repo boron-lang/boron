@@ -1,6 +1,6 @@
 use boron_analysis::literal_table::FullLiteral;
 use boron_hir::{HirId, SemanticTy};
-use boron_parser::{AssignOp, BinaryOp, UnaryOp};
+use boron_parser::{BinaryOp, UnaryOp};
 use boron_resolver::DefId;
 use boron_utils::ident_table::Identifier;
 use boron_utils::prelude::Span;
@@ -26,7 +26,7 @@ pub enum IrExprKind {
 
   Unary { op: UnaryOp, operand: Box<IrExpr> },
 
-  Assign { op: AssignOp, target: Box<IrExpr>, value: Box<IrExpr> },
+  Assign { target: Box<IrExpr>, value: Box<IrExpr> },
 
   Cast { expr: Box<IrExpr>, ty: SemanticTy },
 

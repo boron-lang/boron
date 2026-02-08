@@ -217,8 +217,7 @@ impl<'a> IrLowerer<'a> {
         op: *op,
         operand: Box::new(self.lower_expr(operand, type_args)),
       },
-      ThirExprKind::Assign { op, target, value } => IrExprKind::Assign {
-        op: *op,
+      ThirExprKind::Assign { target, value } => IrExprKind::Assign {
         target: Box::new(self.lower_expr(target, type_args)),
         value: Box::new(self.lower_expr(value, type_args)),
       },
@@ -320,9 +319,10 @@ impl<'a> IrLowerer<'a> {
         SemanticTy::Optional(Box::new(Self::lower_type(inner)))
       }
 
-      InferTy::Array { ty: inner, len, .. } => {
-        SemanticTy::Array { elem: Box::new(Self::lower_type(inner)), len: len.expect_len() }
-      }
+      InferTy::Array { ty: inner, len, .. } => SemanticTy::Array {
+        elem: Box::new(Self::lower_type(inner)),
+        len: len.expect_len(),
+      },
 
       InferTy::Slice(inner, _) => SemanticTy::Slice(Box::new(Self::lower_type(inner))),
 

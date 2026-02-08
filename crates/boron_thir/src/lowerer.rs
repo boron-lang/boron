@@ -16,7 +16,7 @@ use boron_hir::{
   Hir, HirId, Literal, Local as HirLocal, MatchArm as HirMatchArm, Stmt as HirStmt,
   StmtKind as HirStmtKind, Struct as HirStruct,
 };
-use boron_parser::{AssignOp, BinaryOp, Mutability, UnaryOp};
+use boron_parser::{BinaryOp, Mutability, UnaryOp};
 use boron_resolver::{DefId, DefKind, Resolver};
 use boron_source::span::Span;
 use boron_utils::ident_table::Identifier;
@@ -186,7 +186,7 @@ impl<'a> ThirLowerer<'a> {
       HirExprKind::Path(path) => self.lower_path(path, expr),
       HirExprKind::Binary { op, lhs, rhs } => self.lower_binary(*op, lhs, rhs, expr),
       HirExprKind::Unary { op, operand } => self.lower_unary(*op, operand, expr),
-      HirExprKind::Assign { op, target, value } => self.lower_assign(*op, target, value),
+      HirExprKind::Assign { target, value } => self.lower_assign(target, value),
       HirExprKind::Cast { expr: inner, ty: _ } => self.lower_cast(inner, expr.hir_id),
       HirExprKind::Call { callee, args } => self.lower_call(callee, args, expr.hir_id),
       HirExprKind::Comptime { .. } => self.lower_comptime(expr),
@@ -293,14 +293,8 @@ impl<'a> ThirLowerer<'a> {
     ExprKind::Unary { op, operand: Box::new(self.lower_expr(operand)) }
   }
 
-  fn lower_assign(
-    &mut self,
-    op: AssignOp,
-    target: &HirExpr,
-    value: &HirExpr,
-  ) -> ExprKind {
+  fn lower_assign(&mut self, target: &HirExpr, value: &HirExpr) -> ExprKind {
     ExprKind::Assign {
-      op,
       target: Box::new(self.lower_expr(target)),
       value: Box::new(self.lower_expr(value)),
     }

@@ -25,7 +25,7 @@ pub enum ExprKind {
 
   Unary { op: UnaryOp, operand: Box<Expr> },
 
-  Assign { op: AssignOp, target: Box<Expr>, value: Box<Expr> },
+  Assign { target: Box<Expr>, value: Box<Expr> },
 
   Cast { expr: Box<Expr>, ty: InferTy },
 

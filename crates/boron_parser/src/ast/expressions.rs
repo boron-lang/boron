@@ -314,6 +314,26 @@ pub enum AssignOp {
   ShrAssign,    // >>=
 }
 
+impl AssignOp {
+  pub fn binary_op(self) -> BinaryOp {
+    match self {
+      Self::Assign => unreachable!(),
+      Self::AddAssign => BinaryOp::Add,
+      Self::SubAssign => BinaryOp::Sub,
+      Self::MulAssign => BinaryOp::Mul,
+      Self::DivAssign => BinaryOp::Div,
+      Self::ModAssign => BinaryOp::Mod,
+      Self::AndAssign => BinaryOp::And,
+      Self::OrAssign => BinaryOp::Or,
+      Self::BitAndAssign => BinaryOp::BitAnd,
+      Self::BitOrAssign => BinaryOp::BitOr,
+      Self::BitXorAssign => BinaryOp::BitXor,
+      Self::ShlAssign => BinaryOp::Shl,
+      Self::ShrAssign => BinaryOp::Shr,
+    }
+  }
+}
+
 #[derive(Debug, Clone)]
 pub struct Pattern {
   pub id: NodeId,
