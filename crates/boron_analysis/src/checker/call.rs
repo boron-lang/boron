@@ -1,5 +1,5 @@
 use crate::checker::TyChecker;
-use crate::errors::FuncArgMismatch;
+use crate::errors::{ArityMismatch, FuncArgMismatch};
 use crate::table::TypeEnv;
 use crate::ty::{InferTy, SubstitutionMap, TyParam};
 use crate::unify::{Expectation, UnifyError, UnifyResult};
@@ -33,8 +33,15 @@ impl TyChecker<'_> {
 
     match resolved {
       InferTy::Fn { params, ret, span: _fn_span } => {
+        let def = self.resolver.get_definition(callee_def_id.unwrap()).unwrap();
+
         if args.len() != params.len() {
-          // TODO: Report arity mismatch error
+          self.dcx().emit(ArityMismatch {
+            callee: format!("function `{}`", def.name),
+            span: callee.span,
+            expected: params.len(),
+            found: args.len(),
+          })
         }
         for (arg, param_ty) in args.iter().zip(params.iter()) {
           let arg_ty =

@@ -1,0 +1,6 @@
+func y() {}
+
+func main() {
+    //#error: expected struct or enum variant in struct initialization, found `function`
+    var value = y { .x = 10.0 };
+}

@@ -143,10 +143,10 @@ impl TyChecker<'_> {
           self.unify(&idx_ty, &InferTy::Primitive(PrimitiveKind::USize, index.span));
         if let UnifyResult::Err(err) = &result {
           match err {
-            UnifyError::Mismatch { found, .. } => {
+            UnifyError::Mismatch { .. } => {
               self.dcx().emit(IndexTypeMismatch {
                 span: index.span,
-                found: self.format_type(found),
+                found: self.format_type(&idx_ty),
               });
             }
             _ => self.handle_unify_result(result, index.span),

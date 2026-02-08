@@ -1,0 +1,4 @@
+func main() {
+    //#error: array length mismatch: expected `3`, found `2`
+    var x: [i32; 3] = [10; 2];
+}

@@ -1,0 +1,5 @@
+func main() {
+    var x = [10, 20];
+    //#error: index must be of type `usize`, found `*const u8`
+    var y = x["hello"];
+}

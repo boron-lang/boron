@@ -252,7 +252,7 @@ pub struct AssignTypeMismatch {
 }
 
 #[derive(Diagnostic)]
-#[error("function body returns `{found}`, but expected `{expected}`")]
+#[error("function body expected `{expected}`, but found `{found}`")]
 #[code(TYPE_CHECKER_RETURN_TYPE_MISMATCH)]
 pub struct ReturnTypeMismatch {
   #[error("expected return type")]
