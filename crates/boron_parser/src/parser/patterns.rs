@@ -144,73 +144,77 @@ impl<'a> Parser<'a> {
 
   fn parse_tuple_struct_pattern(&mut self, path: Path) -> PatternKind {
     let mut patterns = vec![];
-    let kind = if self.eat(TokenType::DotDot) {
-      PatternKind::TupleStruct { path, rest: true, patterns }
-    } else {
-      while !self.check(TokenType::RightParen) && !self.is_at_end() {
-        patterns.push(self.parse_pattern());
+    let mut rest = false;
 
-        if !self.eat(TokenType::Comma) {
-          break;
-        }
+    while !self.check(TokenType::RightParen) && !self.is_at_end() {
+      if self.eat(TokenType::DotDot) {
+        rest = true;
+        break;
       }
 
-      PatternKind::TupleStruct { rest: false, patterns, path }
-    };
+      patterns.push(self.parse_pattern());
+
+      if !self.eat(TokenType::Comma) {
+        break;
+      }
+    }
 
     self.expect(TokenType::RightParen, "to close tuple struct pattern");
-    kind
+    PatternKind::TupleStruct { path, patterns, rest }
   }
 
   fn parse_struct_pattern(&mut self, path: Path) -> PatternKind {
     let mut fields = vec![];
-    let kind = if self.eat(TokenType::DotDot) {
-      PatternKind::Struct { path, fields, rest: true }
-    } else {
-      while !self.check(TokenType::RightBrace) && !self.is_at_end() {
-        let field_start = self.current_span();
+    let mut rest = false;
 
-        let has_dot = self.eat(TokenType::Dot);
-        if !has_dot && matches!(self.peek().kind, TokenType::Identifier(_)) {
-          self.emit(InvalidFieldPattern { span: self.span_from(field_start) });
-        }
-
-        let name = match &self.peek().kind {
-          TokenType::Identifier(_) => self.parse_identifier(),
-          _ => break,
-        };
-
-        let separator = if has_dot { TokenType::Assign } else { TokenType::Colon };
-
-        if self.eat(separator) {
-          let pat = self.parse_pattern();
-          fields.push(FieldPat {
-            name,
-            pat,
-            id: NodeId::new(),
-            span: self.span_from(field_start),
-          });
-        } else {
-          fields.push(FieldPat {
-            id: NodeId::new(),
-            span: self.span_from(field_start),
-            name,
-            pat: Pattern {
-              id: NodeId::new(),
-              span: *name.span(),
-              kind: PatternKind::Binding { name, subpat: None, is_mut: false },
-            },
-          });
-        }
-
-        if !self.eat(TokenType::Comma) {
-          break;
-        }
+    while !self.check(TokenType::RightBrace) && !self.is_at_end() {
+      if self.eat(TokenType::DotDot) {
+        rest = true;
+        break;
       }
-      PatternKind::Struct { path, fields, rest: false }
-    };
+
+      let field_start = self.current_span();
+
+      let has_dot = self.eat(TokenType::Dot);
+      if !has_dot && matches!(self.peek().kind, TokenType::Identifier(_)) {
+        self.emit(InvalidFieldPattern { span: self.span_from(field_start) });
+      }
+
+      let name = match &self.peek().kind {
+        TokenType::Identifier(_) => self.parse_identifier(),
+        _ => break,
+      };
+
+      let separator = if has_dot { TokenType::Assign } else { TokenType::Colon };
+
+      if self.eat(separator) {
+        let pat = self.parse_pattern();
+        fields.push(FieldPat {
+          name,
+          pat,
+          id: NodeId::new(),
+          span: self.span_from(field_start),
+        });
+      } else {
+        fields.push(FieldPat {
+          id: NodeId::new(),
+          span: self.span_from(field_start),
+          name,
+          pat: Pattern {
+            id: NodeId::new(),
+            span: *name.span(),
+            kind: PatternKind::Binding { name, subpat: None, is_mut: false },
+          },
+        });
+      }
+
+      if !self.eat(TokenType::Comma) {
+        break;
+      }
+    }
+
     self.expect(TokenType::RightBrace, "to close struct pattern");
-    kind
+    PatternKind::Struct { path, fields, rest }
   }
 
   fn parse_slice_pattern(&mut self) -> PatternKind {
