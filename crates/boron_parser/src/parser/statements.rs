@@ -1,5 +1,5 @@
-use crate::parser::errors::{AllVarsInitialized, UseVarNotConst};
 use crate::parser::Parser;
+use crate::parser::errors::{AllVarsInitialized, UseVarNotConst};
 use crate::{Block, ExprStmt, NodeId, Statement, TokenType, VarDecl};
 
 impl Parser<'_> {

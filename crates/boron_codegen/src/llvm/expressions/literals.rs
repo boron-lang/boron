@@ -7,12 +7,16 @@ use inkwell::types::{BasicTypeEnum, StringRadix};
 use inkwell::values::BasicValueEnum;
 
 impl<'ctx> LLVMCodegen<'ctx> {
-  pub fn build_literal(&self, expr: &IrExpr, lit: &FullLiteral) -> Result<BasicValueEnum<'ctx>> {
+  pub fn build_literal(
+    &self,
+    expr: &IrExpr,
+    lit: &FullLiteral,
+  ) -> Result<BasicValueEnum<'ctx>> {
     let ty = self.ty(&expr.ty)?;
 
     match lit {
       FullLiteral::Bool(val) => {
-        Ok(self.context.bool_type().const_int(if *val { 1 } else { 0 }, false).into())
+        Ok(self.context.bool_type().const_int(u64::from(*val), false).into())
       }
       FullLiteral::Int(number) => {
         let BasicTypeEnum::IntType(i) = ty else { unreachable!() };

@@ -6,7 +6,7 @@ mod structs;
 mod types;
 
 use crate::Codegen;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use boron_ir::{Ir, IrId};
 use boron_resolver::DefId;
 use boron_utils::context::Context;
@@ -33,7 +33,7 @@ pub struct LLVMCodegen<'ctx> {
   pub ir: &'ctx Ir,
 }
 
-impl<'ctx> Codegen for LLVMCodegen<'ctx> {
+impl Codegen for LLVMCodegen<'_> {
   fn backend_name(&self) -> &'static str {
     "LLVM"
   }
@@ -47,10 +47,10 @@ impl<'ctx> Codegen for LLVMCodegen<'ctx> {
     }
 
     for func in &ir.functions {
-      self.create_function_body(&func)?;
+      self.create_function_body(func)?;
     }
     for func in &ir.functions {
-      self.generate_function_body(&func)?
+      self.generate_function_body(func)?;
     }
 
     let opt_level = if self.ctx.session.config().mode == Mode::Release {
@@ -61,7 +61,7 @@ impl<'ctx> Codegen for LLVMCodegen<'ctx> {
     self
       .module
       .run_passes(opt_level, &self.target_machine, PassBuilderOptions::create())
-      .map_err(|s| anyhow!("Failed to run optimization passes: {}", s))?;
+      .map_err(|s| anyhow!("Failed to run optimization passes: {s}"))?;
 
     self.output_ir()?;
     Ok(())
@@ -70,7 +70,7 @@ impl<'ctx> Codegen for LLVMCodegen<'ctx> {
 
 impl<'ctx> LLVMCodegen<'ctx> {
   pub fn require_some<T>(&self, value: Option<T>, context: &str) -> Result<T> {
-    value.ok_or_else(|| anyhow!("LLVM codegen invariant violated: {}", context))
+    value.ok_or_else(|| anyhow!("LLVM codegen invariant violated: {context}"))
   }
 
   pub fn require_llvm<T, E: std::fmt::Display>(
@@ -78,11 +78,11 @@ impl<'ctx> LLVMCodegen<'ctx> {
     value: Result<T, E>,
     context: &str,
   ) -> Result<T> {
-    value.map_err(|err| anyhow!("LLVM codegen failed ({}): {}", context, err))
+    value.map_err(|err| anyhow!("LLVM codegen failed ({context}): {err}"))
   }
 
   pub fn struct_ty_by_id(&self, id: &IrId) -> Result<StructType<'ctx>> {
     let strukt = self.require_some(self.structs.get(id), "struct type missing")?;
-    Ok(strukt.value().clone())
+    Ok(*strukt.value())
   }
 }

@@ -11,11 +11,11 @@ impl Parser<'_> {
       TokenType::Star => {
         self.advance();
         ImportKind::Wildcard
-      },
+      }
       TokenType::LeftBrace => {
         let mut specs = vec![];
         self.expect(TokenType::LeftBrace, "to open import list");
-        
+
         loop {
           if self.check(TokenType::RightBrace) || self.is_at_end() {
             break;

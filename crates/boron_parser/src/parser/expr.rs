@@ -541,12 +541,11 @@ impl Parser<'_> {
     while !self.check(TokenType::RightBrace) && !self.is_at_end() {
       let field_start = self.current_span();
 
-      let field = match self.parse_single_field_init(field_start) {
-        Some(field) => field,
-        None => {
-          self.advance_until_one_of(&[TokenType::RightBrace]);
-          return vec![];
-        }
+      let field = if let Some(field) = self.parse_single_field_init(field_start) {
+        field
+      } else {
+        self.advance_until_one_of(&[TokenType::RightBrace]);
+        return vec![];
       };
 
       fields.push(field);

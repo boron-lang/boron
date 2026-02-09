@@ -21,22 +21,27 @@ impl<'ctx> LLVMCodegen<'ctx> {
 
           macro_rules! int_op {
             ($method:ident, $name:expr) => {
-              Ok(self.require_llvm(self.builder.$method(lhs_val, rhs_val, $name), $name)?.into())
+              Ok(
+                self
+                  .require_llvm(self.builder.$method(lhs_val, rhs_val, $name), $name)?
+                  .into(),
+              )
             };
           }
 
           macro_rules! int_cmp {
-            ($pred:ident, $name:expr) => {
-              {
-                let value = self.require_llvm(
-                  self
-                    .builder
-                    .build_int_compare(IntPredicate::$pred, lhs_val, rhs_val, $name),
+            ($pred:ident, $name:expr) => {{
+              let value = self.require_llvm(
+                self.builder.build_int_compare(
+                  IntPredicate::$pred,
+                  lhs_val,
+                  rhs_val,
                   $name,
-                )?;
-                Ok(value.into())
-              }
-            };
+                ),
+                $name,
+              )?;
+              Ok(value.into())
+            }};
           }
 
           match op {
@@ -74,22 +79,27 @@ impl<'ctx> LLVMCodegen<'ctx> {
 
           macro_rules! float_op {
             ($method:ident, $name:expr) => {
-              Ok(self.require_llvm(self.builder.$method(lhs_val, rhs_val, $name), $name)?.into())
+              Ok(
+                self
+                  .require_llvm(self.builder.$method(lhs_val, rhs_val, $name), $name)?
+                  .into(),
+              )
             };
           }
 
           macro_rules! float_cmp {
-            ($pred:ident, $name:expr) => {
-              {
-                let value = self.require_llvm(
-                  self
-                    .builder
-                    .build_float_compare(FloatPredicate::$pred, lhs_val, rhs_val, $name),
+            ($pred:ident, $name:expr) => {{
+              let value = self.require_llvm(
+                self.builder.build_float_compare(
+                  FloatPredicate::$pred,
+                  lhs_val,
+                  rhs_val,
                   $name,
-                )?;
-                Ok(value.into())
-              }
-            };
+                ),
+                $name,
+              )?;
+              Ok(value.into())
+            }};
           }
 
           match op {

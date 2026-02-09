@@ -22,13 +22,15 @@ impl<'ctx> LLVMCodegen<'ctx> {
     let mut largs = vec![];
 
     for arg in args {
-      largs.push(self.generate_expr(&arg)?);
+      largs.push(self.generate_expr(arg)?);
     }
 
     let call_site = self.require_llvm(
-      self
-        .builder
-        .build_call(function, &Self::args_to_metadata(largs.as_slice()), &ir_function.name),
+      self.builder.build_call(
+        function,
+        &Self::args_to_metadata(largs.as_slice()),
+        &ir_function.name,
+      ),
       "build call",
     )?;
 

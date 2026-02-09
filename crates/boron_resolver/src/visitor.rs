@@ -1,3 +1,4 @@
+use crate::DefId;
 use crate::builtin_kind::BuiltInKind;
 use crate::def::{DefKind, Definition};
 use crate::errors::{
@@ -7,7 +8,7 @@ use crate::module_resolver::ModuleResolver;
 use crate::resolver::Resolver;
 use crate::scope::ScopeKind;
 use crate::symbol::{Symbol, SymbolKind};
-use crate::DefId;
+use boron_parser::ast::ProgramNode;
 use boron_parser::ast::expressions::{Expr, ExprKind};
 use boron_parser::ast::items::{
   ConstItem, EnumItem, FunctionItem, Item, ItemKind, ModItem, StructItem, Visibility,
@@ -15,7 +16,6 @@ use boron_parser::ast::items::{
 use boron_parser::ast::params::Param;
 use boron_parser::ast::statements::{Block, Statement};
 use boron_parser::ast::types::Type;
-use boron_parser::ast::ProgramNode;
 use boron_parser::module::Modules;
 use boron_parser::{
   ComptimeArg, ElseBranch, GenericParams, IfExpr, NodeId, Path, Pattern, PatternKind,
@@ -23,7 +23,7 @@ use boron_parser::{
 };
 use boron_source::prelude::{SourceFileId, Span};
 use boron_utils::context::Context;
-use boron_utils::prelude::{get_or_intern, Identifier};
+use boron_utils::prelude::{Identifier, get_or_intern};
 
 #[derive(Clone, Debug, Copy, Hash, PartialEq, Eq)]
 pub enum Namespace {
@@ -138,13 +138,12 @@ impl<'a> ResolveVisitor<'a> {
       }
     }
 
-    let def =
-      Definition::new(name.clone(), node_id, self.current_file(), kind, span, vis);
+    let def = Definition::new(name, node_id, self.current_file(), kind, span, vis);
     let def_id = self.resolver().add_definition(def);
 
     match namespace {
-      Namespace::Value => self.module_resolver.define_value(name.clone(), def_id),
-      Namespace::Type => self.module_resolver.define_type(name.clone(), def_id),
+      Namespace::Value => self.module_resolver.define_value(name, def_id),
+      Namespace::Type => self.module_resolver.define_type(name, def_id),
     }
 
     self.resolver().symbols.record_resolution(node_id, def_id);
@@ -154,7 +153,7 @@ impl<'a> ResolveVisitor<'a> {
         Namespace::Value => SymbolKind::Value,
         Namespace::Type => SymbolKind::Type,
       };
-      let symbol = Symbol::new(name.clone(), def_id, symbol_kind, scope_id);
+      let symbol = Symbol::new(name, def_id, symbol_kind, scope_id);
       self.resolver().symbols.insert(symbol);
     }
 
@@ -184,8 +183,7 @@ impl<'a> ResolveVisitor<'a> {
         Param::SelfParam(s) => (get_or_intern("self", Some(s.span)), s.id, s.span),
       };
 
-      let def =
-        Definition::new(name.clone(), id, self.current_file(), DefKind::Param, span, vis);
+      let def = Definition::new(name, id, self.current_file(), DefKind::Param, span, vis);
       let def_id = self.resolver().add_definition(def);
       self.module_resolver.define_value(name, def_id);
       self.module_resolver.resolver.symbols.record_resolution(id, def_id);
@@ -270,10 +268,10 @@ impl<'a> ResolveVisitor<'a> {
       if matches!(item.visibility, Visibility::Public(_)) {
         match namespace {
           Namespace::Value => {
-            self.resolver().export_inline_value(module_def_id, name, def_id)
+            self.resolver().export_inline_value(module_def_id, name, def_id);
           }
           Namespace::Type => {
-            self.resolver().export_inline_type(module_def_id, name, def_id)
+            self.resolver().export_inline_type(module_def_id, name, def_id);
           }
         }
       }
@@ -456,7 +454,7 @@ impl<'a> ResolveVisitor<'a> {
           pat.id,
           self.current_file(),
           DefKind::Local,
-          pat.span.clone(),
+          pat.span,
           Visibility::Public(Span::dummy()),
         );
         let def_id = self.resolver().add_definition(def);
@@ -464,25 +462,25 @@ impl<'a> ResolveVisitor<'a> {
 
         self.resolver().symbols.record_resolution(pat.id, def_id);
         if let Some(subpat) = subpat {
-          self.resolve_pattern(subpat)
+          self.resolve_pattern(subpat);
         }
       }
       PatternKind::Tuple(patterns) => {
         for p in patterns {
-          self.resolve_pattern(p)
+          self.resolve_pattern(p);
         }
       }
       PatternKind::Struct { path, fields, rest } => {
         self.resolve_path(path);
 
         for field in fields {
-          self.resolve_pattern(&field.pat)
+          self.resolve_pattern(&field.pat);
         }
       }
       PatternKind::TupleStruct { path, patterns, rest } => {
         self.resolve_path(path);
         for p in patterns {
-          self.resolve_pattern(p)
+          self.resolve_pattern(p);
         }
       }
       PatternKind::Path(path) => self.resolve_path(path),
@@ -603,7 +601,7 @@ impl<'a> ResolveVisitor<'a> {
 
     if let Some(def) = self.resolver().get_definition(current_def) {
       if self.current_file() != def.source_file && def.visibility.is_private() {
-        self.ctx.dcx().emit(PrivateItem { name: def.name, span: path.span })
+        self.ctx.dcx().emit(PrivateItem { name: def.name, span: path.span });
       }
     }
 

@@ -97,7 +97,7 @@ impl TyChecker<'_> {
           }
           self.unify(t1, t2)
         } else {
-          return UnifyResult::Ok;
+          UnifyResult::Ok
         }
       }
 

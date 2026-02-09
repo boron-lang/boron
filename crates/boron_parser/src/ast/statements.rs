@@ -1,7 +1,7 @@
+use crate::Pattern;
 use crate::ast::expressions::Expr;
 use crate::ast::program::NodeId;
 use crate::ast::types::Type;
-use crate::Pattern;
 use boron_utils::prelude::Span;
 
 #[derive(Debug, Clone)]

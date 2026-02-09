@@ -9,11 +9,12 @@ impl LLVMCodegen<'_> {
   }
 
   pub fn generate_struct_body(&self, strukt: &IrStruct) -> Result<()> {
-    let ty = self.require_some(self.structs.get(&strukt.id), "struct type missing for body")?;
+    let ty =
+      self.require_some(self.structs.get(&strukt.id), "struct type missing for body")?;
     let mut field_types = vec![];
 
     for (_, ty) in &strukt.fields {
-      field_types.push(self.ty(&ty)?);
+      field_types.push(self.ty(ty)?);
     }
 
     ty.set_body(&field_types, false);

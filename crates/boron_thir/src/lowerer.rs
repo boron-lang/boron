@@ -1,6 +1,6 @@
+use crate::Param;
 use crate::exprs::{Block, Expr, ExprKind, FieldInit, Local, MatchArm, Stmt, StmtKind};
 use crate::items::{Field, Function, Struct};
-use crate::Param;
 use boron_analysis::float::construct_float;
 use boron_analysis::int::construct_i128;
 use boron_analysis::interpreter::{
@@ -351,7 +351,7 @@ impl<'a> ThirLowerer<'a> {
       .resolver
       .get_recorded_comptime_builtin(self.hir.hir_to_node(&expr.hir_id).unwrap());
 
-    let const_val = if let Some(_) = comptime {
+    let const_val = if comptime.is_some() {
       self.built_in_results.get(expr.hir_id)
     } else {
       self.interpreter_cache.get(expr.hir_id)

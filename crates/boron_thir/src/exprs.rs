@@ -1,5 +1,5 @@
-use boron_analysis::literal_table::FullLiteral;
 use boron_analysis::InferTy;
+use boron_analysis::literal_table::FullLiteral;
 use boron_hir::{HirId, Pat};
 use boron_parser::{BinaryOp, UnaryOp};
 use boron_resolver::DefId;

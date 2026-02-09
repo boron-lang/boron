@@ -11,16 +11,10 @@ pub struct SourcesImpl {
 }
 
 /// This struct handles all sources (files) used in the compilation process.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Sources {
   inner: SourcesImpl,
   root: Option<PathBuf>,
-}
-
-impl Default for Sources {
-  fn default() -> Self {
-    Self { inner: Default::default(), root: None }
-  }
 }
 
 impl Sources {

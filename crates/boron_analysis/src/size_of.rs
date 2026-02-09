@@ -15,9 +15,7 @@ pub fn size_of_ty<'a>(sz: &'a SizeOfContext<'a>, ty: &InferTy) -> usize {
   match ty {
     InferTy::Primitive(p, _) => target.size_of(*p),
     InferTy::Ptr { .. } => target.pointer_width.size_bytes(),
-    InferTy::Array { ty, len, .. } => {
-      size_of_ty(sz, ty) * len.len()
-    },
+    InferTy::Array { ty, len, .. } => size_of_ty(sz, ty) * len.len(),
     InferTy::Adt { def_id, .. } => {
       let def = sz.resolver.get_definition(*def_id).unwrap();
 

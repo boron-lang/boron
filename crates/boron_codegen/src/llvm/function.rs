@@ -1,9 +1,11 @@
-use crate::llvm::blocks::{BlockContext, BlockGeneratorContext};
 use crate::llvm::LLVMCodegen;
+use crate::llvm::blocks::{BlockContext, BlockGeneratorContext};
 use anyhow::Result;
 use boron_ir::{IrFunction, IrId, Projection, SemanticTy};
 use inkwell::module::Linkage;
-use inkwell::types::{BasicMetadataTypeEnum, BasicType, BasicTypeEnum, FunctionType};
+use inkwell::types::{
+  BasicMetadataTypeEnum, BasicType as _, BasicTypeEnum, FunctionType,
+};
 use inkwell::values::FunctionValue;
 
 impl<'ctx> LLVMCodegen<'ctx> {
@@ -28,15 +30,12 @@ impl<'ctx> LLVMCodegen<'ctx> {
   }
 
   pub fn function_value(&self, id: &IrId) -> Result<FunctionValue<'ctx>> {
-    Ok(self.require_some(self.funcs.get(id), "function value missing")?.clone())
+    Ok(*self.require_some(self.funcs.get(id), "function value missing")?)
   }
 
   pub fn create_function_body(&self, func: &IrFunction) -> Result<()> {
-    let params = func
-      .params
-      .iter()
-      .map(|param| self.ty(&param.ty))
-      .collect::<Result<Vec<_>>>()?;
+    let params =
+      func.params.iter().map(|param| self.ty(&param.ty)).collect::<Result<Vec<_>>>()?;
     let fn_ty = self.fn_ret_ty(&func.return_type, &params, false)?;
 
     let linkage = if func.body.is_some() { None } else { Some(Linkage::External) };
@@ -58,7 +57,8 @@ impl<'ctx> LLVMCodegen<'ctx> {
           BlockContext::Normal
         };
 
-        self.generate_block(&BlockGeneratorContext::new(block, func, function, context))?;
+        self
+          .generate_block(&BlockGeneratorContext::new(block, func, function, context))?;
       }
     }
 
@@ -70,10 +70,11 @@ impl<'ctx> LLVMCodegen<'ctx> {
     for local in locals.iter() {
       let name = format!("local_{}", local.hir_id.index());
       let struct_ty = self.ty(&local.ty)?;
-      let p_val = self.require_llvm(self.builder.build_alloca(struct_ty, &name), "alloca")?;
+      let p_val =
+        self.require_llvm(self.builder.build_alloca(struct_ty, &name), "alloca")?;
       let init_value = self.generate_expr(&local.init)?;
-      let _ =
-        self.require_llvm(self.builder.build_store(p_val, init_value), "store local init")?;
+      let _ = self
+        .require_llvm(self.builder.build_store(p_val, init_value), "store local init")?;
 
       for projection in &local.projections {
         match projection {
@@ -85,7 +86,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
               unreachable!()
             };
 
-            let strukt = self.ir.find_struct(&struct_def_id, &args);
+            let strukt = self.ir.find_struct(struct_def_id, args);
             let struct_ty = self.struct_ty_by_id(&strukt.id)?;
             let _field_ty = self.require_some(
               struct_ty.get_field_type_at_index(*field_idx),

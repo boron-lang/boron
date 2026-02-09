@@ -2,7 +2,7 @@ use boron_diagnostic_macro::Diagnostic;
 use boron_diagnostics::DiagnosticCtx;
 use boron_source::span::Span;
 use rustc_apfloat::ieee::{Double, DoubleS, IeeeFloat};
-use std::str::FromStr;
+use std::str::FromStr as _;
 
 pub fn construct_float(
   dcx: &DiagnosticCtx,

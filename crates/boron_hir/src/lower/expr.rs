@@ -3,15 +3,13 @@ use crate::expr::{
   PathSegment, Stmt, StmtKind,
 };
 use crate::lower::context::LoweringContext;
-use crate::{Pat, PatKind};
 use boron_parser::ast::expressions::{
   self, ComptimeArg as AstComptimeArg, ExprKind as AstExprKind,
 };
 use boron_parser::ast::statements;
 use boron_parser::{AssignOp, IntBase, IntSuffix};
-use boron_resolver::DefId;
 use boron_source::prelude::Span;
-use boron_utils::prelude::{debug, Identifier};
+use boron_utils::prelude::{Identifier, debug};
 use expressions::Literal as AstLiteral;
 use itertools::Itertools as _;
 
@@ -96,7 +94,7 @@ impl LoweringContext<'_> {
       AstExprKind::Assign { op, target, value } => {
         let target = self.lower_expr(target);
         let lowered_value = self.lower_expr(value);
-        let value = if let AssignOp::Assign = op {
+        let value = if matches!(op, AssignOp::Assign) {
           lowered_value
         } else {
           Expr {

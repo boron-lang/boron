@@ -1,5 +1,5 @@
-use crate::checker::pattern::{ExpectedPattern, PatternContext};
 use crate::checker::TyChecker;
+use crate::checker::pattern::{ExpectedPattern, PatternContext};
 use crate::errors::VarInitMismatch;
 use crate::table::TypeEnv;
 use crate::ty::InferTy;
@@ -72,7 +72,13 @@ impl TyChecker<'_> {
       }
     }
 
-    self.check_pattern(&local.pat, &expected, env, ExpectedPattern::Irrefutable, PatternContext::Local);
+    self.check_pattern(
+      &local.pat,
+      &expected,
+      env,
+      ExpectedPattern::Irrefutable,
+      PatternContext::Local,
+    );
 
     InferTy::Unit(local.span)
   }

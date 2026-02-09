@@ -1,6 +1,6 @@
+use boron_diagnostics::ToDiagnostic;
 use boron_diagnostics::codes as diag_codes;
 use boron_diagnostics::prelude::{Diag, DiagnosticCode, DiagnosticLevel, Label};
-use boron_diagnostics::ToDiagnostic;
 use boron_utils::prelude::Span;
 use std::fmt;
 
@@ -97,7 +97,7 @@ impl LexError {
         format!("byte value {value} is out of range (must be 0-255)")
       }
       LexErrorKind::TooManyCharsInByteLiteral => {
-        "byte literal may only contain one codepoint".to_string()
+        "byte literal may only contain one codepoint".to_owned()
       }
       LexErrorKind::EmptyCharLiteral => "empty character literal".to_owned(),
       LexErrorKind::MultiCharLiteral => {
@@ -173,7 +173,7 @@ impl LexError {
         Some(format!("add at least one digit after '{base}'"))
       }
       LexErrorKind::TooManyCharsInByteLiteral => {
-        Some("use b\"...\" if you meant to write a byte string literal".to_string())
+        Some("use b\"...\" if you meant to write a byte string literal".to_owned())
       }
       _ => None,
     }

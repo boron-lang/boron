@@ -2,8 +2,8 @@ use crate::directives::Directive;
 use crate::output::{FailureType, TestResult, TestStatus};
 use crate::test::Test;
 use boron_core::prelude::*;
-use itertools::Itertools;
 use boron_diagnostics::DiagnosticWriter;
+use itertools::Itertools;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use super::directives::matches_directive;

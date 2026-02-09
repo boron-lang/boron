@@ -1,6 +1,6 @@
 use crate::errors::{PrivateItem, UndefinedModule, UndefinedNameInModule};
 use crate::{
-    DefId, DefKind, Definition, ModuleResolver, ResolveVisitor, Symbol, SymbolKind,
+  DefId, DefKind, Definition, ModuleResolver, ResolveVisitor, Symbol, SymbolKind,
 };
 use boron_parser::{ImportDecl, ImportKind, ImportSpec, NodeId, Visibility};
 use boron_source::prelude::{SourceFileId, Span};
@@ -146,8 +146,8 @@ impl<'a> ResolveVisitor<'a> {
   ) where
     F: FnMut(&mut ModuleResolver<'a>, Identifier, DefId),
   {
-    for entry in exports.iter() {
-      let name = entry.key().clone();
+    for entry in exports {
+      let name = *entry.key();
       let def_id = *entry.value();
       let def = self.resolver().get_definition(def_id).expect("should be known");
 

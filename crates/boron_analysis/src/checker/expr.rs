@@ -1,21 +1,18 @@
-use crate::builtins::{get_builtin, BuiltInParam};
+use crate::builtins::{BuiltInParam, get_builtin};
 use crate::checker::TyChecker;
 use crate::errors::{
-  ArityMismatch, ArrayRepeatNotANumber, AssignTypeMismatch, FuncArgMismatch,
-  IndexTypeMismatch, InvalidBinaryOp, InvalidUnaryOp, TypeMismatch,
+  ArityMismatch, AssignTypeMismatch, FuncArgMismatch, IndexTypeMismatch, InvalidBinaryOp,
+  TypeMismatch,
 };
 use crate::functions::FinalComptimeArg;
-use crate::interpreter::values::ConstValue;
-use crate::interpreter::{InterpreterContext, InterpreterMode};
 use crate::table::TypeEnv;
 use crate::ty::{ArrayLength, InferTy};
 use crate::unify::{Expectation, UnifyError, UnifyResult};
-use crate::TyVarKind;
 use boron_hir::expr::ComptimeArg;
 use boron_hir::{Expr, ExprKind, Literal};
+use boron_parser::Mutability;
 use boron_parser::ast::types::PrimitiveKind;
-use boron_parser::{Mutability, UnaryOp};
-use boron_utils::prelude::{warn, Span};
+use boron_utils::prelude::{Span, warn};
 
 impl TyChecker<'_> {
   pub(crate) fn check_expr(
@@ -50,7 +47,7 @@ impl TyChecker<'_> {
             lhs: self.format_type(&lhs_ty),
             rhs: self.format_type(&rhs_ty),
             span: expr.span,
-          })
+          });
         } else {
           self.handle_unify_result(result, expr.span);
         }

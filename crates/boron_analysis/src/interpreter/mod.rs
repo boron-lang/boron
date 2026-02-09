@@ -16,7 +16,6 @@ use boron_parser::{BinaryOp, UnaryOp};
 use boron_resolver::Resolver;
 use dashmap::DashMap;
 use std::cmp::PartialEq;
-use std::str::FromStr;
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum InterpreterMode {

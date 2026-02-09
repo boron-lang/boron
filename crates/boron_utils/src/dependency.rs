@@ -32,11 +32,11 @@ impl FromStr for Dependency {
 
   fn from_str(s: &str) -> anyhow::Result<Self, Self::Err> {
     let Some((name, rest)) = s.split_once(':') else {
-      bail!("Invalid dependency format. Expected 'name:root=entrypoint', got '{}'", s)
+      bail!("Invalid dependency format. Expected 'name:root=entrypoint', got '{s}'")
     };
 
     let Some((root, entrypoint)) = rest.split_once('=') else {
-      bail!("Invalid dependency format. Expected 'name:root=entrypoint', got '{}'", s)
+      bail!("Invalid dependency format. Expected 'name:root=entrypoint', got '{s}'")
     };
 
     Ok(Self {

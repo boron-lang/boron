@@ -1,8 +1,7 @@
 use crate::def::DefId;
 use crate::scope::ScopeId;
-use boron_utils::prelude::{get_or_intern, Identifier};
+use boron_utils::prelude::Identifier;
 use std::collections::HashMap;
-use boron_source::span::Span;
 
 #[derive(Debug, Clone)]
 pub struct Rib {

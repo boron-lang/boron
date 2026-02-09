@@ -1,5 +1,5 @@
 use parking_lot::{Mutex, MutexGuard};
-use std::io::{stderr, Cursor, Stderr, Write};
+use std::io::{Cursor, Stderr, Write, stderr};
 use std::sync::Arc;
 
 pub enum DiagnosticWriterInner {
@@ -11,17 +11,17 @@ pub enum DiagnosticWriterInner {
 impl Write for DiagnosticWriterInner {
   fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
     match self {
-      DiagnosticWriterInner::Stderr(writer) => writer.write(buf),
-      DiagnosticWriterInner::Buffer(writer) => writer.write(buf),
-      DiagnosticWriterInner::Custom(writer) => writer.write(buf),
+      Self::Stderr(writer) => writer.write(buf),
+      Self::Buffer(writer) => writer.write(buf),
+      Self::Custom(writer) => writer.write(buf),
     }
   }
 
   fn flush(&mut self) -> std::io::Result<()> {
     match self {
-      DiagnosticWriterInner::Stderr(writer) => writer.flush(),
-      DiagnosticWriterInner::Buffer(writer) => writer.flush(),
-      DiagnosticWriterInner::Custom(writer) => writer.flush(),
+      Self::Stderr(writer) => writer.flush(),
+      Self::Buffer(writer) => writer.flush(),
+      Self::Custom(writer) => writer.flush(),
     }
   }
 }

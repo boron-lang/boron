@@ -41,7 +41,7 @@ impl TyChecker<'_> {
             span: callee.span,
             expected: params.len(),
             found: args.len(),
-          })
+          });
         }
         for (arg, param_ty) in args.iter().zip(params.iter()) {
           let arg_ty =

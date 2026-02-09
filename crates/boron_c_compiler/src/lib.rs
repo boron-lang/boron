@@ -183,7 +183,7 @@ impl CBuild {
         pb.finish_with_message("❌ Compilation failed");
         let stderr = String::from_utf8_lossy(&output.stderr);
         if !stderr.is_empty() {
-          bail!("Compilation failed with error: {}", stderr);
+          bail!("Compilation failed with error: {stderr}");
         } else {
           bail!("Compilation failed with exit code: {}", output.status);
         }
@@ -244,7 +244,7 @@ impl CBuild {
 
       let stderr = String::from_utf8_lossy(&output.stderr);
       if !stderr.is_empty() {
-        bail!("Compilation failed with error: {}", stderr);
+        bail!("Compilation failed with error: {stderr}");
       } else {
         bail!("Compilation failed with exit code: {}", output.status);
       }
@@ -343,7 +343,7 @@ impl CBuild {
     if !output.status.success() {
       let stderr = String::from_utf8_lossy(&output.stderr);
       if !stderr.is_empty() {
-        bail!("Library creation failed with error: {}", stderr);
+        bail!("Library creation failed with error: {stderr}");
       } else {
         bail!("Library creation failed with exit code: {}", output.status);
       }

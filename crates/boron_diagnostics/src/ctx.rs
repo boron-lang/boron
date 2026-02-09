@@ -1,17 +1,15 @@
-use crate::emitters::human_readable::HumanReadableEmitter;
 use crate::emitters::Emitter;
+use crate::emitters::human_readable::HumanReadableEmitter;
 use crate::output_type::DiagnosticOutputType;
+use crate::writer::DiagnosticWriter;
 use crate::{Diag, Diagnostic, DiagnosticId, DiagnosticLevel};
 use boron_source::prelude::Sources;
-use dashmap::mapref::one::{Ref, RefMut};
 use dashmap::DashMap;
+use dashmap::mapref::one::{Ref, RefMut};
 use derivative::Derivative;
 use log::debug;
-use parking_lot::{Mutex, MutexGuard};
-use std::io::Result;
-use std::io::{stderr, Cursor, Stderr, Write as _, Write};
+use std::io::{Write as _, Write as _, stderr};
 use std::sync::Arc;
-use crate::writer::DiagnosticWriter;
 
 #[derive(Derivative)]
 #[derivative(Debug)]

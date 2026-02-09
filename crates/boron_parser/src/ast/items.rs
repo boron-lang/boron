@@ -24,7 +24,7 @@ pub enum Visibility {
 
 impl Visibility {
   pub fn is_private(&self) -> bool {
-    matches!(self, Visibility::Private)
+    matches!(self, Self::Private)
   }
 }
 

@@ -1,7 +1,6 @@
 use boron_hir::SemanticTy;
-use rustc_apfloat::ieee::{Double, DoubleS, IeeeFloat};
+use rustc_apfloat::ieee::{DoubleS, IeeeFloat};
 use std::fmt;
-use std::fmt::write;
 
 #[derive(Debug, Clone)]
 pub enum ConstValue {

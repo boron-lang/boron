@@ -1,9 +1,9 @@
-use crate::llvm::blocks::BlockGeneratorContext;
 use crate::llvm::LLVMCodegen;
+use crate::llvm::blocks::BlockGeneratorContext;
 use anyhow::Result;
 use boron_ir::{IrStmt, IrStmtKind, IrTerminator};
 
-#[allow(dead_code)]
+#[expect(dead_code)]
 #[derive(Clone, Debug, PartialEq, Eq, Copy)]
 pub enum BlockContext {
   FunctionStart,
@@ -21,7 +21,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
   }
 
   pub fn generate_block(&self, ctx: &BlockGeneratorContext<'ctx, '_>) -> Result<()> {
-    let name = Self::block_name(&ctx);
+    let name = Self::block_name(ctx);
 
     let entry = self.context.append_basic_block(ctx.function, &name);
     self.builder.position_at_end(entry);
@@ -32,12 +32,11 @@ impl<'ctx> LLVMCodegen<'ctx> {
           ctx.function.get_nth_param(idx as u32),
           "param index should exist",
         )?;
-        let alloca = self
-          .builder
-          .build_alloca(self.ty(&param.ty)?, &param.name);
+        let alloca = self.builder.build_alloca(self.ty(&param.ty)?, &param.name);
         let alloca = self.require_llvm(alloca, "param alloca")?;
 
-        let _ = self.require_llvm(self.builder.build_store(alloca, param_val), "param store")?;
+        let _ = self
+          .require_llvm(self.builder.build_store(alloca, param_val), "param store")?;
 
         self.locals.insert(param.def_id, alloca);
       }
@@ -46,7 +45,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
     }
 
     for stmt in &ctx.block.stmts {
-      self.generate_stmt(stmt, ctx)?
+      self.generate_stmt(stmt, ctx)?;
     }
 
     self.generate_terminator(&ctx.block.terminator)?;

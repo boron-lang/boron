@@ -113,8 +113,7 @@ fn detect_msvc_compiler() -> Result<Compiler> {
             }
             Err(e) => {
               return Err(anyhow!(
-                "cl.exe not found in PATH after setting up MSVC environment: {}",
-                e
+                "cl.exe not found in PATH after setting up MSVC environment: {e}"
               ));
             }
           }
@@ -127,7 +126,7 @@ fn detect_msvc_compiler() -> Result<Compiler> {
     }
   }
 
-  Err(anyhow!("No working MSVC installation found. Checked paths: {:?}", msvc_paths))
+  Err(anyhow!("No working MSVC installation found. Checked paths: {msvc_paths:?}"))
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -155,7 +154,7 @@ fn setup_msvc_environment(vcvars_path: &Path) -> Result<HashMap<String, String>>
 
   if !output.status.success() {
     let stderr = String::from_utf8_lossy(&output.stderr);
-    return Err(anyhow!("vcvars script failed with error: {}", stderr));
+    return Err(anyhow!("vcvars script failed with error: {stderr}"));
   }
 
   let mut env_vars = HashMap::new();

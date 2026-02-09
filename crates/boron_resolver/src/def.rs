@@ -1,9 +1,9 @@
+use boron_parser::Visibility;
 use boron_parser::ast::NodeId;
 use boron_source::new_id;
 use boron_source::prelude::SourceFileId;
 use boron_utils::prelude::{Identifier, Span};
 use std::fmt::{Display, Formatter};
-use boron_parser::Visibility;
 
 new_id!(DefId);
 
@@ -17,7 +17,7 @@ pub struct Definition {
   pub source_file: SourceFileId,
   pub kind: DefKind,
   pub span: Span,
-  pub visibility: Visibility
+  pub visibility: Visibility,
 }
 
 impl Definition {
@@ -27,7 +27,7 @@ impl Definition {
     source_file: SourceFileId,
     kind: DefKind,
     span: Span,
-    visibility: Visibility
+    visibility: Visibility,
   ) -> Self {
     Self { name, id: DefId::new(), node_id, source_file, kind, span, visibility }
   }

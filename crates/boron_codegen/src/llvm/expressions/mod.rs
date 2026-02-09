@@ -31,7 +31,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
         let arr_id = expr.hir_id.local_id.0;
 
         let array_alloca =
-          self.builder.build_alloca(array_ty, &format!("array_expr_{}", arr_id));
+          self.builder.build_alloca(array_ty, &format!("array_expr_{arr_id}"));
         let array_alloca = self.require_llvm(array_alloca, "array alloca")?;
 
         for (i, elem_expr) in exprs.iter().enumerate() {
@@ -46,7 +46,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
                   self.context.i32_type().const_int(0, false),
                   self.context.i32_type().const_int(i as u64, false),
                 ],
-                &format!("array_elem_ptr_{}_{}", arr_id, i),
+                &format!("array_elem_ptr_{arr_id}_{i}"),
               ),
               "array element gep",
             )?

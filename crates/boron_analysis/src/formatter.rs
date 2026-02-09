@@ -76,7 +76,7 @@ impl TyChecker<'_> {
           "; {}]",
           match len {
             ArrayLength::Len(val) => val.to_string(),
-            ArrayLength::Poisoned => "<error>".to_string(),
+            ArrayLength::Poisoned => "<error>".to_owned(),
           }
         )?;
       }

@@ -4,7 +4,7 @@ use crate::{InferTy, TyChecker, TypeEnv};
 use boron_hir::Expr;
 use boron_parser::{PrimitiveKind, UnaryOp};
 
-impl<'a> TyChecker<'a> {
+impl TyChecker<'_> {
   pub fn check_unary(
     &mut self,
     env: &mut TypeEnv,
@@ -65,9 +65,10 @@ impl<'a> TyChecker<'a> {
         }
       }
 
-      UnaryOp::Deref => match &resolved {
-        InferTy::Ptr { ty, .. } => ty.as_ref().clone(),
-        _ => {
+      UnaryOp::Deref => {
+        if let InferTy::Ptr { ty, .. } = &resolved {
+          ty.as_ref().clone()
+        } else {
           self.dcx().emit(TyCantBeDereferenced {
             span: expr.span,
             ty: self.format_type(&operand_ty),
@@ -75,7 +76,7 @@ impl<'a> TyChecker<'a> {
 
           InferTy::Err(expr.span)
         }
-      },
+      }
     }
   }
 }

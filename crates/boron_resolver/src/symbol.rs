@@ -1,8 +1,8 @@
 use crate::def::DefId;
 use crate::scope::ScopeId;
 use boron_parser::ast::NodeId;
-use dashmap::DashMap;
 use boron_utils::prelude::Identifier;
+use dashmap::DashMap;
 
 #[derive(Debug, Clone)]
 pub struct Symbol {
@@ -14,7 +14,12 @@ pub struct Symbol {
 }
 
 impl Symbol {
-  pub fn new(name: Identifier, def_id: DefId, kind: SymbolKind, scope_id: ScopeId) -> Self {
+  pub fn new(
+    name: Identifier,
+    def_id: DefId,
+    kind: SymbolKind,
+    scope_id: ScopeId,
+  ) -> Self {
     Self { name, def_id, kind, scope_id }
   }
 }
@@ -44,7 +49,7 @@ impl SymbolTable {
   }
 
   pub fn insert(&self, symbol: Symbol) {
-    let key = (symbol.scope_id, symbol.name.clone());
+    let key = (symbol.scope_id, symbol.name);
     match symbol.kind {
       SymbolKind::Value => {
         self.values.insert(key, symbol);
@@ -59,27 +64,27 @@ impl SymbolTable {
   }
 
   pub fn lookup_value(&self, scope: ScopeId, name: Identifier) -> Option<Symbol> {
-    self.values.get(&(scope, name.to_owned())).map(|r| r.clone())
+    self.values.get(&(scope, name)).map(|r| r.clone())
   }
 
   pub fn lookup_type(&self, scope: ScopeId, name: Identifier) -> Option<Symbol> {
-    self.types.get(&(scope, name.to_owned())).map(|r| r.clone())
+    self.types.get(&(scope, name)).map(|r| r.clone())
   }
 
   pub fn lookup_module(&self, scope: ScopeId, name: Identifier) -> Option<Symbol> {
-    self.modules.get(&(scope, name.to_owned())).map(|r| r.clone())
+    self.modules.get(&(scope, name)).map(|r| r.clone())
   }
 
   pub fn has_value(&self, scope: ScopeId, name: Identifier) -> bool {
-    self.values.contains_key(&(scope, name.to_owned()))
+    self.values.contains_key(&(scope, name))
   }
 
   pub fn has_type(&self, scope: ScopeId, name: Identifier) -> bool {
-    self.types.contains_key(&(scope, name.to_owned()))
+    self.types.contains_key(&(scope, name))
   }
 
   pub fn has_module(&self, scope: ScopeId, name: Identifier) -> bool {
-    self.modules.contains_key(&(scope, name.to_owned()))
+    self.modules.contains_key(&(scope, name))
   }
 
   pub fn record_resolution(&self, node_id: NodeId, def_id: DefId) {

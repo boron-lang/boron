@@ -10,9 +10,8 @@ use boron_thir::{
   Expr as ThirExpr, ExprKind as ThirExprKind, FieldInit as ThirFieldInit,
   Function as ThirFunction, Struct as ThirStruct, Thir,
 };
-use itertools::Itertools;
-use boron_resolver::DefId;
 use boron_utils::prelude::debug;
+use itertools::Itertools as _;
 
 #[derive(Debug)]
 pub struct IrLowerer<'a> {
@@ -103,7 +102,7 @@ impl<'a> IrLowerer<'a> {
         def_id: func.def_id,
         body,
       });
-    };
+    }
 
     self.current_function = IrId::dummy();
   }
@@ -125,7 +124,7 @@ impl<'a> IrLowerer<'a> {
               match &hp.kind {
                 ParamKind::Regular { name, .. } => name.text(),
                 ParamKind::Variadic { name, .. } => name.text(),
-                ParamKind::SelfParam { .. } => "self".to_string(),
+                ParamKind::SelfParam { .. } => "self".to_owned(),
               }
             })
           })
@@ -204,7 +203,7 @@ impl<'a> IrLowerer<'a> {
         projections.push(Projection::Binding(*def_id));
 
         if let Some(subpat) = subpat {
-          self.lower_local_pattern(local_ty, subpat, projections)
+          self.lower_local_pattern(local_ty, subpat, projections);
         }
       }
       PatKind::Struct { fields, def_id, rest } => {
@@ -216,8 +215,8 @@ impl<'a> IrLowerer<'a> {
           else {
             unreachable!("checked befores")
           };
-          
-          let def_id = if let PatKind::Binding { def_id , ..} = &field.pat.kind {
+
+          let def_id = if let PatKind::Binding { def_id, .. } = &field.pat.kind {
             Some(*def_id)
           } else {
             debug!("non-binding pattern in struct field");
@@ -227,8 +226,8 @@ impl<'a> IrLowerer<'a> {
           projections.push(Projection::Field {
             struct_ty: local_ty.clone(),
             field_idx: field_idx as u32,
-            def_id
-          })
+            def_id,
+          });
         }
       }
       _ => todo!("lower complex pattern bindings in IR"),

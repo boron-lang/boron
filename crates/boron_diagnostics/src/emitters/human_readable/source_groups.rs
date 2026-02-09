@@ -1,7 +1,7 @@
-use crate::emitters::human_readable::label::{LabelInfo, LabelKind};
-use crate::emitters::human_readable::HumanReadableEmitter;
-use crate::emitters::show::Show;
 use crate::Diag;
+use crate::emitters::human_readable::HumanReadableEmitter;
+use crate::emitters::human_readable::label::{LabelInfo, LabelKind};
+use crate::emitters::show::Show;
 use boron_source::prelude::SourceFileId;
 use std::ops::Range;
 

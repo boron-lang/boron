@@ -6,7 +6,7 @@ use crate::unify::Expectation;
 use boron_hir::{Literal, Pat, PatKind};
 use boron_resolver::{DefId, DefKind};
 use boron_source::span::Span;
-use itertools::Itertools;
+use itertools::Itertools as _;
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum ExpectedPattern {
@@ -36,7 +36,7 @@ impl TyChecker<'_> {
   ) {
     match expected_pat {
       ExpectedPattern::Irrefutable => {
-        self.check_irrefutable_pattern(pat, expected, env, ctx)
+        self.check_irrefutable_pattern(pat, expected, env, ctx);
       }
       ExpectedPattern::Refutable => self.check_refutable_pattern(pat, expected, env, ctx),
     }
@@ -128,8 +128,8 @@ impl TyChecker<'_> {
         let mut missing_fields = vec![];
 
         for field in &strukt.fields {
-          if fields.iter().find(|f| f.name == field.name).is_none() {
-            missing_fields.push(field)
+          if !fields.iter().any(|f| f.name == field.name) {
+            missing_fields.push(field);
           }
         }
 
@@ -137,7 +137,7 @@ impl TyChecker<'_> {
           self.dcx().emit(NotAllFieldsCovered {
             span: pat.span,
             fields: missing_fields.iter().map(|f| f.name.text()).collect_vec().join(", "),
-          })
+          });
         }
 
         let mut refutable = PatternRefutability::Irrefutable;
@@ -238,15 +238,14 @@ impl TyChecker<'_> {
 
         if let InferTy::Array { len, .. } = self.infcx.resolve(expected)
           && matches!(len, ArrayLength::Len(_))
-        {
-          if self.slice_pattern_fits_array(
+          && self.slice_pattern_fits_array(
             prefix.len(),
             middle.is_some(),
             suffix.len(),
             len,
-          ) {
-            refutable = PatternRefutability::Irrefutable;
-          }
+          )
+        {
+          refutable = PatternRefutability::Irrefutable;
         }
 
         for elem_pat in prefix {

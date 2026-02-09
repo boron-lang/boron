@@ -1,6 +1,5 @@
 use crate::llvm::LLVMCodegen;
 use anyhow::{Result, anyhow};
-use fs_err;
 use inkwell::targets::FileType;
 
 impl LLVMCodegen<'_> {
@@ -23,6 +22,6 @@ impl LLVMCodegen<'_> {
         FileType::Object,
         &obj_dir.join(format!("{}{}", config.name, self.ctx.target().obj_file_suffix())),
       )
-      .map_err(|e| anyhow!("Failed to write object file {}", e))
+      .map_err(|e| anyhow!("Failed to write object file {e}"))
   }
 }

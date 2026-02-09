@@ -32,7 +32,7 @@ impl CfgBuilder {
   }
 }
 
-impl<'a> IrLowerer<'a> {
+impl IrLowerer<'_> {
   pub(crate) fn lower_body(
     &self,
     block: &ThirBlock,
@@ -94,7 +94,7 @@ impl<'a> IrLowerer<'a> {
             hir_id: stmt.hir_id,
             kind: IrStmtKind::Local(hir_id),
             span: stmt.span,
-          })
+          });
         }
         ThirStmtKind::Expr(expr) => {
           if self.handle_control_expr(
@@ -125,8 +125,8 @@ impl<'a> IrLowerer<'a> {
 
     let terminator = match fallthrough {
       Some(target) => match terminator {
-        Some(IrTerminator::Return(_)) | Some(IrTerminator::Unreachable) => terminator,
-        Some(IrTerminator::Branch { .. }) | Some(IrTerminator::Goto { .. }) => terminator,
+        Some(IrTerminator::Return(_) | IrTerminator::Unreachable) => terminator,
+        Some(IrTerminator::Branch { .. } | IrTerminator::Goto { .. }) => terminator,
         None => Some(IrTerminator::Goto { target }),
       },
       None => terminator,
