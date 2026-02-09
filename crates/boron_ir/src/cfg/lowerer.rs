@@ -1,5 +1,5 @@
-use crate::IrLowerer;
 use crate::{IrBlock, IrBody, IrStmt, IrStmtKind, IrTerminator};
+use crate::{IrLocal, IrLowerer};
 use boron_analysis::ty::SubstitutionMap;
 use boron_hir::{HirId, LocalId};
 use boron_resolver::DefId;
@@ -74,11 +74,27 @@ impl<'a> IrLowerer<'a> {
 
       match &stmt.kind {
         ThirStmtKind::Local(local) => {
+          let ty = self.lower_semantic_ty(&local.ty, type_args);
+          let mut projections = vec![];
+          let hir_id = local.hir_id;
+
+          self.lower_local_pattern(&ty, &local.pat, &mut projections);
+
+          let init = local.init.clone().unwrap();
+          let local = IrLocal {
+            hir_id: local.hir_id,
+            ty,
+            init: self.lower_expr(&init, type_args),
+            span: local.span,
+            projections,
+          };
+          self.ir.add_local(self.current_function, local);
+
           current_stmts.push(IrStmt {
             hir_id: stmt.hir_id,
-            kind: IrStmtKind::Local(Box::new(self.lower_local(local, type_args))),
+            kind: IrStmtKind::Local(hir_id),
             span: stmt.span,
-          });
+          })
         }
         ThirStmtKind::Expr(expr) => {
           if self.handle_control_expr(
@@ -98,21 +114,6 @@ impl<'a> IrLowerer<'a> {
             kind: IrStmtKind::Expr(self.lower_expr(expr, type_args)),
             span: stmt.span,
           });
-        }
-        ThirStmtKind::Semi(expr) => {
-          if self.handle_control_expr(
-            builder,
-            &mut current_id,
-            &mut current_stmts,
-            &mut terminator,
-            expr,
-            type_args,
-            loop_stack,
-          ) {
-            continue;
-          }
-
-          terminator = Some(IrTerminator::Return(Some(self.lower_expr(expr, type_args))));
         }
       }
     }

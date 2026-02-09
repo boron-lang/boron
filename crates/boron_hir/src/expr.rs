@@ -168,7 +168,6 @@ pub enum StmtKind {
 #[derive(Debug, Clone)]
 pub struct Local {
   pub hir_id: HirId,
-  pub def_id: DefId,
   pub pat: Pat,
   pub ty: Option<Ty>,
   pub init: Option<Expr>,

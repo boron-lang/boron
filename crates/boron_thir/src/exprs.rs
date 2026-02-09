@@ -1,7 +1,7 @@
-use boron_analysis::InferTy;
 use boron_analysis::literal_table::FullLiteral;
+use boron_analysis::InferTy;
 use boron_hir::{HirId, Pat};
-use boron_parser::{AssignOp, BinaryOp, UnaryOp};
+use boron_parser::{BinaryOp, UnaryOp};
 use boron_resolver::DefId;
 use boron_utils::ident_table::Identifier;
 use boron_utils::prelude::Span;
@@ -86,14 +86,11 @@ pub struct Stmt {
 pub enum StmtKind {
   Local(Box<Local>),
   Expr(Expr),
-  /// Expression without semicolon (only valid as last stmt in block)
-  Semi(Expr),
 }
 
 #[derive(Debug, Clone)]
 pub struct Local {
   pub hir_id: HirId,
-  pub def_id: DefId,
   pub pat: Pat,
   pub ty: InferTy,
   pub init: Option<Expr>,

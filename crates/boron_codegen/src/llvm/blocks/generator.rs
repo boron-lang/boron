@@ -41,6 +41,8 @@ impl<'ctx> LLVMCodegen<'ctx> {
 
         self.locals.insert(param.def_id, alloca);
       }
+
+      self.generate_var_allocas(ctx.ir_function.id);
     }
 
     for stmt in &ctx.block.stmts {
@@ -52,27 +54,10 @@ impl<'ctx> LLVMCodegen<'ctx> {
 
   pub fn generate_stmt(&self, stmt: &IrStmt, _ctx: &BlockGeneratorContext<'ctx, '_>) {
     match &stmt.kind {
-      IrStmtKind::Local(local) => {
-        let name = format!("local_{}", local.def_id.index());
-        let p_val = self.builder.build_alloca(self.ty(&local.ty), &name).expect("alloca");
-
-        self.locals.insert(local.def_id, p_val);
-
-        let result = self
-          .builder
-          .build_store(p_val, self.generate_expr(&local.init.clone().unwrap()));
-
-        match result {
-          Ok(res) => {}
-          Err(err) => {
-            compiler_bug!(self.ctx.dcx(), "failed to build store instruction {}", err)
-          }
-        }
-      }
       IrStmtKind::Expr(expr) => {
         self.generate_expr(expr);
       }
-      _ => unreachable!(),
+      IrStmtKind::Local(id) => {}
     }
   }
 

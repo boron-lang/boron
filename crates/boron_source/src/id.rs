@@ -16,7 +16,7 @@ macro_rules! new_id {
 
         pub fn reset() {
           use ::std::sync::atomic::Ordering;
-          [<LAST_ID_$name:upper>].store(0, Ordering::Relaxed);
+          [<LAST_ID_$name:upper>].store(1, Ordering::Relaxed);
         }
 
         pub fn dummy() -> Self {

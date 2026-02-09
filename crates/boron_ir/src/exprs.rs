@@ -49,7 +49,7 @@ pub enum IrExprKind {
 #[derive(Debug, Clone)]
 pub struct IrFieldInit {
   pub hir_id: HirId,
-  pub name: Identifier,
+  pub name: String,
   pub ty: SemanticTy,
   pub value: IrExpr,
   pub span: Span,
@@ -72,15 +72,21 @@ pub struct IrStmt {
 
 #[derive(Debug, Clone)]
 pub enum IrStmtKind {
-  Local(Box<IrLocal>),
   Expr(IrExpr),
+  Local(HirId),
 }
 
 #[derive(Debug, Clone)]
 pub struct IrLocal {
   pub hir_id: HirId,
-  pub def_id: DefId,
   pub ty: SemanticTy,
-  pub init: Option<IrExpr>,
+  pub init: IrExpr,
   pub span: Span,
+  pub projections: Vec<Projection>,
+}
+
+#[derive(Debug, Clone)]
+pub enum Projection {
+  Field { def_id: Option<DefId>, field_idx: u32, struct_ty: SemanticTy },
+  Binding(DefId),
 }

@@ -4,17 +4,16 @@ use crate::item::{
   VariantField, VariantKind,
 };
 use crate::lower::context::LoweringContext;
-use boron_parser::ast::ProgramNode;
 use boron_parser::ast::items::{
   ConstItem, EnumItem, FunctionItem, Item as AstItem, ItemKind, StructField, StructItem,
   StructMember, Variant as AstVariant, VariantPayload as AstVariantPayload, Visibility,
 };
 use boron_parser::ast::params;
+use boron_parser::ast::ProgramNode;
 use boron_parser::ast::{
   GenericParam as AstGenericParam, GenericParams as AstGenericParams,
   TypeBound as AstTypeBound, VariantField as AstVariantField,
 };
-use boron_resolver::DefId;
 
 impl LoweringContext<'_> {
   pub fn lower_module(&mut self, node: &ProgramNode) {
@@ -161,7 +160,7 @@ impl LoweringContext<'_> {
 
     Variant {
       hir_id: self.next_hir_id(),
-      def_id: def_id.unwrap_or(boron_resolver::DefId(0)),
+      def_id: def_id.unwrap(),
       name: v.name,
       kind,
       span: v.span,
@@ -227,7 +226,7 @@ impl LoweringContext<'_> {
       ),
     };
 
-    Param { hir_id: self.next_hir_id(), def_id: id.unwrap_or(DefId(0)), kind, span }
+    Param { hir_id: self.next_hir_id(), def_id: id.unwrap(), kind, span }
   }
 
   pub fn lower_generics(&mut self, generics: &Option<AstGenericParams>) -> Generics {
@@ -246,7 +245,7 @@ impl LoweringContext<'_> {
 
     GenericParam {
       hir_id: self.next_hir_id(),
-      def_id: def_id.unwrap_or(DefId(0)),
+      def_id: def_id.unwrap(),
       name: p.name,
       kind: GenericParamKind::Type {
         bounds: p.bounds.iter().map(|b| self.lower_type_bound(b)).collect(),
@@ -260,7 +259,7 @@ impl LoweringContext<'_> {
 
     TypeBound {
       hir_id: self.next_hir_id(),
-      def_id: def_id.unwrap_or(DefId(0)),
+      def_id: def_id.unwrap(),
       path: self.lower_path(&b.path),
       span: b.span,
     }

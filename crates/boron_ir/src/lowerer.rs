@@ -1,28 +1,39 @@
 use crate::{
-  Ir, IrExpr, IrExprKind, IrFieldInit, IrFunction, IrId, IrLocal, IrParam, IrStruct,
+  Ir, IrExpr, IrExprKind, IrFieldInit, IrFunction, IrId, IrParam, IrStruct, Projection,
   SymbolMangler,
 };
 use boron_analysis::ty::SubstitutionMap;
 use boron_analysis::{InferTy, TypeTable};
 use boron_hir::pat::PatKind;
-use boron_hir::{Hir, ParamKind, SemanticTy};
+use boron_hir::{Hir, ParamKind, Pat, SemanticTy};
 use boron_thir::{
   Expr as ThirExpr, ExprKind as ThirExprKind, FieldInit as ThirFieldInit,
-  Function as ThirFunction, Local as ThirLocal, Struct as ThirStruct, Thir,
+  Function as ThirFunction, Struct as ThirStruct, Thir,
 };
+use itertools::Itertools;
+use boron_resolver::DefId;
+use boron_utils::prelude::debug;
 
 #[derive(Debug)]
 pub struct IrLowerer<'a> {
   hir: &'a Hir,
   thir: &'a Thir,
   type_table: &'a TypeTable,
-  ir: Ir,
+  pub ir: Ir,
   mangler: SymbolMangler<'a>,
+  pub current_function: IrId,
 }
 
 impl<'a> IrLowerer<'a> {
   pub fn new(hir: &'a Hir, thir: &'a Thir, type_table: &'a TypeTable) -> Self {
-    Self { hir, thir, type_table, ir: Ir::default(), mangler: SymbolMangler::new(hir) }
+    Self {
+      hir,
+      thir,
+      type_table,
+      ir: Ir::default(),
+      mangler: SymbolMangler::new(hir),
+      current_function: IrId::dummy(),
+    }
   }
 
   pub fn mangler(&self) -> &SymbolMangler<'a> {
@@ -44,7 +55,9 @@ impl<'a> IrLowerer<'a> {
   pub fn lower_function(&mut self, func: &ThirFunction) {
     let scheme = self.type_table.def_type(func.def_id).unwrap();
     let is_generic = !scheme.vars.is_empty();
+    let id = IrId::new();
 
+    self.current_function = id;
     if let Some(monomorphizations) = self.type_table.monomorphizations.get(&func.def_id) {
       for mono in monomorphizations.iter() {
         if mono.type_args.map().iter().any(|(_, ty)| ty.has_params()) {
@@ -67,7 +80,7 @@ impl<'a> IrLowerer<'a> {
         self.ir.functions.push(IrFunction {
           name: mangled_name,
           params,
-          id: IrId::new(),
+          id,
           type_args,
           return_type: Self::lower_type(&return_ty),
           def_id: func.def_id,
@@ -84,13 +97,15 @@ impl<'a> IrLowerer<'a> {
       self.ir.functions.push(IrFunction {
         name: mangled_name,
         params,
-        id: IrId::new(),
+        id,
         type_args: vec![],
         return_type: Self::lower_type(&func.return_type),
         def_id: func.def_id,
         body,
       });
-    }
+    };
+
+    self.current_function = IrId::dummy();
   }
 
   fn lower_function_params(
@@ -178,24 +193,45 @@ impl<'a> IrLowerer<'a> {
       .collect()
   }
 
-  pub(crate) fn lower_local(
+  pub fn lower_local_pattern(
     &self,
-    local: &ThirLocal,
-    type_args: &SubstitutionMap,
-  ) -> IrLocal {
-    let ty = self.lower_semantic_ty(&local.ty, type_args);
+    local_ty: &SemanticTy,
+    pat: &Pat,
+    projections: &mut Vec<Projection>,
+  ) {
+    match &pat.kind {
+      PatKind::Binding { subpat, def_id, .. } => {
+        projections.push(Projection::Binding(*def_id));
 
-    match &local.pat.kind {
-      PatKind::Binding { subpat, .. } if subpat.is_none() => {}
+        if let Some(subpat) = subpat {
+          self.lower_local_pattern(local_ty, subpat, projections)
+        }
+      }
+      PatKind::Struct { fields, def_id, rest } => {
+        let struct_fields = self.hir.get_struct(*def_id).unwrap();
+
+        for field in fields {
+          let Some((field_idx, _)) =
+            struct_fields.fields.iter().find_position(|f| f.name == field.name)
+          else {
+            unreachable!("checked befores")
+          };
+          
+          let def_id = if let PatKind::Binding { def_id , ..} = &field.pat.kind {
+            Some(*def_id)
+          } else {
+            debug!("non-binding pattern in struct field");
+            None
+          };
+
+          projections.push(Projection::Field {
+            struct_ty: local_ty.clone(),
+            field_idx: field_idx as u32,
+            def_id
+          })
+        }
+      }
       _ => todo!("lower complex pattern bindings in IR"),
-    }
-
-    IrLocal {
-      hir_id: local.hir_id,
-      def_id: local.def_id,
-      ty,
-      init: local.init.as_ref().map(|e| self.lower_expr(e, type_args)),
-      span: local.span,
     }
   }
 
@@ -289,14 +325,18 @@ impl<'a> IrLowerer<'a> {
 
     IrFieldInit {
       hir_id: field.hir_id,
-      name: field.name,
+      name: field.name.text(),
       ty,
       value: self.lower_expr(&field.value, type_args),
       span: field.span,
     }
   }
 
-  fn lower_semantic_ty(&self, ty: &InferTy, type_args: &SubstitutionMap) -> SemanticTy {
+  pub fn lower_semantic_ty(
+    &self,
+    ty: &InferTy,
+    type_args: &SubstitutionMap,
+  ) -> SemanticTy {
     let substituted = Self::apply_subst_by_def_id(ty, type_args);
     Self::lower_type(&substituted)
   }

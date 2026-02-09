@@ -48,11 +48,38 @@ impl TyChecker<'_> {
               (*param_def_id, defaulted)
             })
             .collect();
+
           let resolved_type_args = SubstitutionMap::with_values(resolved_type_args);
           MonomorphizationEntry { def_id: entry.def_id, type_args: resolved_type_args }
         })
         .collect();
       self.table.monomorphizations.insert(def_id, resolved_entries);
+    }
+
+    let expr_mono_entries: Vec<_> = self
+      .table
+      .expr_monomorphizations
+      .iter()
+      .map(|e| (*e.key(), e.value().clone()))
+      .collect();
+
+    for (hir_id, entry) in expr_mono_entries {
+      let resolved_type_args = entry
+        .type_args
+        .map()
+        .iter()
+        .map(|(param_def_id, ty)| {
+          let resolved = self.infcx.resolve(ty);
+          let defaulted = self.default_ty_vars(resolved);
+          (*param_def_id, defaulted)
+        })
+        .collect();
+
+      let resolved_type_args = SubstitutionMap::with_values(resolved_type_args);
+      self.table.expr_monomorphizations.insert(
+        hir_id,
+        MonomorphizationEntry { def_id: entry.def_id, type_args: resolved_type_args },
+      );
     }
   }
 
@@ -71,7 +98,7 @@ impl TyChecker<'_> {
           match self.infcx.var_kind(v) {
             TyVarKind::Integer => InferTy::Primitive(PrimitiveKind::I32, span),
             TyVarKind::Float => InferTy::Primitive(PrimitiveKind::F64, span),
-            TyVarKind::General => InferTy::Var(v, span),
+            TyVarKind::General => panic!(),
           }
         }
       }

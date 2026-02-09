@@ -14,6 +14,10 @@ impl HirId {
   pub fn make_owner(owner: DefId) -> Self {
     Self { owner, local_id: LocalId::ZERO }
   }
+  
+  pub fn index(&self) -> u32 {
+    self.local_id.0
+  }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]

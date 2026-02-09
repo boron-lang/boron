@@ -148,6 +148,7 @@ dependencies = [
  "boron_source",
  "boron_utils",
  "dashmap 7.0.0-rc2",
+ "itertools",
  "rustc_apfloat",
 ]
 
@@ -184,6 +185,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "boron_analysis",
+ "boron_hir",
  "boron_ir",
  "boron_parser",
  "boron_resolver",

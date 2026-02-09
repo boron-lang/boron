@@ -15,11 +15,15 @@ impl<'ctx> LLVMCodegen<'ctx> {
       }
       IrExprKind::Binary { lhs, op, rhs } => self.generate_binary_op(lhs, op, rhs),
       IrExprKind::LocalRef(def_id) => {
-        let ptr = self.locals.get(def_id).expect("local ref should be in locals map");
-        self
-          .builder
-          .build_load(self.ty(&expr.ty), *ptr, &format!("load_{}", def_id.index()))
-          .expect("load local")
+        let ptr = self.locals.get(def_id);
+        if let Some(ptr) = ptr {
+          self
+            .builder
+            .build_load(self.ty(&expr.ty), *ptr, &format!("load_{}", def_id.index()))
+            .expect("load local")
+        } else {
+          panic!("couldn't fetch local {:#?}", def_id)
+        }
       }
       IrExprKind::Array(exprs) => {
         let array_ty = self.ty(&expr.ty);
@@ -52,6 +56,41 @@ impl<'ctx> LLVMCodegen<'ctx> {
         }
 
         array_alloca.into()
+      }
+
+      IrExprKind::Struct { def_id, fields, type_args } => {
+        let ir_struct = self.ir.find_struct(def_id, type_args);
+        let struct_ty = self.structs.get(&ir_struct.id).expect("must exist").clone();
+        let alloca_name = format!("struct_init_{}", ir_struct.id.index());
+
+        let alloca = self
+          .builder
+          .build_alloca(struct_ty, &alloca_name)
+          .expect("couldn't create alloca");
+
+        for (idx, (field_name, _)) in ir_struct.fields.iter().enumerate() {
+          let field_ptr = self
+            .builder
+            .build_struct_gep(
+              struct_ty,
+              alloca,
+              idx as u32,
+              &format!("{alloca_name}_field_ptr_{idx}"),
+            )
+            .expect("couldn't build gep");
+          let value = fields.iter().find(|field| &field.name == field_name).unwrap();
+
+          self
+            .builder
+            .build_store(field_ptr, self.generate_expr(&value.value))
+            .expect("couldn't build store");
+        }
+
+        self.struct_init_allocs.insert(ir_struct.id, alloca);
+        let loaded =
+          self.builder.build_load(struct_ty, alloca, "struct_val").expect("load struct");
+
+        loaded
       }
       _ => todo!("{:#?}", expr),
     }

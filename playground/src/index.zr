@@ -1,9 +1,11 @@
 mod vec;
 import * from vec;
 
-extern func printf(format: *const u8) -> i32;
+extern func printf(format: f64) -> i32;
+func junk() -> f64;
 
 func main() {
-    var x = 10;
-    x += 10;
+    var Vec2 { .x, .y } = Vec2 { .x = 10.0, .y = 15.0 };
+
+    var hello = x + junk();
 }

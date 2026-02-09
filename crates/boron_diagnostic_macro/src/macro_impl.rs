@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use quote::quote;
 use std::collections::{BTreeSet, HashMap};
-use syn::{DeriveInput, Expr, parse_macro_input, spanned::Spanned};
+use syn::{parse_macro_input, spanned::Spanned, DeriveInput, Expr};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -37,6 +37,35 @@ fn is_vec_span_type(ty: &syn::Type) -> bool {
         if let syn::PathArguments::AngleBracketed(args) = &seg.arguments {
           if let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first() {
             return is_span_type(inner_ty);
+          }
+        }
+      }
+      false
+    }
+    _ => false,
+  }
+}
+
+fn is_string_type(ty: &syn::Type) -> bool {
+  match ty {
+    syn::Type::Path(type_path) => {
+      type_path.path.segments.last().map(|seg| seg.ident == "String").unwrap_or(false)
+    }
+    _ => false,
+  }
+}
+
+fn is_vec_string_type(ty: &syn::Type) -> bool {
+  match ty {
+    syn::Type::Path(type_path) => {
+      let last_seg = type_path.path.segments.last();
+      if let Some(seg) = last_seg {
+        if seg.ident != "Vec" {
+          return false;
+        }
+        if let syn::PathArguments::AngleBracketed(args) = &seg.arguments {
+          if let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first() {
+            return is_string_type(inner_ty);
           }
         }
       }
@@ -254,7 +283,7 @@ fn get_diagnostic_level(severity: &str) -> proc_macro2::TokenStream {
   }
 }
 
-fn get_help_fields(fields: &syn::FieldsNamed) -> Vec<&syn::Ident> {
+fn get_help_fields(fields: &syn::FieldsNamed) -> Vec<(&syn::Ident, bool)> {
   fields
     .named
     .iter()
@@ -263,7 +292,31 @@ fn get_help_fields(fields: &syn::FieldsNamed) -> Vec<&syn::Ident> {
         attr.path().segments.last().map(|seg| seg.ident == "help").unwrap_or(false)
       });
 
-      if has_help { field.ident.as_ref() } else { None }
+      if has_help {
+        let is_vec = is_vec_string_type(&field.ty);
+        field.ident.as_ref().map(|ident| (ident, is_vec))
+      } else {
+        None
+      }
+    })
+    .collect()
+}
+
+fn get_note_fields(fields: &syn::FieldsNamed) -> Vec<(&syn::Ident, bool)> {
+  fields
+    .named
+    .iter()
+    .filter_map(|field| {
+      let has_note = field.attrs.iter().any(|attr| {
+        attr.path().segments.last().map(|seg| seg.ident == "note").unwrap_or(false)
+      });
+
+      if has_note {
+        let is_vec = is_vec_string_type(&field.ty);
+        field.ident.as_ref().map(|ident| (ident, is_vec))
+      } else {
+        None
+      }
     })
     .collect()
 }
@@ -358,22 +411,11 @@ fn impl_diagnostic_derive(ast: &DeriveInput) -> Result<TokenStream, MacroFunctio
   }
 
   // Fields with #[note] attribute
-  let note_fields: Vec<_> = fields
-    .named
-    .iter()
-    .filter_map(|field| {
-      let has_note = field.attrs.iter().any(|attr| {
-        attr.path().segments.last().map(|seg| seg.ident == "note").unwrap_or(false)
-      });
-
-      if has_note { field.ident.as_ref() } else { None }
-    })
-    .collect();
+  let note_fields = get_note_fields(fields);
 
   // Fields with #[help] attribute
   let help_fields = get_help_fields(fields);
 
-  // Additional label fields (secondary spans)
   let label_fields: Vec<_> = fields
     .named
     .iter()
@@ -491,20 +533,28 @@ fn impl_diagnostic_derive(ast: &DeriveInput) -> Result<TokenStream, MacroFunctio
     }
   }
 
-  let note_field_refs = note_fields.iter().map(|&ident| {
+  let note_field_refs = note_fields.iter().map(|(ident, _)| {
     quote! { let #ident = &self.#ident; }
   });
 
-  let note_strings = note_fields.iter().map(|&ident| {
-    quote! { #ident.to_string() }
+  let note_strings = note_fields.iter().map(|(ident, is_vec)| {
+    if *is_vec {
+      quote! { #ident.clone() }
+    } else {
+      quote! { vec![#ident.to_string()] }
+    }
   });
 
-  let help_field_refs = help_fields.iter().map(|&ident| {
+  let help_field_refs = help_fields.iter().map(|(ident, _)| {
     quote! { let #ident = &self.#ident; }
   });
 
-  let help_strings = help_fields.iter().map(|&ident| {
-    quote! { #ident.to_string() }
+  let help_strings = help_fields.iter().map(|(ident, is_vec)| {
+    if *is_vec {
+      quote! { #ident.clone() }
+    } else {
+      quote! { vec![#ident.to_string()] }
+    }
   });
 
   let struct_note_pushes = struct_note_messages.iter().map(|lit| {
@@ -525,7 +575,7 @@ fn impl_diagnostic_derive(ast: &DeriveInput) -> Result<TokenStream, MacroFunctio
         #(#note_field_refs)*
         let mut notes = Vec::new();
         #(#struct_note_pushes)*
-        #(notes.push(#note_strings);)*
+        #(notes.extend(#note_strings);)*
         notes
       }
     }
@@ -539,7 +589,7 @@ fn impl_diagnostic_derive(ast: &DeriveInput) -> Result<TokenStream, MacroFunctio
         #(#help_field_refs)*
         let mut helps = Vec::new();
         #(#struct_help_pushes)*
-        #(helps.push(#help_strings);)*
+        #(helps.extend(#help_strings);)*
         helps
       }
     }

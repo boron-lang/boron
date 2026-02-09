@@ -282,10 +282,8 @@ impl LoweringContext<'_> {
     let (kind, span) = match stmt {
       statements::Statement::VarDecl(var) => {
         let pat = self.lower_ast_pattern(&var.pat);
-        let def_id = Self::local_def_id_from_pat(&pat, var.span);
         let local = Local {
           hir_id: self.next_hir_id(),
-          def_id,
           pat,
           ty: var.ty.as_ref().map(|t| self.lower_type(t)),
           init: Some(self.lower_expr(&var.value)),
@@ -325,16 +323,6 @@ impl LoweringContext<'_> {
     };
 
     Stmt { hir_id: self.next_hir_id(), kind, span }
-  }
-
-  fn local_def_id_from_pat(pat: &Pat, span: Span) -> DefId {
-    match &pat.kind {
-      PatKind::Binding { def_id, subpat, .. } if subpat.is_none() => *def_id,
-      PatKind::Binding { .. } => {
-        panic!("local bindings with subpatterns are not supported yet at {span:?}")
-      }
-      _ => panic!("local pattern is not a simple binding at {span:?}"),
-    }
   }
 
   pub fn lower_literal(lit: &AstLiteral) -> Literal {

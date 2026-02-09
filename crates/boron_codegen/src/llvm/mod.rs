@@ -29,6 +29,7 @@ pub struct LLVMCodegen<'ctx> {
   pub structs: DashMap<IrId, StructType<'ctx>>,
   pub funcs: DashMap<IrId, FunctionValue<'ctx>>,
   pub locals: DashMap<DefId, PointerValue<'ctx>>,
+  pub struct_init_allocs: DashMap<IrId, PointerValue<'ctx>>,
   pub ir: &'ctx Ir,
 }
 

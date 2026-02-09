@@ -294,3 +294,21 @@ pub struct UnaryNotOnNumeric {
   #[error("in this expression")]
   pub span: Span,
 }
+
+#[derive(Diagnostic)]
+#[error("struct pattern doesn't cover all fields: {fields}")]
+#[code(TYPE_CHECKER_STRUCT_PAT_NOT_ALL_FIELDS)]
+#[help("use `..` to cover all remaining fields")]
+pub struct NotAllFieldsCovered {
+  pub fields: String,
+  #[error("in this pattern")]
+  pub span: Span,
+}
+
+#[derive(Diagnostic)]
+#[error("refutable pattern in local binding")]
+#[code(TYPE_CHECKER_LOCAL_PATTERN_IS_REFUTABLE)]
+pub struct RefutablePatternInLocalBinding {
+  #[error("in this pattern")]
+  pub span: Span,
+}

@@ -50,6 +50,7 @@ pub fn run_codegen<'a>(ctx: &'a Context<'a>, ir: &Ir) -> anyhow::Result<()> {
     structs: DashMap::new(),
     funcs: DashMap::new(),
     locals: DashMap::new(),
+    struct_init_allocs: DashMap::new(),
     ir,
   };
 

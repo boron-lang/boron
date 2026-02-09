@@ -8,6 +8,7 @@ use boron_analysis::interpreter::{
 };
 use boron_analysis::literal_table::FullLiteral;
 use boron_analysis::results::BuiltInResults;
+use boron_analysis::ty::SubstitutionMap;
 use boron_analysis::{InferTy, TypeTable};
 use boron_diagnostics::DiagnosticCtx;
 use boron_hir::expr::{FieldInit as HirFieldInit, PathExpr as HirPathExpr};
@@ -172,7 +173,6 @@ impl<'a> ThirLowerer<'a> {
 
     Local {
       hir_id: local.hir_id,
-      def_id: local.def_id,
       pat: local.pat.clone(),
       ty,
       init: local.init.as_ref().map(|e| self.lower_expr(e)),
@@ -217,7 +217,7 @@ impl<'a> ThirLowerer<'a> {
 
     Expr {
       hir_id: expr.hir_id,
-      ty: self.type_table.node_type(expr.hir_id).unwrap_or(InferTy::Err(expr.span)),
+      ty: self.type_table.node_type(expr.hir_id).unwrap(),
       kind,
       span: expr.span,
     }
@@ -301,7 +301,7 @@ impl<'a> ThirLowerer<'a> {
   }
 
   fn lower_cast(&mut self, expr: &HirExpr, hir_id: HirId) -> ExprKind {
-    let ty = self.type_table.node_type(hir_id).unwrap_or(InferTy::Err(expr.span));
+    let ty = self.type_table.node_type(hir_id).unwrap();
 
     ExprKind::Cast { expr: Box::new(self.lower_expr(expr)), ty }
   }
@@ -395,9 +395,27 @@ impl<'a> ThirLowerer<'a> {
     fields: &[HirFieldInit],
     init_hir_id: HirId,
   ) -> ExprKind {
-    let fields = fields.iter().map(|f| self.lower_field_init(f)).collect();
     let type_args = self.lower_struct_init_type_args(init_hir_id, def_id);
+    let subst = self.lower_struct_init_subst(init_hir_id, def_id);
+    let fields =
+      fields.iter().map(|f| self.lower_field_init(def_id, f, &subst)).collect();
     ExprKind::Struct { def_id, type_args, fields }
+  }
+
+  fn lower_struct_init_subst(
+    &self,
+    init_hir_id: HirId,
+    def_id: DefId,
+  ) -> SubstitutionMap {
+    let Some(mono) = self.type_table.expr_monomorphization(init_hir_id) else {
+      return SubstitutionMap::new();
+    };
+
+    if mono.def_id != def_id {
+      return SubstitutionMap::new();
+    }
+
+    mono.type_args
   }
 
   fn lower_struct_init_type_args(
@@ -482,14 +500,67 @@ impl<'a> ThirLowerer<'a> {
     }
   }
 
-  fn lower_field_init(&mut self, field: &HirFieldInit) -> FieldInit {
-    let ty = self.type_table.node_type(field.hir_id).unwrap_or(InferTy::Err(field.span));
+  fn lower_field_init(
+    &mut self,
+    def_id: DefId,
+    field: &HirFieldInit,
+    subst: &SubstitutionMap,
+  ) -> FieldInit {
+    let ty = self.type_table.field_type(def_id, &field.name.text()).unwrap();
+    let ty = Self::apply_subst_by_def_id(&ty, subst);
     FieldInit {
       hir_id: field.hir_id,
       name: field.name,
       ty,
       value: self.lower_expr(&field.value),
       span: field.span,
+    }
+  }
+
+  fn apply_subst_by_def_id(ty: &InferTy, type_args: &SubstitutionMap) -> InferTy {
+    match ty {
+      InferTy::Var(_var, _span) => ty.clone(),
+      InferTy::Param(param) => {
+        if let Some(subst_ty) = type_args.get(param.def_id) {
+          subst_ty.clone()
+        } else {
+          ty.clone()
+        }
+      }
+      InferTy::Adt { def_id, args, span } => InferTy::Adt {
+        def_id: *def_id,
+        args: args.iter().map(|t| Self::apply_subst_by_def_id(t, type_args)).collect(),
+        span: *span,
+      },
+      InferTy::Ptr { mutability, ty: inner, span } => InferTy::Ptr {
+        mutability: *mutability,
+        ty: Box::new(Self::apply_subst_by_def_id(inner, type_args)),
+        span: *span,
+      },
+      InferTy::Optional(inner, span) => {
+        InferTy::Optional(Box::new(Self::apply_subst_by_def_id(inner, type_args)), *span)
+      }
+      InferTy::Array { ty: inner, len, span } => InferTy::Array {
+        ty: Box::new(Self::apply_subst_by_def_id(inner, type_args)),
+        len: *len,
+        span: *span,
+      },
+      InferTy::Slice(inner, span) => {
+        InferTy::Slice(Box::new(Self::apply_subst_by_def_id(inner, type_args)), *span)
+      }
+      InferTy::Tuple(tys, span) => InferTy::Tuple(
+        tys.iter().map(|t| Self::apply_subst_by_def_id(t, type_args)).collect(),
+        *span,
+      ),
+      InferTy::Fn { params, ret, span } => InferTy::Fn {
+        params: params
+          .iter()
+          .map(|t| Self::apply_subst_by_def_id(t, type_args))
+          .collect(),
+        ret: Box::new(Self::apply_subst_by_def_id(ret, type_args)),
+        span: *span,
+      },
+      _ => ty.clone(),
     }
   }
 }

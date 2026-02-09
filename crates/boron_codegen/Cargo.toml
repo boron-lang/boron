@@ -17,6 +17,7 @@ boron_analysis = { workspace = true }
 boron_resolver = { workspace = true }
 anyhow = { workspace = true }
 fs-err = { workspace = true }
+boron_hir = { workspace = true }
 
 [lints]
 workspace = true
