@@ -1,5 +1,6 @@
 use crate::llvm::LLVMCodegen;
-use boron_ir::{IrId, SemanticTy};
+use anyhow::{anyhow, Result};
+use boron_ir::SemanticTy;
 use boron_parser::PrimitiveKind;
 use boron_resolver::DefId;
 use boron_utils::prelude::warn;
@@ -42,31 +43,31 @@ impl<'ctx> LLVMCodegen<'ctx> {
     &self,
     def_id: &DefId,
     args: &Vec<SemanticTy>,
-  ) -> StructType<'ctx> {
+  ) -> Result<StructType<'ctx>> {
     let strukt = self.ir.find_struct(def_id, args);
-    self.structs.get(&strukt.id).expect("must exist").value().clone()
+    self.struct_ty_by_id(&strukt.id)
   }
 
-  pub fn ty(&self, ty: &SemanticTy) -> BasicTypeEnum<'ctx> {
+  pub fn ty(&self, ty: &SemanticTy) -> Result<BasicTypeEnum<'ctx>> {
     match ty {
-      SemanticTy::Primitive(p) => self.primitive_ty(p),
+      SemanticTy::Primitive(p) => Ok(self.primitive_ty(p)),
 
       SemanticTy::Struct { def_id, args } => {
-        self.get_struct_ty(def_id, args).as_basic_type_enum()
+        Ok(self.get_struct_ty(def_id, args)?.as_basic_type_enum())
       }
 
       SemanticTy::Ptr { .. } => {
-        self.context.ptr_type(AddressSpace::default()).as_basic_type_enum()
+        Ok(self.context.ptr_type(AddressSpace::default()).as_basic_type_enum())
       }
-      SemanticTy::Unit => panic!("unit has no value"),
+      SemanticTy::Unit => Err(anyhow!("unit has no value")),
       SemanticTy::Array { elem, len } => {
-        let elem_ty = self.ty(elem);
-        elem_ty.array_type(*len as u32).as_basic_type_enum()
+        let elem_ty = self.ty(elem)?;
+        Ok(elem_ty.array_type(*len as u32).as_basic_type_enum())
       }
 
       _ => {
         warn!("not handled: {:#?}", ty);
-        self.context.i8_type().into()
+        Ok(self.context.i8_type().into())
       }
     }
   }

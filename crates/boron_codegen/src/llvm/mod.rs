@@ -43,14 +43,14 @@ impl<'ctx> Codegen for LLVMCodegen<'ctx> {
       self.create_struct_type(strukt);
     }
     for strukt in &ir.structs {
-      self.generate_struct_body(strukt);
+      self.generate_struct_body(strukt)?;
     }
 
     for func in &ir.functions {
-      self.create_function_body(&func);
+      self.create_function_body(&func)?;
     }
     for func in &ir.functions {
-      self.generate_function_body(&func)
+      self.generate_function_body(&func)?
     }
 
     let opt_level = if self.ctx.session.config().mode == Mode::Release {
@@ -65,5 +65,24 @@ impl<'ctx> Codegen for LLVMCodegen<'ctx> {
 
     self.output_ir()?;
     Ok(())
+  }
+}
+
+impl<'ctx> LLVMCodegen<'ctx> {
+  pub fn require_some<T>(&self, value: Option<T>, context: &str) -> Result<T> {
+    value.ok_or_else(|| anyhow!("LLVM codegen invariant violated: {}", context))
+  }
+
+  pub fn require_llvm<T, E: std::fmt::Display>(
+    &self,
+    value: Result<T, E>,
+    context: &str,
+  ) -> Result<T> {
+    value.map_err(|err| anyhow!("LLVM codegen failed ({}): {}", context, err))
+  }
+
+  pub fn struct_ty_by_id(&self, id: &IrId) -> Result<StructType<'ctx>> {
+    let strukt = self.require_some(self.structs.get(id), "struct type missing")?;
+    Ok(strukt.value().clone())
   }
 }

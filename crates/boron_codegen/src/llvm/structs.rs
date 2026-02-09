@@ -1,4 +1,5 @@
 use crate::llvm::LLVMCodegen;
+use anyhow::Result;
 use boron_ir::IrStruct;
 
 impl LLVMCodegen<'_> {
@@ -7,14 +8,15 @@ impl LLVMCodegen<'_> {
     self.structs.insert(strukt.id, struct_type);
   }
 
-  pub fn generate_struct_body(&self, strukt: &IrStruct) {
-    let ty = self.structs.get(&strukt.id).expect("must exist");
+  pub fn generate_struct_body(&self, strukt: &IrStruct) -> Result<()> {
+    let ty = self.require_some(self.structs.get(&strukt.id), "struct type missing for body")?;
     let mut field_types = vec![];
 
     for (_, ty) in &strukt.fields {
-      field_types.push(self.ty(&ty));
+      field_types.push(self.ty(&ty)?);
     }
 
     ty.set_body(&field_types, false);
+    Ok(())
   }
 }

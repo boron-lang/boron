@@ -1,7 +1,7 @@
 use crate::llvm::blocks::BlockGeneratorContext;
 use crate::llvm::LLVMCodegen;
+use anyhow::Result;
 use boron_ir::{IrStmt, IrStmtKind, IrTerminator};
-use boron_utils::prelude::compiler_bug;
 
 #[allow(dead_code)]
 #[derive(Clone, Debug, PartialEq, Eq, Copy)]
@@ -20,7 +20,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
     }
   }
 
-  pub fn generate_block(&self, ctx: &BlockGeneratorContext<'ctx, '_>) {
+  pub fn generate_block(&self, ctx: &BlockGeneratorContext<'ctx, '_>) -> Result<()> {
     let name = Self::block_name(&ctx);
 
     let entry = self.context.append_basic_block(ctx.function, &name);
@@ -28,46 +28,52 @@ impl<'ctx> LLVMCodegen<'ctx> {
 
     if ctx.context == BlockContext::FunctionStart {
       for (idx, param) in ctx.ir_function.params.iter().enumerate() {
-        let param_val =
-          ctx.function.get_nth_param(idx as u32).expect("param index should exist");
+        let param_val = self.require_some(
+          ctx.function.get_nth_param(idx as u32),
+          "param index should exist",
+        )?;
         let alloca = self
           .builder
-          .build_alloca(self.ty(&param.ty), &param.name)
-          .expect("param alloca");
+          .build_alloca(self.ty(&param.ty)?, &param.name);
+        let alloca = self.require_llvm(alloca, "param alloca")?;
 
-        if let Err(err) = self.builder.build_store(alloca, param_val) {
-          compiler_bug!(self.ctx.dcx(), "failed to build param store instruction {}", err)
-        }
+        let _ = self.require_llvm(self.builder.build_store(alloca, param_val), "param store")?;
 
         self.locals.insert(param.def_id, alloca);
       }
 
-      self.generate_var_allocas(ctx.ir_function.id);
+      self.generate_var_allocas(ctx.ir_function.id)?;
     }
 
     for stmt in &ctx.block.stmts {
-      self.generate_stmt(stmt, ctx)
+      self.generate_stmt(stmt, ctx)?
     }
 
-    self.generate_terminator(&ctx.block.terminator);
+    self.generate_terminator(&ctx.block.terminator)?;
+    Ok(())
   }
 
-  pub fn generate_stmt(&self, stmt: &IrStmt, _ctx: &BlockGeneratorContext<'ctx, '_>) {
+  pub fn generate_stmt(
+    &self,
+    stmt: &IrStmt,
+    _ctx: &BlockGeneratorContext<'ctx, '_>,
+  ) -> Result<()> {
     match &stmt.kind {
       IrStmtKind::Expr(expr) => {
-        self.generate_expr(expr);
+        self.generate_expr(expr)?;
       }
       IrStmtKind::Local(id) => {}
     }
+    Ok(())
   }
 
-  fn generate_terminator(&self, terminator: &IrTerminator) {
+  fn generate_terminator(&self, terminator: &IrTerminator) -> Result<()> {
     match terminator {
       IrTerminator::Return(None) => {
         let _ = self.builder.build_return(None);
       }
       IrTerminator::Return(Some(val)) => {
-        let _ = self.builder.build_return(Some(&self.generate_expr(val)));
+        let _ = self.builder.build_return(Some(&self.generate_expr(val)?));
       }
       IrTerminator::Branch { .. } => {
         todo!("lower branch terminator in LLVM codegen");
@@ -79,5 +85,6 @@ impl<'ctx> LLVMCodegen<'ctx> {
         let _ = self.builder.build_unreachable();
       }
     }
+    Ok(())
   }
 }
