@@ -29,7 +29,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
       self.builder.build_call(
         function,
         &Self::args_to_metadata(largs.as_slice()),
-        &ir_function.name,
+        &format!("call.{}", ir_function.name),
       ),
       "build call",
     )?;

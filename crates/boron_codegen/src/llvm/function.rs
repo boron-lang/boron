@@ -68,7 +68,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
   pub fn generate_var_allocas(&self, function: IrId) -> Result<()> {
     let locals = self.require_some(self.ir.locals.get(&function), "locals missing")?;
     for local in locals.iter() {
-      let name = format!("local_{}", local.hir_id.index());
+      let name = format!("local.alloc.{}", local.hir_id);
       let struct_ty = self.ty(&local.ty)?;
       let p_val =
         self.require_llvm(self.builder.build_alloca(struct_ty, &name), "alloca")?;
@@ -102,7 +102,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
                 struct_ty,
                 *struct_ptr,
                 *field_idx,
-                &format!("field_access_{}", local.hir_id.index()),
+                &format!("local.field.ptr.{}.{}", local.hir_id, field_idx),
               ),
               "struct field gep",
             )?;

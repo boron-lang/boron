@@ -1,4 +1,5 @@
 use boron_resolver::DefId;
+use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct HirId {
@@ -17,6 +18,12 @@ impl HirId {
 
   pub fn index(&self) -> u32 {
     self.local_id.0
+  }
+}
+
+impl Display for HirId {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    write!(f, "{}.{}", self.owner.index(), self.local_id.0)
   }
 }
 

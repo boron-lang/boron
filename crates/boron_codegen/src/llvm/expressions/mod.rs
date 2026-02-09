@@ -21,17 +21,15 @@ impl<'ctx> LLVMCodegen<'ctx> {
           self.builder.build_load(
             self.ty(&expr.ty)?,
             *ptr,
-            &format!("load_{}", def_id.index()),
+            &format!("local.load.{}", expr.hir_id),
           ),
           "load local",
         )
       }
       IrExprKind::Array(exprs) => {
         let array_ty = self.ty(&expr.ty)?;
-        let arr_id = expr.hir_id.local_id.0;
-
         let array_alloca =
-          self.builder.build_alloca(array_ty, &format!("array_expr_{arr_id}"));
+          self.builder.build_alloca(array_ty, &format!("array.alloc.{}", expr.hir_id));
         let array_alloca = self.require_llvm(array_alloca, "array alloca")?;
 
         for (i, elem_expr) in exprs.iter().enumerate() {
@@ -46,7 +44,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
                   self.context.i32_type().const_int(0, false),
                   self.context.i32_type().const_int(i as u64, false),
                 ],
-                &format!("array_elem_ptr_{arr_id}_{i}"),
+                &format!("array.elem.ptr.{}.{}", expr.hir_id, i),
               ),
               "array element gep",
             )?
@@ -64,7 +62,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
       IrExprKind::Struct { def_id, fields, type_args } => {
         let ir_struct = self.ir.find_struct(def_id, type_args);
         let struct_ty = self.struct_ty_by_id(&ir_struct.id)?;
-        let alloca_name = format!("struct_init_{}", ir_struct.id.index());
+        let alloca_name = format!("struct.init.alloc.{}", expr.hir_id);
 
         let alloca = self.builder.build_alloca(struct_ty, &alloca_name);
         let alloca = self.require_llvm(alloca, "struct alloca")?;
@@ -75,7 +73,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
               struct_ty,
               alloca,
               idx as u32,
-              &format!("{alloca_name}_field_ptr_{idx}"),
+              &format!("struct.field.ptr.{}.{}", expr.hir_id, idx),
             ),
             "struct field gep",
           )?;
@@ -92,7 +90,11 @@ impl<'ctx> LLVMCodegen<'ctx> {
 
         self.struct_init_allocs.insert(ir_struct.id, alloca);
         let loaded = self.require_llvm(
-          self.builder.build_load(struct_ty, alloca, "struct_val"),
+          self.builder.build_load(
+            struct_ty,
+            alloca,
+            &format!("struct.load.{}", expr.hir_id),
+          ),
           "load struct",
         )?;
 

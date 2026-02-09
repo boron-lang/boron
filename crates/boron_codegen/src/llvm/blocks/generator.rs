@@ -16,7 +16,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
     match ctx.context {
       BlockContext::FunctionStart => "start".to_owned(),
       BlockContext::FunctionExit => "exit".to_owned(),
-      BlockContext::Normal => format!("bb{}", ctx.block.hir_id.local_id.0),
+      BlockContext::Normal => format!("bb.{}", ctx.block.hir_id),
     }
   }
 
@@ -32,7 +32,9 @@ impl<'ctx> LLVMCodegen<'ctx> {
           ctx.function.get_nth_param(idx as u32),
           "param index should exist",
         )?;
-        let alloca = self.builder.build_alloca(self.ty(&param.ty)?, &param.name);
+        let alloca = self
+          .builder
+          .build_alloca(self.ty(&param.ty)?, &format!("param.alloc.{}", param.name));
         let alloca = self.require_llvm(alloca, "param alloca")?;
 
         let _ = self
