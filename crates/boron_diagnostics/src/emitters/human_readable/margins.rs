@@ -5,6 +5,7 @@ use boron_source::prelude::SourceFile;
 use boron_source::span::Span;
 use std::io;
 use std::io::Write;
+use yansi::Color;
 
 pub(super) struct MarginContext<'a> {
   pub idx: usize,
@@ -44,7 +45,7 @@ impl<'a> HumanReadableEmitter {
     margin: &MarginContext<'a>,
     labels: &MarginLabelContext<'a>,
     bar_char: char,
-    bar_color: Option<yansi::Color>,
+    bar_color: Color,
   ) -> io::Result<()> {
     let padding = " ".repeat(margin.line_no_width + 1);
     write!(w, " {}{} ", padding, bar_char.fg(bar_color))?;

@@ -38,17 +38,17 @@ impl HumanReadableEmitter {
     Self { characters: ascii(), color, sources }
   }
 
-  fn margin_color(&self) -> Option<Color> {
-    Some(Color::Fixed(44)).filter(|_| self.color)
+  fn margin_color(&self) -> Color {
+    Color::Fixed(44)
   }
-  fn line_number_color(&self) -> Option<Color> {
-    Some(Color::Fixed(246)).filter(|_| self.color)
+  fn line_number_color(&self) -> Color {
+    Color::Fixed(246)
   }
-  fn note_color(&self) -> Option<Color> {
-    Some(Color::Fixed(115)).filter(|_| self.color)
+  fn note_color(&self) -> Color {
+    Color::Fixed(115)
   }
-  fn help_color(&self) -> Option<Color> {
-    Some(Color::Fixed(51)).filter(|_| self.color)
+  fn help_color(&self) -> Color {
+    Color::Fixed(51)
   }
 
   fn char_width(c: char, col: usize) -> (char, usize) {
@@ -140,7 +140,7 @@ impl<'a> HumanReadableEmitter {
   fn write_section_margin_with_bar(
     &self,
     bar_char: char,
-    bar_color: Option<Color>,
+    bar_color: Color,
     multi_labels_with_message: &'a [&'a LabelInfo<'a>],
     src: &'a SourceFile,
     line_no_width: usize,
@@ -838,7 +838,7 @@ impl<'a> HumanReadableEmitter {
     prefix: &str,
     prefix_len: usize,
     bar_char: char,
-    bar_color: Option<Color>,
+    bar_color: Color,
     multi_labels_with_message: &[&LabelInfo<'a>],
     src: &SourceFile,
     line_no_width: usize,
