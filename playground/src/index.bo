@@ -1,11 +1,10 @@
 mod vec;
 import * from vec;
 
-extern func printf(format: f64) -> i32;
-func junk() -> f64;
+//extern func test();
+
 
 func main() {
-    var Vec2 { .x, .y } = Vec2 { .x = 10.0, .y = 15.0 };
-
-    var hello = x + junk();
+    //#error: builtin function `{}` expected `{}` arguments, found `{}`
+    var size = sizeOf!()
 }

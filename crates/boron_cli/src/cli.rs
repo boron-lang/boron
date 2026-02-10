@@ -100,7 +100,7 @@ pub struct Cli {
     long = "packages",
     help = "Add packages that will be resolved by the compiler. \
         Format: name:write_to=entrypoint \
-        Example: -d std:./std=./std/lib.zr \
+        Example: -d std:./std=./std/lib.bo \
         Order is important, because if one dependency depends on another, but it isn't compiled yet, the compiler will fail."
   )]
   pub packages: Vec<Dependency>,
@@ -177,7 +177,7 @@ impl TryFrom<Cli> for ProjectConfig {
       color: !cli.no_color,
       check_only: cli.check_only,
       verbose: cli.verbose,
-      no_backtrace: cli.no_backtrace
+      no_backtrace: cli.no_backtrace,
     })
   }
 }

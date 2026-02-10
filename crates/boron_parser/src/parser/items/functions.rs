@@ -1,6 +1,6 @@
 use crate::parser::errors::{ExpectedParenToOpenList, FunctionCamelCase};
 use crate::parser::Parser;
-use crate::{FunctionItem, NeverType, NodeId, TokenType, Type, UnitType};
+use crate::{FunctionItem, FunctionModifiers, NeverType, NodeId, TokenType, Type, UnitType};
 use boron_source::ident_table::Identifier;
 use boron_source::prelude::Span;
 use stringcase::camel_case;
@@ -8,7 +8,7 @@ use stringcase::camel_case;
 impl Parser<'_> {
   pub(crate) fn parse_function(
     &mut self,
-    is_comptime: bool,
+    modifiers: FunctionModifiers,
     span_start: Span,
   ) -> Option<FunctionItem> {
     let name = self.parse_identifier();
@@ -51,7 +51,7 @@ impl Parser<'_> {
 
     Some(FunctionItem {
       id: NodeId::new(),
-      is_comptime,
+      modifiers,
       name,
       generics,
       params,

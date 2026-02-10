@@ -98,7 +98,7 @@ impl TyChecker<'_> {
           match self.infcx.var_kind(v) {
             TyVarKind::Integer => InferTy::Primitive(PrimitiveKind::I32, span),
             TyVarKind::Float => InferTy::Primitive(PrimitiveKind::F64, span),
-            TyVarKind::General => panic!(),
+            TyVarKind::General => ty,
           }
         }
       }

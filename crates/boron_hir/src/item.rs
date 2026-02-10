@@ -1,9 +1,10 @@
-use crate::Expr;
 use crate::expr::Block;
 use crate::generics::Generics;
 use crate::ids::HirId;
 use crate::ty::Ty;
+use crate::Expr;
 use boron_parser::ast::items::Visibility;
+use boron_parser::FunctionModifiers;
 use boron_resolver::DefId;
 use boron_utils::prelude::{Identifier, Span};
 use std::collections::HashMap;
@@ -14,7 +15,7 @@ pub struct Function {
   pub def_id: DefId,
   pub name: Identifier,
   pub visibility: Visibility,
-  pub is_comptime: bool,
+  pub modifiers: FunctionModifiers,
   pub generics: Generics,
   pub params: Vec<Param>,
   pub return_type: Ty,

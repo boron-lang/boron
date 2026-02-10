@@ -2,14 +2,15 @@ use crate::expressions::Expr;
 use crate::items::Item;
 use crate::parser::Parser;
 use crate::parser::errors::{
-  ConstCannotBeUninitialized, ConstExpectedFuncOrIdent, ConstItemsNeedTypeAnnotation,
-  ModStringLit,
+  ABIMustBeExplicit, ComptimeExternTogether, ConstCannotBeUninitialized,
+  ConstExpectedFuncOrIdent, ConstItemsNeedTypeAnnotation, InvalidAbi, ModStringLit,
 };
 use crate::{
-  ConstItem, ItemKind, ModItem, NodeId, Path, PathParsingContext, TokenType, Type,
-  Visibility, log_parse_failure,
+  ConstItem, FunctionModifiers, ItemKind, ModItem, NodeId, Path, PathParsingContext,
+  TokenType, Type, Visibility, log_parse_failure,
 };
 use boron_source::prelude::Span;
+use boron_target::abi::ABI;
 use boron_utils::prelude::debug;
 
 mod functions;
@@ -24,6 +25,7 @@ pub const ITEM_TOKENS: &[TokenType] = &[
   TokenType::Import,
   TokenType::Comptime,
   TokenType::Struct,
+  TokenType::Extern,
 ];
 
 // tokens allowed to start a new item inside a struct
@@ -87,17 +89,18 @@ impl Parser<'_> {
           None
         }
       }
-      TokenType::Comptime => {
+      token @ (TokenType::Comptime | TokenType::Extern) => {
+        let modifiers = self.parse_function_modifiers(token);
         let span = self.peek().span;
         if self.peek().kind == TokenType::Func {
           self.eat(TokenType::Func);
 
           Some(ItemKind::Function(log_parse_failure!(
-            self.parse_function(true, span),
+            self.parse_function(modifiers, span),
             "module item"
           )?))
         } else {
-          self.expect(TokenType::Func, "after `comptime` only `func` is a valid keyword");
+          self.expect(TokenType::Func, "after modifiers only `func` is a valid keyword");
           self.synchronize_to_next_item();
           None
         }
@@ -106,7 +109,7 @@ impl Parser<'_> {
         log_parse_failure!(self.parse_const(span_start), "const item")
       }
       TokenType::Func => Some(ItemKind::Function(log_parse_failure!(
-        self.parse_function(false, span_start),
+        self.parse_function(FunctionModifiers::empty(), span_start),
         "function item"
       )?)),
       TokenType::Import => {
@@ -145,6 +148,52 @@ impl Parser<'_> {
   /// tries to find next item to start parsing from.
   pub fn synchronize_to_next_item(&mut self) {
     self.advance_until_one_of(ITEM_TOKENS);
+  }
+
+  fn parse_function_modifiers(&mut self, first: TokenType) -> FunctionModifiers {
+    let mut comptime = false;
+    let mut external = None;
+
+    match first {
+      TokenType::Comptime => {
+        comptime = true;
+        if self.eat(TokenType::Extern) {
+          self.emit(ComptimeExternTogether { span: self.previous().span });
+          external = self.parse_extern_abi();
+        }
+      }
+      TokenType::Extern => {
+        external = self.parse_extern_abi();
+        if self.eat(TokenType::Comptime) {
+          self.emit(ComptimeExternTogether { span: self.previous().span });
+          comptime = true;
+        }
+      }
+      _ => {}
+    }
+
+    FunctionModifiers { comptime, external }
+  }
+
+  fn parse_extern_abi(&mut self) -> Option<ABI> {
+    let abi_span = self.peek().span;
+    let abi = if let TokenType::StringLiteral(string) = self.peek().kind.clone() {
+      self.advance();
+      Some(string)
+    } else {
+      self.emit(ABIMustBeExplicit { span: abi_span });
+      None
+    };
+
+    if let Some(abi_str) = abi {
+      let abi = ABI::parse_from_string(abi_str.clone());
+      if abi.is_none() {
+        self.emit(InvalidAbi { abi: abi_str, span: abi_span });
+      }
+      abi
+    } else {
+      None
+    }
   }
 
   fn parse_const(&mut self, span: Span) -> Option<ItemKind> {

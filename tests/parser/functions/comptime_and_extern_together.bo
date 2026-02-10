@@ -1,0 +1,4 @@
+//#error: `comptime` and `extern` cannot be used together
+comptime extern "C" func hello();
+
+func main() {}

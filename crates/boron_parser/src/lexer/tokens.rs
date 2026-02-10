@@ -35,6 +35,7 @@ pub enum TokenType {
   Const,     // const
   Mut,       // mut
   Comptime,  // comptime
+  Extern,    // extern
 
   // Modules
   Mod,       // mod
@@ -204,6 +205,7 @@ impl fmt::Display for TokenType {
       Self::Const => write!(f, "keyword `const`"),
       Self::Mut => write!(f, "keyword `mut`"),
       Self::Comptime => write!(f, "keyword `comptime`"),
+      Self::Extern => write!(f, "keyword `extern`"),
 
       // Keywords - Modules
       Self::Mod => write!(f, "keyword `mod`"),

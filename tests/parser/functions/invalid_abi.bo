@@ -1,0 +1,4 @@
+//#error: found invalid abi: {}
+extern "B" func hello();
+
+func main() {}

@@ -460,3 +460,28 @@ pub struct InvalidFieldPattern {
   #[error("in this field init")]
   pub span: Span,
 }
+
+#[derive(Diagnostic)]
+#[error("`comptime` and `extern` cannot be used together")]
+#[code(PARSE_COMPTIME_EXTERN_TOGETHER)]
+pub struct ComptimeExternTogether {
+  #[error("invalid modifier combination here")]
+  pub span: Span,
+}
+
+#[derive(Diagnostic)]
+#[error("ABI must be explicit in extern function")]
+#[code(PARSE_ABI_MUST_BE_EXPLICIT)]
+pub struct ABIMustBeExplicit {
+  #[error("in this extern function")]
+  pub span: Span,
+}
+
+#[derive(Diagnostic)]
+#[error("found invalid abi: {abi}")]
+#[code(ABI_INVALID)]
+pub struct InvalidAbi {
+  pub abi: String,
+  #[error("in this extern modifier")]
+  pub span: Span,
+}

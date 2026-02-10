@@ -1,0 +1,4 @@
+//#error: ABI must be explicit in extern function
+extern func hello();
+
+func main() {}

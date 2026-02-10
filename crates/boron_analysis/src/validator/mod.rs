@@ -24,7 +24,7 @@ pub fn validate_comptime(hir: &Hir, dcx: &DiagnosticCtx, resolver: &Resolver) {
 
 impl ComptimeValidator<'_> {
   fn validate_function(&self, _def_id: DefId, func: &Function) {
-    if func.is_comptime && !func.generics.params.is_empty() {
+    if func.modifiers.comptime && !func.generics.params.is_empty() {
       self.dcx.emit(ComptimeNoGenerics { span: func.generics.span });
     }
 

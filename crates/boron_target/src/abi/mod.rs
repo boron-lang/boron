@@ -1,0 +1,16 @@
+use std::str::FromStr;
+use strum::EnumString;
+
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, Default, EnumString)]
+pub enum ABI {
+  /// The C ABI is considered the default
+  #[default]
+  #[strum(serialize = "C")]
+  C,
+}
+
+impl ABI {
+  pub fn parse_from_string(abi: String) -> Option<ABI> {
+    ABI::from_str(&abi).ok()
+  }
+}

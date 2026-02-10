@@ -1,5 +1,5 @@
-use crate::Type;
 use crate::ast::program::NodeId;
+use crate::Type;
 use boron_utils::prelude::{Identifier, Span};
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
@@ -85,7 +85,7 @@ impl Path {
       }
     }
 
-    Some(path.with_extension("zr"))
+    Some(path.with_extension("bo"))
   }
 }
 

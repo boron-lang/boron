@@ -1,7 +1,7 @@
 use anyhow::Result;
-use boron_core::prelude::{strip_same_root, Session};
+use boron_core::prelude::{Session, strip_same_root};
 use std::env::current_dir;
-use std::io::{stderr, Write};
+use std::io::{Write, stderr};
 use std::panic::PanicHookInfo;
 use std::path::PathBuf;
 use sysinfo::System;

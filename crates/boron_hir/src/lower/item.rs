@@ -60,7 +60,7 @@ impl LoweringContext<'_> {
         def_id,
         name: func.name,
         visibility,
-        is_comptime: func.is_comptime,
+        modifiers: func.modifiers.clone(),
         generics,
         params,
         return_type,

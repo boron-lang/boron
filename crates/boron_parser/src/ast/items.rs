@@ -1,3 +1,4 @@
+use boron_target::abi::ABI;
 use crate::ast::expressions::Expr;
 use crate::ast::generics::GenericParams;
 use crate::ast::params::Param;
@@ -67,9 +68,21 @@ pub struct ConstItem {
 }
 
 #[derive(Debug, Clone)]
+pub struct FunctionModifiers {
+  pub comptime: bool,
+  pub external: Option<ABI>,
+}
+
+impl FunctionModifiers {
+  pub fn empty() -> Self {
+    Self { comptime: false, external: None }
+  }
+}
+
+#[derive(Debug, Clone)]
 pub struct FunctionItem {
   pub id: NodeId,
-  pub is_comptime: bool,
+  pub modifiers: FunctionModifiers,
   pub name: Identifier,
   pub generics: Option<GenericParams>,
   pub params: Vec<Param>,
