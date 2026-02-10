@@ -1,6 +1,8 @@
-use crate::parser::errors::{ExpectedParenToOpenList, FunctionCamelCase};
+use crate::parser::errors::{ExpectedParenToOpenList, ExternNoBody, FunctionCamelCase};
 use crate::parser::Parser;
-use crate::{FunctionItem, FunctionModifiers, NeverType, NodeId, TokenType, Type, UnitType};
+use crate::{
+  FunctionItem, FunctionModifiers, NeverType, NodeId, TokenType, Type, UnitType,
+};
 use boron_source::ident_table::Identifier;
 use boron_source::prelude::Span;
 use stringcase::camel_case;
@@ -48,6 +50,12 @@ impl Parser<'_> {
 
     let body =
       if self.check(TokenType::LeftBrace) { Some(self.parse_block()) } else { None };
+
+    if let Some(body) = &body
+      && modifiers.external.is_some()
+    {
+      self.emit(ExternNoBody { span: body.span })
+    }
 
     Some(FunctionItem {
       id: NodeId::new(),

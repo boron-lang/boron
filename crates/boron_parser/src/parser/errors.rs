@@ -485,3 +485,11 @@ pub struct InvalidAbi {
   #[error("in this extern modifier")]
   pub span: Span,
 }
+
+#[derive(Diagnostic)]
+#[error("extern functions can't have a body")]
+#[code(ABI_EXTERN_NO_BODY)]
+pub struct ExternNoBody {
+  #[error("in this function")]
+  pub span: Span
+}

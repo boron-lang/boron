@@ -1,10 +1,8 @@
 mod vec;
 import * from vec;
 
-//extern func test();
-
+extern "C" func test() {};
 
 func main() {
-    //#error: builtin function `{}` expected `{}` arguments, found `{}`
-    var size = sizeOf!()
+    var Vec2 { .x, .y } = Vec2 { .x = 10.0, .y = 15.0 };
 }

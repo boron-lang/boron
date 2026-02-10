@@ -142,7 +142,8 @@ define_codes! {
   CONST_EVAL_PATH_ISNT_CONST => 505,
 
   // Target/ABI codes (0600..0699)
-  ABI_INVALID => 600
+  ABI_INVALID => 600,
+  ABI_EXTERN_NO_BODY => 601
 }
 
 #[cfg(test)]

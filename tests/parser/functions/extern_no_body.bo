@@ -1,0 +1,4 @@
+//#error: extern functions can't have a body
+extern "C" func test() {};
+
+func main() {}
