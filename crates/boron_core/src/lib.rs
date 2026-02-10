@@ -2,7 +2,7 @@ mod check;
 mod unit;
 
 pub mod vars {
-  pub const FILE_EXTENSION: &str = "zr";
+  pub const FILE_EXTENSION: &str = "bo";
 }
 
 pub mod prelude {
