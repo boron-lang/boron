@@ -9,9 +9,7 @@ description = "boron Utils"
 [dependencies]
 anstyle = { workspace = true }
 anyhow = { workspace = true }
-colored = { workspace = true }
 fs-err = { workspace = true }
-lasso = { workspace = true }
 log = { workspace = true }
 parking_lot = { workspace = true }
 rayon = { workspace = true }

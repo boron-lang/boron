@@ -1,6 +1,6 @@
 use crate::checker::TyChecker;
 use crate::ty::InferTy;
-use boron_utils::ident_table::Identifier;
+use boron_source::ident_table::Identifier;
 use boron_utils::prelude::Span;
 
 impl TyChecker<'_> {

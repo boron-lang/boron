@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use boron_analysis::results::BuiltInResults;
 use boron_analysis::validator::validate_comptime;
-use boron_analysis::{TypeTable, expand_builtins, typeck_hir};
+use boron_analysis::{expand_builtins, typeck_hir, TypeTable};
 use boron_codegen::run_codegen;
 use boron_hir::hir::Hir;
 use boron_hir::lower::lower_to_hir;
@@ -16,7 +16,7 @@ use std::process::exit;
 
 pub struct CompilationUnit<'ctx> {
   pub entry_point: SourceFileId,
-  pub ctx: &'ctx Context<'ctx>,
+  pub sess: &'ctx Session,
   pub modules: Modules,
   pub resolver: Resolver,
   pub hir: Option<Hir>,
@@ -27,10 +27,10 @@ pub struct CompilationUnit<'ctx> {
 }
 
 impl<'ctx> CompilationUnit<'ctx> {
-  pub fn new(entry_point: SourceFileId, context: &'ctx Context<'ctx>) -> Self {
+  pub fn new(entry_point: SourceFileId, sess: &'ctx Session) -> Self {
     Self {
       entry_point,
-      ctx: context,
+      sess,
       modules: Modules::new(),
       resolver: Resolver::new(),
       hir: None,
@@ -79,7 +79,7 @@ impl<'ctx> CompilationUnit<'ctx> {
     let Some(ir) = &self.ir else {
       return Ok(());
     };
-    match run_codegen(self.ctx, ir) {
+    match run_codegen(self.sess, ir) {
       Err(err) => {
         self.emit_errors();
         Err(err)
@@ -98,7 +98,7 @@ impl<'ctx> CompilationUnit<'ctx> {
     };
 
     self.thir = Some(
-      ThirLowerer::new(hir, &self.resolver, self.ctx.dcx(), typeck, builtin_results)
+      ThirLowerer::new(hir, &self.resolver, self.sess.dcx(), typeck, builtin_results)
         .lower(),
     );
   }
@@ -119,35 +119,35 @@ impl<'ctx> CompilationUnit<'ctx> {
       return;
     };
 
-    self.builtin_results = Some(expand_builtins(self.ctx, &self.resolver, typeck, hir));
+    self.builtin_results = Some(expand_builtins(self.sess, &self.resolver, typeck, hir));
   }
 
   fn validate_comptime(&self) {
     let Some(hir) = &self.hir else { return };
-    let dcx = self.ctx.dcx();
+    let dcx = self.sess.dcx();
 
     validate_comptime(hir, dcx, &self.resolver);
   }
 
   fn typeck(&mut self) {
     let Some(hir) = &self.hir else { return };
-    let table = typeck_hir(hir, self.ctx, &self.resolver);
+    let table = typeck_hir(hir, self.sess, &self.resolver);
 
     self.typeck = Some(table);
   }
 
   fn resolve_names(&self) {
-    ResolveVisitor::resolve_modules(&self.resolver, &self.modules, self.ctx);
+    ResolveVisitor::resolve_modules(&self.resolver, &self.modules, self.sess);
   }
 
   fn lower_to_hir(&mut self) {
-    let dcx = self.ctx.dcx();
+    let dcx = self.sess.dcx();
     let hir = lower_to_hir(&self.resolver, &self.modules, dcx);
     self.hir = Some(hir);
   }
 
   pub fn sess(&self) -> &Session {
-    self.ctx.session
+    self.sess
   }
 
   fn run_step<F>(&mut self, step: F) -> bool
@@ -159,9 +159,9 @@ impl<'ctx> CompilationUnit<'ctx> {
   }
 
   fn file_to_module(&mut self, id: SourceFileId) -> Option<SourceFileId> {
-    let dcx = self.ctx.dcx();
+    let dcx = self.sess.dcx();
 
-    let source_file = self.ctx.sources.get(id).unwrap_or_else(|| {
+    let source_file = self.sess.sources().get(id).unwrap_or_else(|| {
       dcx.bug(format!("Source file {id:?} not found"));
       unreachable!();
     });
@@ -185,12 +185,12 @@ impl<'ctx> CompilationUnit<'ctx> {
 
     let files_to_process: Vec<_> = {
       let this = self.modules.get_unchecked(id);
-      let dcx = self.ctx.dcx();
+      let dcx = self.sess.dcx();
       let mut files = Vec::new();
 
       for module in &this.node.discover_modules {
         let full_path =
-          module.construct_file(self.ctx.session.root(), source_file.path());
+          module.construct_file(self.sess.root(), source_file.path());
 
         let Some(path) = full_path else {
           dcx.emit(ModuleNotFound { module: module.clone(), span: module.span });
@@ -202,7 +202,7 @@ impl<'ctx> CompilationUnit<'ctx> {
           continue;
         }
 
-        if self.ctx.sources.get_by_path(&path).is_some() {
+        if self.sess.sources().get_by_path(&path).is_some() {
           continue;
         }
 
@@ -212,7 +212,7 @@ impl<'ctx> CompilationUnit<'ctx> {
           continue;
         };
 
-        let file_id = self.ctx.sources.add(contents, path);
+        let file_id = self.sess.sources().add(contents, path);
         self.sess().graph().add_discovered_relation(id, file_id);
         files.push(file_id);
       }
@@ -230,7 +230,7 @@ impl<'ctx> CompilationUnit<'ctx> {
   }
 
   fn emit_errors(&self) -> bool {
-    let emitted = self.ctx.dcx().emit_all();
+    let emitted = self.sess.dcx().emit_all();
     if emitted > 0 {
       error!(
         "stopping compilation due to {emitted} {}",
@@ -239,8 +239,8 @@ impl<'ctx> CompilationUnit<'ctx> {
     }
 
     if emitted > 0 {
-      self.ctx.dcx().flush_to_stderr();
-      if !self.ctx.session.is_test() {
+      self.sess.dcx().flush_to_stderr();
+      if !self.sess.is_test() {
         exit(1)
       }
     }

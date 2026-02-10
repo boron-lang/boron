@@ -5,7 +5,7 @@ use boron_parser::ast::expressions::{BinaryOp, UnaryOp};
 use boron_parser::ast::types::Mutability;
 use boron_parser::{FloatSuffix, IntBase, IntSuffix};
 use boron_resolver::DefId;
-use boron_utils::ident_table::Identifier;
+use boron_source::ident_table::Identifier;
 use boron_utils::prelude::Span;
 
 #[derive(Debug, Clone)]

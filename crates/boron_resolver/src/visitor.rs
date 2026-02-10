@@ -1,4 +1,3 @@
-use crate::DefId;
 use crate::builtin_kind::BuiltInKind;
 use crate::def::{DefKind, Definition};
 use crate::errors::{
@@ -8,7 +7,7 @@ use crate::module_resolver::ModuleResolver;
 use crate::resolver::Resolver;
 use crate::scope::ScopeKind;
 use crate::symbol::{Symbol, SymbolKind};
-use boron_parser::ast::ProgramNode;
+use crate::DefId;
 use boron_parser::ast::expressions::{Expr, ExprKind};
 use boron_parser::ast::items::{
   ConstItem, EnumItem, FunctionItem, Item, ItemKind, ModItem, StructItem, Visibility,
@@ -16,14 +15,14 @@ use boron_parser::ast::items::{
 use boron_parser::ast::params::Param;
 use boron_parser::ast::statements::{Block, Statement};
 use boron_parser::ast::types::Type;
+use boron_parser::ast::ProgramNode;
 use boron_parser::module::Modules;
 use boron_parser::{
   ComptimeArg, ElseBranch, GenericParams, IfExpr, NodeId, Path, Pattern, PatternKind,
   StructMember, VariantField, VariantPayload,
 };
 use boron_source::prelude::{SourceFileId, Span};
-use boron_utils::context::Context;
-use boron_utils::prelude::{Identifier, get_or_intern};
+use boron_utils::prelude::{get_or_intern, Identifier, Session};
 
 #[derive(Clone, Debug, Copy, Hash, PartialEq, Eq)]
 pub enum Namespace {
@@ -33,33 +32,29 @@ pub enum Namespace {
 
 pub struct ResolveVisitor<'a> {
   pub module_resolver: ModuleResolver<'a>,
-  pub ctx: &'a Context<'a>,
+  pub sess: &'a Session,
 }
 
 impl<'a> ResolveVisitor<'a> {
   pub fn new(
     resolver: &'a Resolver,
-    ctx: &'a Context<'a>,
+    sess: &'a Session,
     current_file: SourceFileId,
   ) -> Self {
-    Self { module_resolver: ModuleResolver::new(resolver, current_file), ctx }
+    Self { module_resolver: ModuleResolver::new(resolver, current_file), sess }
   }
 
-  pub fn resolve_modules(
-    resolver: &'a Resolver,
-    modules: &Modules,
-    ctx: &'a Context<'a>,
-  ) {
+  pub fn resolve_modules(resolver: &'a Resolver, modules: &Modules, sess: &'a Session) {
     // collect all top-level definitions
     for module in modules.all() {
-      let mut visitor = ResolveVisitor::new(resolver, ctx, module.source_file_id);
+      let mut visitor = ResolveVisitor::new(resolver, sess, module.source_file_id);
       visitor.collect_definitions(&module.node);
     }
 
     let order = match resolver.import_graph.resolution_order() {
       Ok(order) => order,
       Err(err) => {
-        ctx.dcx().emit(err);
+        sess.dcx().emit(err);
         return;
       }
     };
@@ -70,7 +65,7 @@ impl<'a> ResolveVisitor<'a> {
         continue;
       };
 
-      let mut visitor = ResolveVisitor::new(resolver, ctx, *file_id);
+      let mut visitor = ResolveVisitor::new(resolver, sess, *file_id);
       visitor.resolve_module(&module.node);
     }
   }
@@ -133,7 +128,7 @@ impl<'a> ResolveVisitor<'a> {
 
     if let Some(existing) = existing {
       if let Some(def) = self.resolver().get_definition(existing) {
-        self.ctx.dcx().emit(DuplicateDefinition { name, span, previous: def.span });
+        self.sess.dcx().emit(DuplicateDefinition { name, span, previous: def.span });
         return None;
       }
     }
@@ -519,7 +514,7 @@ impl<'a> ResolveVisitor<'a> {
     }
 
     if let Some(root) = &path.root {
-      self.ctx.dcx().emit(InvalidPathRoot { root: root.to_string(), span });
+      self.sess.dcx().emit(InvalidPathRoot { root: root.to_string(), span });
       return;
     }
 
@@ -533,7 +528,7 @@ impl<'a> ResolveVisitor<'a> {
       {
         self.resolver().symbols.record_resolution(id, def_id);
       } else {
-        self.ctx.dcx().emit(UndefinedName { name, span });
+        self.sess.dcx().emit(UndefinedName { name, span });
       }
       return;
     }
@@ -547,7 +542,7 @@ impl<'a> ResolveVisitor<'a> {
       .or_else(|| self.module_resolver.lookup_type(&first_name))
     else {
       self
-        .ctx
+        .sess
         .dcx()
         .emit(UndefinedName { name: first_name, span: *first.identifier.span() });
       return;
@@ -582,7 +577,7 @@ impl<'a> ResolveVisitor<'a> {
           {
             current_def = def_id;
           } else {
-            self.ctx.dcx().emit(UndefinedNameInModule {
+            self.sess.dcx().emit(UndefinedNameInModule {
               name: seg_name,
               module_name,
               span: *segment.identifier.span(),
@@ -601,7 +596,7 @@ impl<'a> ResolveVisitor<'a> {
 
     if let Some(def) = self.resolver().get_definition(current_def) {
       if self.current_file() != def.source_file && def.visibility.is_private() {
-        self.ctx.dcx().emit(PrivateItem { name: def.name, span: path.span });
+        self.sess.dcx().emit(PrivateItem { name: def.name, span: path.span });
       }
     }
 

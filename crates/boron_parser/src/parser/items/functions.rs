@@ -1,8 +1,8 @@
-use crate::parser::Parser;
 use crate::parser::errors::{ExpectedParenToOpenList, FunctionCamelCase};
+use crate::parser::Parser;
 use crate::{FunctionItem, NeverType, NodeId, TokenType, Type, UnitType};
+use boron_source::ident_table::Identifier;
 use boron_source::prelude::Span;
-use boron_utils::ident_table::Identifier;
 use stringcase::camel_case;
 
 impl Parser<'_> {

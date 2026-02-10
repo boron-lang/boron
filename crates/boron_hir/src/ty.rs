@@ -1,8 +1,8 @@
-use crate::Expr;
 use crate::ids::HirId;
+use crate::Expr;
 use boron_parser::ast::types::{Mutability, PrimitiveKind};
 use boron_resolver::DefId;
-use boron_utils::ident_table::Identifier;
+use boron_source::ident_table::Identifier;
 use boron_utils::prelude::Span;
 
 #[derive(Debug, Clone)]

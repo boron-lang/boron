@@ -15,7 +15,6 @@ edition = "2024"
 [workspace.dependencies]
 anstyle = "1.0.11"
 anyhow = "1.0.98"
-colored = "3.0.0"
 dashmap = "7.0.0-rc2"
 derivative = "2.2.0"
 env_logger = "0.11.8"
@@ -52,16 +51,6 @@ boron_target = { path = "crates/boron_target" }
 boron_ir = { path = "crates/boron_ir" }
 boron_codegen = { path = "crates/boron_codegen" }
 boron_thir = { path = "crates/boron_thir" }
-
-[profile.testrunner]
-inherits = "dev"
-panic = "unwind"
-
-[profile.release]
-panic = "abort"
-
-[profile.dev]
-panic = "abort"
 
 [workspace.lints.rust]
 elided_lifetimes_in_paths = "warn"

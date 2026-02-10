@@ -3,21 +3,19 @@ use crate::{
   DefId, DefKind, Definition, ModuleResolver, ResolveVisitor, Symbol, SymbolKind,
 };
 use boron_parser::{ImportDecl, ImportKind, ImportSpec, NodeId, Visibility};
+use boron_source::ident_table::Identifier;
 use boron_source::prelude::{SourceFileId, Span};
-use boron_utils::ident_table::Identifier;
 use boron_utils::prelude::debug;
 use dashmap::DashMap;
 
 impl<'a> ResolveVisitor<'a> {
   pub fn collect_import(&self, import: &ImportDecl) {
-    let sess = self.ctx.session;
-
-    let current = sess.dcx().sources().get_unchecked(self.current_file());
-    let path = import.path.construct_file(sess.root(), current.path().clone());
+    let current = self.sess.dcx().sources().get_unchecked(self.current_file());
+    let path = import.path.construct_file(self.sess.root(), current.path().clone());
 
     let Some(path) = path else { todo!("add proper diagnostic") };
 
-    let importing_from = sess.dcx().sources().get_by_path(&path);
+    let importing_from = self.sess.dcx().sources().get_by_path(&path);
 
     if let Some(source_id) = importing_from {
       let src_id = *source_id.value();
@@ -25,7 +23,7 @@ impl<'a> ResolveVisitor<'a> {
       self.resolver().add_import_edge(src_id, self.current_file());
     } else {
       self
-        .ctx
+        .sess
         .dcx()
         .emit(UndefinedModule { name: import.path.to_string(), span: import.path.span });
     }
@@ -113,10 +111,10 @@ impl<'a> ResolveVisitor<'a> {
         let def = self.resolver().get_definition(def_id).expect("should exist");
 
         if def.visibility.is_private() {
-          self.ctx.dcx().emit(PrivateItem { name: def.name, span: spec.span });
+          self.sess.dcx().emit(PrivateItem { name: def.name, span: spec.span });
         }
       } else {
-        self.ctx.dcx().emit(UndefinedNameInModule {
+        self.sess.dcx().emit(UndefinedNameInModule {
           name: orig_name,
           span: spec.span,
           module_name: import.path.to_string(),

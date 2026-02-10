@@ -150,6 +150,13 @@ pub struct Cli {
 
   #[arg(value_name = "no-color", help = "No color in the output", long = "no-color")]
   pub no_color: bool,
+
+  #[arg(
+    value_name = "no-backtrace",
+    help = "No backtrace in panics",
+    long = "no-backtrace"
+  )]
+  pub no_backtrace: bool,
 }
 
 impl TryFrom<Cli> for ProjectConfig {
@@ -168,6 +175,9 @@ impl TryFrom<Cli> for ProjectConfig {
       root,
       diagnostic_output_type: cli.diag_output_type.into(),
       color: !cli.no_color,
+      check_only: cli.check_only,
+      verbose: cli.verbose,
+      no_backtrace: cli.no_backtrace
     })
   }
 }

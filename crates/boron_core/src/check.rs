@@ -1,46 +1,36 @@
-use crate::prelude::{Colorize as _, CompilationUnit, FILE_EXTENSION};
-use anyhow::Result;
+use crate::prelude::{CompilationUnit, FILE_EXTENSION};
 use anyhow::bail;
+use anyhow::Result;
 use boron_diagnostics::DiagnosticWriter;
 use boron_source::prelude::Sources;
-use boron_utils::context::Context;
-use boron_utils::prelude::{ProjectConfig, Session, info};
+use boron_utils::prelude::{info, CompilationMode, ProjectConfig, Session};
 use std::sync::Arc;
 
-pub fn compiler_entrypoint(
-  config: &ProjectConfig,
-  writer: DiagnosticWriter,
-  is_test: bool,
-  check_only: bool,
-) -> Result<Session> {
-  let file = &config.entrypoint;
-  info!("checking entrypoint: {} with {} mode", file.display(), config.mode);
+pub fn compiler_entrypoint(session: &Session) -> Result<()> {
+  let file = &session.config.entrypoint;
+  info!("checking entrypoint: {} with {} mode", file.display(), session.config().mode);
 
   if let Some(ext) = file.extension() {
     if ext != FILE_EXTENSION {
       bail!(
         "Found an entry point with invalid extension: {}. It must be {}",
-        file.display().to_string().dimmed(),
-        FILE_EXTENSION.dimmed()
+        file.display().to_string(),
+        FILE_EXTENSION
       );
     }
   }
-  let sources = Arc::new(Sources::with_root(config.root.clone()));
 
-  let sess = Session::new(config.clone(), &sources, writer, is_test);
-  let context = &mut Context::new(&sess, Arc::clone(&sources));
-
-  let file = sess.config().root.join(file);
+  let file = session.root().join(file);
   let contents = fs_err::read_to_string(file.clone())?;
 
-  let file_id = sources.add(contents, file.clone());
-  let mut unit = CompilationUnit::new(file_id, context);
+  let file_id = session.sources().add(contents, file.clone());
+  let mut unit = CompilationUnit::new(file_id, session);
 
-  if check_only {
+  if session.config().check_only {
     unit.check();
   } else {
     unit.build()?;
   }
 
-  Ok(sess)
+  Ok(())
 }

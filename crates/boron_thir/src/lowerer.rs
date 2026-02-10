@@ -1,6 +1,6 @@
-use crate::Param;
 use crate::exprs::{Block, Expr, ExprKind, FieldInit, Local, MatchArm, Stmt, StmtKind};
 use crate::items::{Field, Function, Struct};
+use crate::Param;
 use boron_analysis::float::construct_float;
 use boron_analysis::int::construct_i128;
 use boron_analysis::interpreter::{
@@ -19,8 +19,8 @@ use boron_hir::{
 };
 use boron_parser::{BinaryOp, Mutability, UnaryOp};
 use boron_resolver::{DefId, DefKind, Resolver};
+use boron_source::ident_table::Identifier;
 use boron_source::span::Span;
-use boron_utils::ident_table::Identifier;
 use dashmap::DashMap;
 
 #[derive(Debug, Default)]

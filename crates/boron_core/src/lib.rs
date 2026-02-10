@@ -10,6 +10,5 @@ pub mod prelude {
   pub use boron_diagnostics::prelude::*;
   pub use boron_parser::*;
   pub use boron_source::prelude::*;
-  pub use boron_utils::context::*;
   pub use boron_utils::{prelude::*, *};
 }

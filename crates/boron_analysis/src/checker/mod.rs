@@ -20,11 +20,10 @@ use boron_hir::item::SelfKind;
 use boron_hir::{Const, Function, Hir, ParamKind};
 use boron_parser::Mutability;
 use boron_resolver::{DefId, Resolver};
-use boron_utils::context::Context;
-use boron_utils::prelude::Span;
+use boron_utils::prelude::{Session, Span};
 
-pub fn typeck_hir(hir: &Hir, ctx: &Context<'_>, resolver: &Resolver) -> TypeTable {
-  let mut checker = TyChecker::new(hir, ctx, resolver);
+pub fn typeck_hir(hir: &Hir, sess: &Session, resolver: &Resolver) -> TypeTable {
+  let mut checker = TyChecker::new(hir, sess, resolver);
 
   checker.collect_signatures();
 
@@ -46,7 +45,7 @@ pub fn typeck_hir(hir: &Hir, ctx: &Context<'_>, resolver: &Resolver) -> TypeTabl
 
 pub struct TyChecker<'a> {
   pub hir: &'a Hir,
-  pub ctx: &'a Context<'a>,
+  pub sess: &'a Session,
   pub resolver: &'a Resolver,
   pub table: TypeTable,
   pub infcx: InferCtx,
@@ -54,10 +53,10 @@ pub struct TyChecker<'a> {
 }
 
 impl<'a> TyChecker<'a> {
-  pub fn new(hir: &'a Hir, ctx: &'a Context<'a>, resolver: &'a Resolver) -> Self {
+  pub fn new(hir: &'a Hir, sess: &'a Session, resolver: &'a Resolver) -> Self {
     Self {
       hir,
-      ctx,
+      sess,
       resolver,
       table: TypeTable::new(),
       infcx: InferCtx::new(),
@@ -70,7 +69,7 @@ impl<'a> TyChecker<'a> {
   }
 
   pub fn dcx(&self) -> &'a DiagnosticCtx {
-    self.ctx.dcx()
+    self.sess.dcx()
   }
 
   pub fn new_interpreter(

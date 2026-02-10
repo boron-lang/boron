@@ -1,11 +1,11 @@
 use crate::llvm::LLVMCodegen;
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use boron_ir::SemanticTy;
 use boron_parser::PrimitiveKind;
 use boron_resolver::DefId;
 use boron_utils::prelude::warn;
-use inkwell::AddressSpace;
 use inkwell::types::{BasicType as _, BasicTypeEnum, StructType};
+use inkwell::AddressSpace;
 
 impl<'ctx> LLVMCodegen<'ctx> {
   pub fn primitive_ty(&self, prim: &PrimitiveKind) -> BasicTypeEnum<'ctx> {
@@ -17,7 +17,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
       PrimitiveKind::I64 => ctx.i64_type().into(),
       PrimitiveKind::I128 => ctx.i128_type().into(),
       PrimitiveKind::ISize => {
-        let bits = self.ctx.target().pointer_width.size_bytes() * 8;
+        let bits = self.sess.target().pointer_width.size_bytes() * 8;
         ctx.custom_width_int_type(bits as u32).into()
       }
 
@@ -27,7 +27,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
       PrimitiveKind::U64 => ctx.i64_type().into(),
       PrimitiveKind::U128 => ctx.i128_type().into(),
       PrimitiveKind::USize => {
-        let bits = self.ctx.target().pointer_width.size_bytes() * 8;
+        let bits = self.sess.target().pointer_width.size_bytes() * 8;
         ctx.custom_width_int_type(bits as u32).into()
       }
 

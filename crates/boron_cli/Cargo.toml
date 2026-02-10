@@ -11,9 +11,9 @@ anyhow = { workspace = true }
 clap = { workspace = true }
 env_logger = { workspace = true }
 log = { workspace = true }
-colored = { workspace = true }
 boron_utils = { workspace = true }
 boron_diagnostics = { workspace = true }
+yansi = { workspace = true }
 
 [lints]
 workspace = true

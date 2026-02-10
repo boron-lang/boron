@@ -1,6 +1,6 @@
 use boron_diagnostic_macro::Diagnostic;
+use boron_source::ident_table::Identifier;
 use boron_source::span::Span;
-use boron_utils::ident_table::Identifier;
 
 #[derive(Diagnostic)]
 #[error("cannot find `{name}` in this scope")]

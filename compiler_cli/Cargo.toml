@@ -9,6 +9,12 @@ description = "Boron compiler"
 clap = { workspace = true }
 boron_cli = { workspace = true }
 boron_core = { workspace = true }
+backtrace = "0.3.76"
+yansi = { workspace = true }
+anyhow = { workspace = true }
+sysinfo = "0.38.1"
+terminal_size = "0.4.3"
+boron_target = { workspace = true }
 
 [lints]
 workspace = true

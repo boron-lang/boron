@@ -4,12 +4,12 @@ use crate::test::Test;
 use boron_core::prelude::*;
 use boron_diagnostics::DiagnosticWriter;
 use itertools::Itertools;
-use std::panic::{AssertUnwindSafe, catch_unwind};
+use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use super::directives::matches_directive;
 use super::panic::{
-  PanicHookGuard, PanicRunGuard, clear_last_backtrace, install_panic_hook, panic_message,
-  take_last_backtrace,
+  clear_last_backtrace, install_panic_hook, panic_message, take_last_backtrace, PanicHookGuard,
+  PanicRunGuard,
 };
 
 pub fn run_single_test_in_process(test: &Test) -> TestResult {
@@ -28,8 +28,8 @@ pub fn run_single_test_in_process(test: &Test) -> TestResult {
 
   let output = DiagnosticWriter::buffer();
   let result = catch_unwind(AssertUnwindSafe(|| {
-    let result = compiler_entrypoint(
-      &ProjectConfig {
+    let sess = Session::new(
+      ProjectConfig {
         entrypoint: test.path.clone(),
         project_type,
         packages: vec![],
@@ -40,13 +40,17 @@ pub fn run_single_test_in_process(test: &Test) -> TestResult {
         root: test.path.parent().unwrap().to_path_buf(),
         diagnostic_output_type: DiagnosticOutputType::HumanReadable,
         color: true,
+        check_only: true,
+        verbose: false,
+        no_backtrace: false,
       },
       output.clone(),
-      true,
-      true,
+      CompilationMode::TestRunner,
     );
 
-    if let Ok(sess) = result {
+    let result = compiler_entrypoint(&sess);
+
+    if let Ok(_) = result {
       let sources = sess.dcx().sources();
 
       if sess.dcx().has_errors() {

@@ -5,12 +5,12 @@ mod output;
 mod structs;
 mod types;
 
+use std::fmt::Display;
 use crate::Codegen;
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use boron_ir::{Ir, IrId};
 use boron_resolver::DefId;
-use boron_utils::context::Context;
-use boron_utils::prelude::Mode;
+use boron_utils::prelude::{Mode, Session};
 use dashmap::DashMap;
 use inkwell::builder::Builder;
 use inkwell::context::Context as LLVMContext;
@@ -21,7 +21,7 @@ use inkwell::types::StructType;
 use inkwell::values::{FunctionValue, PointerValue};
 
 pub struct LLVMCodegen<'ctx> {
-  pub ctx: &'ctx Context<'ctx>,
+  pub sess: &'ctx Session,
   pub context: &'ctx LLVMContext,
   pub module: Module<'ctx>,
   pub builder: Builder<'ctx>,
@@ -53,7 +53,7 @@ impl Codegen for LLVMCodegen<'_> {
       self.generate_function_body(func)?;
     }
 
-    let opt_level = if self.ctx.session.config().mode == Mode::Release {
+    let opt_level = if self.sess.config().mode == Mode::Release {
       "default<O3>"
     } else {
       "default<O0>"
@@ -73,7 +73,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
     value.ok_or_else(|| anyhow!("LLVM codegen invariant violated: {context}"))
   }
 
-  pub fn require_llvm<T, E: std::fmt::Display>(
+  pub fn require_llvm<T, E: Display>(
     &self,
     value: Result<T, E>,
     context: &str,

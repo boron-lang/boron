@@ -6,8 +6,8 @@ use crate::scope::{ScopeId, ScopeKind, Scopes};
 use crate::symbol::SymbolTable;
 use boron_parser::module::Modules;
 use boron_parser::{NodeId, Path};
+use boron_source::ident_table::Identifier;
 use boron_source::prelude::SourceFileId;
-use boron_utils::ident_table::Identifier;
 use dashmap::DashMap;
 use parking_lot::RwLock;
 

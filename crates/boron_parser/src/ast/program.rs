@@ -1,7 +1,7 @@
 use crate::{Expr, ImportDecl, Item, Path};
+use boron_source::ident_table::Identifier;
 use boron_source::new_id;
 use boron_source::prelude::Span;
-use boron_utils::ident_table::Identifier;
 
 new_id!(NodeId);
 

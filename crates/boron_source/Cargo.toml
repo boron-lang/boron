@@ -10,6 +10,7 @@ description = "boron shared source/span utilities"
 dashmap = { workspace = true }
 parking_lot = { workspace = true }
 paste = "1.0.15"
+lasso = { workspace = true }
 
 [lints]
 workspace = true

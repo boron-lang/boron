@@ -1,72 +1,49 @@
+use crate::module_graph::ModuleGraph;
 use crate::prelude::create_dir_all;
 use crate::project_config::ProjectConfig;
 use boron_diagnostics::{DiagnosticCtx, DiagnosticWriter};
-use boron_source::prelude::{SourceFileId, Sources};
+use boron_source::prelude::Sources;
 use boron_target::target::Target;
-use dashmap::DashMap;
-use parking_lot::Mutex;
-use petgraph::graph::{DiGraph, NodeIndex};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-struct GraphWithMap {
-  graph: Mutex<DiGraph<SourceFileId, ()>>,
-  map: DashMap<SourceFileId, NodeIndex>,
-}
-
-impl GraphWithMap {
-  fn new() -> Self {
-    Self { graph: Mutex::new(DiGraph::new()), map: DashMap::new() }
-  }
-
-  fn ensure_node(&self, id: SourceFileId) -> NodeIndex {
-    *self.map.entry(id).or_insert_with(|| self.graph.lock().add_node(id))
-  }
-
-  fn add_edge(&self, from: SourceFileId, to: SourceFileId) {
-    let a = self.ensure_node(from);
-    let b = self.ensure_node(to);
-    self.graph.lock().add_edge(a, b, ());
-  }
-}
-
-pub struct ModuleGraph {
-  discovered: GraphWithMap,
-}
-
-impl ModuleGraph {
-  pub fn new() -> Self {
-    Self { discovered: GraphWithMap::new() }
-  }
-
-  pub fn add_discovered_relation(&self, from: SourceFileId, to: SourceFileId) {
-    self.discovered.add_edge(from, to);
-  }
-}
-
-/// Struct that holds information about current package
 pub struct Session {
-  config: ProjectConfig,
+  pub config: ProjectConfig,
   dcx: DiagnosticCtx,
   module_graph: ModuleGraph,
   target: Target,
+  compilation_mode: CompilationMode,
+  sources: Arc<Sources>,
+}
 
-  is_test: bool,
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Default)]
+pub enum CompilationMode {
+  #[default]
+  Normal,
+  /// This mode is active when running the compiler test suite
+  TestRunner,
 }
 
 impl Session {
   pub fn new(
     config: ProjectConfig,
-    sources: &Arc<Sources>,
-    w: DiagnosticWriter,
-    is_test: bool,
+    writer: DiagnosticWriter,
+    compilation_mode: CompilationMode,
   ) -> Self {
+    let sources = Arc::new(Sources::with_root(config.root.clone()));
+
     Self {
-      dcx: DiagnosticCtx::new(sources, config.color, &config.diagnostic_output_type, w),
+      dcx: DiagnosticCtx::new(
+        Arc::clone(&sources),
+        config.color,
+        &config.diagnostic_output_type,
+        writer,
+      ),
       config,
-      is_test,
       module_graph: ModuleGraph::new(),
       target: Target::host(),
+      compilation_mode,
+      sources,
     }
   }
 
@@ -82,16 +59,20 @@ impl Session {
     &self.config
   }
 
+  pub fn is_test(&self) -> bool {
+    self.compilation_mode == CompilationMode::TestRunner
+  }
+
   pub fn dcx(&self) -> &DiagnosticCtx {
     &self.dcx
   }
 
-  pub fn is_test(&self) -> bool {
-    self.is_test
-  }
-
   pub fn root(&self) -> PathBuf {
     self.config.root.clone()
+  }
+  
+  pub fn sources(&self) -> &Arc<Sources> {
+    &self.sources
   }
 
   pub fn graph(&self) -> &ModuleGraph {

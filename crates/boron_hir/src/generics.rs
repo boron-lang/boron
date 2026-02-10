@@ -1,7 +1,7 @@
 use crate::ids::HirId;
 use crate::ty::{PathSegment, Ty};
 use boron_resolver::DefId;
-use boron_utils::ident_table::Identifier;
+use boron_source::ident_table::Identifier;
 use boron_utils::prelude::Span;
 
 #[derive(Debug, Clone, Default)]

@@ -1,8 +1,8 @@
 use crate::TyChecker;
 use boron_parser::ast::types::{Mutability, PrimitiveKind};
 use boron_resolver::DefId;
+use boron_source::ident_table::Identifier;
 use boron_source::new_id;
-use boron_utils::ident_table::Identifier;
 use boron_utils::prelude::Span;
 use std::collections::HashMap;
 

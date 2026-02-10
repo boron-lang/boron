@@ -1,6 +1,6 @@
 use crate::TyVar;
 use boron_diagnostic_macro::Diagnostic;
-use boron_utils::ident_table::Identifier;
+use boron_source::ident_table::Identifier;
 use boron_utils::prelude::Span;
 
 #[derive(Diagnostic)]

@@ -1,16 +1,16 @@
 use crate::InferTy;
 use boron_hir::Hir;
 use boron_resolver::{DefId, DefKind, Resolver};
-use boron_utils::context::Context;
+use boron_utils::prelude::Session;
 
 pub struct SizeOfContext<'a> {
-  pub ctx: &'a Context<'a>,
+  pub sess: &'a Session,
   pub resolver: &'a Resolver,
   pub hir: &'a Hir,
 }
 
 pub fn size_of_ty<'a>(sz: &'a SizeOfContext<'a>, ty: &InferTy) -> usize {
-  let target = sz.ctx.session.target();
+  let target = sz.sess.target();
 
   match ty {
     InferTy::Primitive(p, _) => target.size_of(*p),

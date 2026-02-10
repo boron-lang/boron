@@ -2,13 +2,13 @@ mod llvm;
 
 use crate::llvm::LLVMCodegen;
 use boron_ir::Ir;
-use boron_utils::context::Context;
+use boron_utils::prelude::Session;
 use dashmap::DashMap;
-use inkwell::OptimizationLevel;
 use inkwell::context::Context as LLVMContext;
 use inkwell::targets::{
   CodeModel, InitializationConfig, RelocMode, Target, TargetTriple,
 };
+use inkwell::OptimizationLevel;
 
 pub trait Codegen {
   fn backend_name(&self) -> &str;
@@ -16,11 +16,11 @@ pub trait Codegen {
   fn generate(&self, ir: &Ir) -> anyhow::Result<()>;
 }
 
-pub fn run_codegen<'a>(ctx: &'a Context<'a>, ir: &Ir) -> anyhow::Result<()> {
+pub fn run_codegen(sess: &Session, ir: &Ir) -> anyhow::Result<()> {
   Target::initialize_native(&InitializationConfig::default())
     .expect("failed to init native target");
 
-  let triple = TargetTriple::create(ctx.target().triple);
+  let triple = TargetTriple::create(sess.target().triple);
   let target = Target::from_triple(&triple).expect("failed to get target");
 
   let target_machine = target
@@ -42,7 +42,7 @@ pub fn run_codegen<'a>(ctx: &'a Context<'a>, ir: &Ir) -> anyhow::Result<()> {
   module.set_triple(&triple);
 
   let codegen = LLVMCodegen {
-    ctx,
+    sess,
     context: &llvm_ctx,
     module,
     builder: llvm_ctx.create_builder(),

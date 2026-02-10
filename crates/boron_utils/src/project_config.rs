@@ -15,4 +15,7 @@ pub struct ProjectConfig {
   pub root: PathBuf,
   pub diagnostic_output_type: DiagnosticOutputType,
   pub color: bool,
+  pub check_only: bool,
+  pub verbose: bool,
+  pub no_backtrace: bool
 }

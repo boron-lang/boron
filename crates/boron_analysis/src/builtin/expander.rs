@@ -3,13 +3,12 @@ use crate::results::BuiltInResults;
 use crate::{InferTy, TypeTable};
 use boron_diagnostics::DiagnosticCtx;
 use boron_hir::{Block, Expr, ExprKind, Function, Hir, ParamKind, StmtKind};
-use boron_resolver::Resolver;
 use boron_resolver::prelude::BuiltInKind;
-use boron_utils::context::Context;
-use boron_utils::prelude::debug;
+use boron_resolver::Resolver;
+use boron_utils::prelude::{debug, Session};
 
 pub struct BuiltInExpander<'a> {
-  pub ctx: &'a Context<'a>,
+  pub sess: &'a Session,
   pub resolver: &'a Resolver,
   pub results: BuiltInResults,
   pub hir: &'a Hir,
@@ -18,16 +17,16 @@ pub struct BuiltInExpander<'a> {
 
 impl<'a> BuiltInExpander<'a> {
   pub fn new(
-    ctx: &'a Context<'a>,
+    sess: &'a Session,
     resolver: &'a Resolver,
     type_table: &'a TypeTable,
     hir: &'a Hir,
   ) -> Self {
-    Self { ctx, results: BuiltInResults::new(), resolver, hir, type_table }
+    Self { sess, results: BuiltInResults::new(), resolver, hir, type_table }
   }
 
   pub fn dcx(&self) -> &'a DiagnosticCtx {
-    self.ctx.dcx()
+    self.sess.dcx()
   }
 
   pub fn expand_function(&self, func: &Function) {
