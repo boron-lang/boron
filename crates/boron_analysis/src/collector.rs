@@ -14,7 +14,6 @@ impl TyChecker<'_> {
       func.generics.clone()
     };
 
-    panic!();
     let ty_vars = self.register_generics(&generics);
     let params = self.param_types(&func.params);
     let ret = self.lower_hir_ty(&func.return_type);
