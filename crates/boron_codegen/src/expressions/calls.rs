@@ -1,4 +1,4 @@
-use crate::llvm::LLVMCodegen;
+use crate::codegen::LLVMCodegen;
 use anyhow::Result;
 use boron_ir::{IrExpr, SemanticTy};
 use boron_resolver::DefId;

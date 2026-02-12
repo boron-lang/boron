@@ -1,6 +1,6 @@
-use crate::llvm::LLVMCodegen;
 use anyhow::Result;
 use boron_ir::IrStruct;
+use crate::codegen::LLVMCodegen;
 
 impl LLVMCodegen<'_> {
   pub fn create_struct_type(&self, strukt: &IrStruct) {

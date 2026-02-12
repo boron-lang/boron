@@ -1,10 +1,10 @@
-use crate::llvm::LLVMCodegen;
 use anyhow::Result;
 use boron_analysis::literal_table::FullLiteral;
 use boron_ir::{IrExpr, SemanticTy};
 use boron_target::primitive::PrimitiveKind;
 use inkwell::types::{BasicTypeEnum, StringRadix};
 use inkwell::values::{BasicValue, BasicValueEnum};
+use crate::codegen::LLVMCodegen;
 
 impl<'ctx> LLVMCodegen<'ctx> {
   pub fn build_literal(

@@ -1,11 +1,3 @@
-mod blocks;
-mod expressions;
-mod function;
-mod output;
-mod structs;
-mod types;
-
-use crate::Codegen;
 use anyhow::{anyhow, Result};
 use boron_ir::{Ir, IrId};
 use boron_resolver::DefId;

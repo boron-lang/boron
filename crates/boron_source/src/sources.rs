@@ -1,7 +1,7 @@
 use crate::source_file::{SourceFile, SourceFileId};
-use dashmap::DashMap;
 use dashmap::iter::Iter;
 use dashmap::mapref::one::Ref;
+use dashmap::DashMap;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Default)]
@@ -56,27 +56,36 @@ impl Sources {
   pub fn display(&self, id: SourceFileId) -> Option<String> {
     self.get(id).map(|s| {
       let path = s.path();
-      if let Some(root) = &self.root {
-        Self::strip_root(path.as_path(), root).display().to_string()
-      } else {
-        path.display().to_string()
-      }
+
+      self.strip_root(path.as_path()).display().to_string()
     })
   }
 
-  fn strip_root(path: &Path, root: &Path) -> PathBuf {
-    let path_components: Vec<_> = path.components().collect();
-    let root_components: Vec<_> = root.components().collect();
+  pub fn strip_root(&self, path: &Path) -> PathBuf {
+    let Some(root) = &self.root else {
+      return path.to_path_buf();
+    };
 
-    let mut common_length = 0;
-    for (path_comp, root_comp) in path_components.iter().zip(root_components.iter()) {
-      if path_comp == root_comp {
-        common_length += 1;
-      } else {
-        break;
-      }
-    }
-
-    path_components.iter().skip(common_length).collect()
+    strip_same_root(path, &root)
   }
+}
+
+/// strips the same root from a path using `reference_path` as the common base
+pub fn strip_same_root(path: &Path, reference_path: &Path) -> PathBuf {
+  let path_components: Vec<_> = path.components().collect();
+  let reference_components: Vec<_> = reference_path.components().collect();
+
+  let mut common_length = 0;
+
+  for (path_comp, ref_comp) in path_components.iter().zip(reference_components.iter()) {
+    if path_comp == ref_comp {
+      common_length += 1;
+    } else {
+      break;
+    }
+  }
+
+  let stripped_path: PathBuf = path_components.iter().skip(common_length).collect();
+
+  stripped_path
 }

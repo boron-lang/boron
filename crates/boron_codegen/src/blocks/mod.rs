@@ -1,8 +1,8 @@
-pub(crate) use crate::llvm::blocks::generator::BlockContext;
+use crate::blocks::generator::BlockContext;
 use boron_ir::{IrBlock, IrFunction};
 use inkwell::values::FunctionValue;
 
-mod generator;
+pub mod generator;
 
 pub struct BlockGeneratorContext<'ctx, 'block> {
   pub block: &'block IrBlock,

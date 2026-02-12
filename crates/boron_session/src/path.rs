@@ -2,31 +2,7 @@ use crate::errors::BoronError;
 use anyhow::Result;
 use std::path::{Path, PathBuf};
 
-/// strips the same root from a path using `reference_path` as the common base
-pub fn strip_same_root(path: &Path, reference_path: &Path) -> PathBuf {
-  let path_components: Vec<_> = path.components().collect();
-  let reference_components: Vec<_> = reference_path.components().collect();
-
-  let mut common_length = 0;
-
-  for (path_comp, ref_comp) in path_components.iter().zip(reference_components.iter()) {
-    if path_comp == ref_comp {
-      common_length += 1;
-    } else {
-      break;
-    }
-  }
-
-  let stripped_path: PathBuf = path_components.iter().skip(common_length).collect();
-
-  stripped_path
-}
-
 /// Canonicalizes a path and strips the common prefix
-///
-/// # Errors
-///
-/// Returns an error if the path cannot be canonicalized
 pub fn canonicalize_with_strip<P: AsRef<Path>>(path: P) -> Result<PathBuf, BoronError> {
   let canonical = fs_err::canonicalize(path)?;
   Ok(strip_windows_long_path_prefix(canonical))

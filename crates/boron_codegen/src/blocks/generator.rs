@@ -1,5 +1,5 @@
-use crate::llvm::LLVMCodegen;
-use crate::llvm::blocks::BlockGeneratorContext;
+use crate::blocks::BlockGeneratorContext;
+use crate::codegen::LLVMCodegen;
 use anyhow::Result;
 use boron_ir::{IrStmt, IrStmtKind, IrTerminator};
 

@@ -97,10 +97,10 @@ impl<'a> CompilerBuild<'a> {
       _ => self.link_direct(output_name.as_ref()),
     }?;
 
-    println!(
+    info!(
       "{} {}",
       "Finished".bold().underline(),
-      format!("{}", output_path.display()).dim()
+      format!("{}", self.sess.sources().strip_root(&output_path).display()).dim()
     );
 
     Ok(output_path)
@@ -130,7 +130,7 @@ impl<'a> CompilerBuild<'a> {
 
     debug!("Executing compiler command: {command:?}");
 
-    info!("{} {}", "Compiling with".underline(), self.compiler.kind().name().bold());
+    info!("{} {}", "Compiling with".bold().underline(), self.compiler.kind().name().bold());
 
     let output = command
       .current_dir(self.build_dir())

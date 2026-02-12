@@ -1,4 +1,4 @@
-use crate::llvm::LLVMCodegen;
+use crate::codegen::LLVMCodegen;
 use anyhow::{anyhow, Result};
 use boron_ir::SemanticTy;
 use boron_parser::PrimitiveKind;

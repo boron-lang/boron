@@ -1,5 +1,6 @@
-use crate::llvm::LLVMCodegen;
-use crate::llvm::blocks::{BlockContext, BlockGeneratorContext};
+use crate::blocks::generator::BlockContext;
+use crate::blocks::BlockGeneratorContext;
+use crate::codegen::LLVMCodegen;
 use anyhow::Result;
 use boron_ir::{IrFunction, IrId, Projection, SemanticTy};
 use inkwell::module::Linkage;
@@ -66,7 +67,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
   }
 
   pub fn generate_var_allocas(&self, function: IrId) -> Result<()> {
-    let locals=  self.ir.locals.get(&function);
+    let locals = self.ir.locals.get(&function);
     let Some(locals) = locals else {
       return Ok(());
     };

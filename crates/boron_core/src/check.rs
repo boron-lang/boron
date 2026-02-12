@@ -1,12 +1,11 @@
-use crate::prelude::{CompilationUnit, FILE_EXTENSION};
-use anyhow::Result;
+use crate::prelude::{info, CompilationUnit, FILE_EXTENSION};
 use anyhow::bail;
-use boron_session::prelude::{Session, info};
+use anyhow::Result;
+use boron_session::prelude::Session;
+use yansi::Paint;
 
 pub fn compiler_entrypoint(session: &Session) -> Result<()> {
   let file = &session.config.entrypoint;
-  info!("checking entrypoint: {} with {} mode", file.display(), session.config().mode);
-
   if let Some(ext) = file.extension() {
     if ext != FILE_EXTENSION {
       bail!(
@@ -25,6 +24,7 @@ pub fn compiler_entrypoint(session: &Session) -> Result<()> {
 
   if session.config().check_only {
     unit.check();
+    info!("{} without any problems", "Checked".underline().bold())
   } else {
     unit.build()?;
   }
