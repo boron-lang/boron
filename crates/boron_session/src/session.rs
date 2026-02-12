@@ -4,8 +4,11 @@ use crate::project_config::ProjectConfig;
 use boron_diagnostics::{DiagnosticCtx, DiagnosticWriter};
 use boron_source::prelude::Sources;
 use boron_target::target::{Linker, Target};
+use parking_lot::RwLock;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
+use yansi::Paint;
 
 pub struct Session {
   pub config: ProjectConfig,
@@ -15,6 +18,7 @@ pub struct Session {
   linker: Option<Linker>,
   compilation_mode: CompilationMode,
   sources: Arc<Sources>,
+  timings: RwLock<Vec<(String, Duration)>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy, Default)]
@@ -47,6 +51,7 @@ impl Session {
       linker,
       compilation_mode,
       sources,
+      timings: RwLock::new(Vec::new()),
     }
   }
 
@@ -103,5 +108,35 @@ impl Session {
       self.config.name,
       self.target().obj_file_suffix()
     ))
+  }
+
+  pub fn store_timing(&self, step: &str, duration: Duration) {
+    let mut write = self.timings.write();
+    write.push((step.to_string(), duration));
+  }
+
+  pub fn print_timings(&self) {
+    let timings = self.timings.read();
+
+    let total: Duration = timings.iter().map(|(_, d)| *d).sum();
+    let max_len = timings.iter().map(|(step, _)| step.len()).max().unwrap_or(0);
+
+    println!("\n{}", "Timing Summary".bold().underline());
+    println!("{}", "─".repeat(max_len + 20));
+
+    for (step, duration) in timings.iter() {
+      let percentage = duration.as_secs_f64() / total.as_secs_f64() * 100.0;
+
+      println!(
+        "{:<width$}  {:>8.2?}  {:>5.1}%",
+        step,
+        duration,
+        percentage,
+        width = max_len
+      );
+    }
+
+    println!("{}", "─".repeat(max_len + 20));
+    println!("{:<width$}  {:>8.2?}", "Total".bold(), total.bold(), width = max_len);
   }
 }

@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use boron_analysis::results::BuiltInResults;
 use boron_analysis::validator::validate_comptime;
-use boron_analysis::{TypeTable, expand_builtins, typeck_hir};
+use boron_analysis::{expand_builtins, typeck_hir, TypeTable};
 use boron_codegen::run_codegen;
 use boron_hir::hir::Hir;
 use boron_hir::lower::lower_to_hir;
@@ -14,6 +14,7 @@ use boron_resolver::{ResolveVisitor, Resolver};
 use boron_source::source_file::SourceFileId;
 use boron_thir::{Thir, ThirLowerer};
 use std::process::exit;
+use std::time::{Duration, Instant};
 
 pub struct CompilationUnit<'ctx> {
   pub entry_point: SourceFileId,
@@ -48,27 +49,27 @@ impl<'ctx> CompilationUnit<'ctx> {
     };
 
     self.resolver.build_import_graph(&self.modules);
-    if self.run_step(|this| this.resolve_names()) {
+    if self.run_step("Name resolution", |this| this.resolve_names()) {
       return;
     }
-    if self.run_step(|this| this.lower_to_hir()) {
+    if self.run_step("HIR lowering" ,|this| this.lower_to_hir()) {
       return;
     }
-    if self.run_step(|this| this.validate_comptime()) {
-      return;
-    }
-
-    if self.run_step(|this| this.typeck()) {
-      return;
-    }
-    if self.run_step(|this| this.expand_builtins()) {
-      return;
-    }
-    if self.run_step(|this| this.lower_to_thir()) {
+    if self.run_step("Comptime validation",|this| this.validate_comptime()) {
       return;
     }
 
-    let _ = self.run_step(|this| this.lower_to_ir());
+    if self.run_step("Type inference and checking", |this| this.typeck()) {
+      return;
+    }
+    if self.run_step("Built-in expanding", |this| this.expand_builtins()) {
+      return;
+    }
+    if self.run_step("THIR lowering", |this| this.lower_to_thir()) {
+      return;
+    }
+
+    let _ = self.run_step("IR lowering", |this| this.lower_to_ir());
   }
 
   pub fn build(&mut self) -> Result<()> {
@@ -80,13 +81,19 @@ impl<'ctx> CompilationUnit<'ctx> {
     let Some(ir) = &self.ir else {
       return Ok(());
     };
+    let start = Instant::now();
     if let Err(err) = run_codegen(self.sess, ir) {
       self.emit_errors();
       return Err(err);
     }
+    self.sess.store_timing("LLVM codegen", start.elapsed());
 
+    let linking_start = Instant::now();
     match self.link() {
-      Ok(path) => Ok(()),
+      Ok(path) => {
+        self.sess.store_timing("Linking", linking_start.elapsed());
+        Ok(())
+      },
       Err(err) => Err(err),
     }
   }
@@ -160,11 +167,15 @@ impl<'ctx> CompilationUnit<'ctx> {
     self.sess
   }
 
-  fn run_step<F>(&mut self, step: F) -> bool
+  fn run_step<F>(&mut self, name: &str, step: F) -> bool
   where
     F: FnOnce(&mut Self),
   {
+    let start = Instant::now();
     step(self);
+    let end = start.elapsed();
+
+    self.sess.store_timing(name, end);
     self.emit_errors()
   }
 

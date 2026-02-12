@@ -1,7 +1,7 @@
 use crate::panic::setup_panic_handler;
 use anyhow::Result;
-use boron_cli::Cli;
 use boron_cli::prelude::setup_logger;
+use boron_cli::Cli;
 use boron_core::prelude::*;
 use clap::Parser as _;
 use std::process::exit;
@@ -18,12 +18,13 @@ fn main() -> Result<()> {
   setup_panic_handler(&session);
   setup_logger(session.config.verbose, !session.config.color);
 
-  let instant = Instant::now();
   if let Err(e) = compiler_entrypoint(&session) {
     error!("{e:?}");
     exit(1);
   } else {
-    info!("finished in {:.2?}", instant.elapsed());
+    if session.config.timings {
+      session.print_timings();
+    }
   }
 
   Ok(())

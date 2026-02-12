@@ -187,6 +187,13 @@ pub struct Cli {
     long = "no-backtrace"
   )]
   pub no_backtrace: bool,
+
+  #[arg(
+    value_name = "timings",
+    help = "Shows timings for each compilation step",
+    long = "timings"
+  )]
+  pub timings: bool
 }
 
 impl TryFrom<Cli> for ProjectConfig {
@@ -209,6 +216,7 @@ impl TryFrom<Cli> for ProjectConfig {
       check_only: cli.check_only,
       verbose: cli.verbose,
       no_backtrace: cli.no_backtrace,
+      timings: cli.timings
     })
   }
 }

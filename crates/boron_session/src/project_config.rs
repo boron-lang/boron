@@ -20,4 +20,5 @@ pub struct ProjectConfig {
   pub check_only: bool,
   pub verbose: bool,
   pub no_backtrace: bool,
+  pub timings: bool,
 }
