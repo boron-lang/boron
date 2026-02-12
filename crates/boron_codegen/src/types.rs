@@ -1,32 +1,22 @@
 use crate::codegen::LLVMCodegen;
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use boron_ir::SemanticTy;
 use boron_parser::PrimitiveKind;
 use boron_resolver::DefId;
 use boron_session::prelude::warn;
-use inkwell::AddressSpace;
 use inkwell::types::{BasicType as _, BasicTypeEnum, StructType};
+use inkwell::AddressSpace;
 
 impl<'ctx> LLVMCodegen<'ctx> {
   pub fn primitive_ty(&self, prim: &PrimitiveKind) -> BasicTypeEnum<'ctx> {
     let ctx = self.context;
     match prim {
-      PrimitiveKind::I8 => ctx.i8_type().into(),
-      PrimitiveKind::I16 => ctx.i16_type().into(),
-      PrimitiveKind::I32 => ctx.i32_type().into(),
-      PrimitiveKind::I64 => ctx.i64_type().into(),
-      PrimitiveKind::I128 => ctx.i128_type().into(),
-      PrimitiveKind::ISize => {
-        let bits = self.sess.target().pointer_width.size_bytes() * 8;
-        ctx.custom_width_int_type(bits as u32).into()
-      }
-
-      PrimitiveKind::U8 => ctx.i8_type().into(),
-      PrimitiveKind::U16 => ctx.i16_type().into(),
-      PrimitiveKind::U32 => ctx.i32_type().into(),
-      PrimitiveKind::U64 => ctx.i64_type().into(),
-      PrimitiveKind::U128 => ctx.i128_type().into(),
-      PrimitiveKind::USize => {
+      PrimitiveKind::I8 | PrimitiveKind::U8 => ctx.i8_type().into(),
+      PrimitiveKind::I16 | PrimitiveKind::U16 => ctx.i16_type().into(),
+      PrimitiveKind::I32 | PrimitiveKind::U32 => ctx.i32_type().into(),
+      PrimitiveKind::I64 | PrimitiveKind::U64 => ctx.i64_type().into(),
+      PrimitiveKind::I128 | PrimitiveKind::U128 => ctx.i128_type().into(),
+      PrimitiveKind::ISize | PrimitiveKind::USize => {
         let bits = self.sess.target().pointer_width.size_bytes() * 8;
         ctx.custom_width_int_type(bits as u32).into()
       }

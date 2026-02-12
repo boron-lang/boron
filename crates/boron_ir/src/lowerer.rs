@@ -122,8 +122,9 @@ impl<'a> IrLowerer<'a> {
           .and_then(|hir_func| {
             hir_func.params.iter().find(|hp| hp.hir_id == p.hir_id).map(|hp| {
               match &hp.kind {
-                ParamKind::Regular { name, .. } => name.text(),
-                ParamKind::Variadic { name, .. } => name.text(),
+                ParamKind::Regular { name, .. } | ParamKind::Variadic { name, .. } => {
+                  name.text()
+                }
                 ParamKind::SelfParam { .. } => "self".to_owned(),
               }
             })
@@ -147,7 +148,7 @@ impl<'a> IrLowerer<'a> {
           continue;
         }
 
-        let fields = self.lower_struct_fields(strukt, &mono.type_args);
+        let fields = Self::lower_struct_fields(strukt, &mono.type_args);
         let type_args: Vec<SemanticTy> = scheme
           .vars
           .iter()
@@ -165,7 +166,7 @@ impl<'a> IrLowerer<'a> {
         });
       }
     } else if !is_generic {
-      let fields = self.lower_struct_fields(strukt, &SubstitutionMap::new());
+      let fields = Self::lower_struct_fields(strukt, &SubstitutionMap::new());
       let mangled_name = self.mangler.mangle_struct(strukt.def_id, &[]);
       self.ir.structs.push(IrStruct {
         name: mangled_name,
@@ -178,7 +179,6 @@ impl<'a> IrLowerer<'a> {
   }
 
   fn lower_struct_fields(
-    &self,
     strukt: &ThirStruct,
     type_args: &SubstitutionMap,
   ) -> Vec<(String, SemanticTy)> {
@@ -258,14 +258,14 @@ impl<'a> IrLowerer<'a> {
       },
       ThirExprKind::Cast { expr: inner, ty } => IrExprKind::Cast {
         expr: Box::new(self.lower_expr(inner, type_args)),
-        ty: self.lower_semantic_ty(ty, type_args),
+        ty: Self::lower_semantic_ty(ty, type_args),
       },
       ThirExprKind::Call { callee, type_args: call_type_args, args } => {
         IrExprKind::Call {
           callee: *callee,
           type_args: call_type_args
             .iter()
-            .map(|ty| self.lower_semantic_ty(ty, type_args))
+            .map(|ty| Self::lower_semantic_ty(ty, type_args))
             .collect(),
           args: args.iter().map(|a| self.lower_expr(a, type_args)).collect(),
         }
@@ -286,7 +286,7 @@ impl<'a> IrLowerer<'a> {
           def_id: *def_id,
           type_args: struct_type_args
             .iter()
-            .map(|ty| self.lower_semantic_ty(ty, type_args))
+            .map(|ty| Self::lower_semantic_ty(ty, type_args))
             .collect(),
           fields: fields.iter().map(|f| self.lower_field_init(f, type_args)).collect(),
         }
@@ -309,7 +309,7 @@ impl<'a> IrLowerer<'a> {
 
     IrExpr {
       hir_id: expr.hir_id,
-      ty: self.lower_semantic_ty(&expr.ty, type_args),
+      ty: Self::lower_semantic_ty(&expr.ty, type_args),
       kind,
       span: expr.span,
     }
@@ -320,7 +320,7 @@ impl<'a> IrLowerer<'a> {
     field: &ThirFieldInit,
     type_args: &SubstitutionMap,
   ) -> IrFieldInit {
-    let ty = self.lower_semantic_ty(&field.ty, type_args);
+    let ty = Self::lower_semantic_ty(&field.ty, type_args);
 
     IrFieldInit {
       hir_id: field.hir_id,
@@ -331,11 +331,7 @@ impl<'a> IrLowerer<'a> {
     }
   }
 
-  pub fn lower_semantic_ty(
-    &self,
-    ty: &InferTy,
-    type_args: &SubstitutionMap,
-  ) -> SemanticTy {
+  pub fn lower_semantic_ty(ty: &InferTy, type_args: &SubstitutionMap) -> SemanticTy {
     let substituted = Self::apply_subst_by_def_id(ty, type_args);
     Self::lower_type(&substituted)
   }
@@ -377,9 +373,7 @@ impl<'a> IrLowerer<'a> {
       InferTy::Unit(_) => SemanticTy::Unit,
       InferTy::Never(_) => SemanticTy::Never,
 
-      InferTy::Var(_, _) | InferTy::Param(_) => SemanticTy::Error,
-
-      InferTy::Err(span) => SemanticTy::Error,
+      InferTy::Var(_, _) | InferTy::Param(_) | InferTy::Err(_) => SemanticTy::Error,
     }
   }
 

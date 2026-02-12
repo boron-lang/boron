@@ -34,7 +34,7 @@ impl TyChecker<'_> {
       .collect()
   }
 
-  pub fn collect_signatures(&mut self) {
+  pub fn collect_signatures(&self) {
     for entry in &self.hir.functions {
       let def_id = *entry.key();
       let func = entry.value();

@@ -63,7 +63,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
       IrStmtKind::Expr(expr) => {
         self.generate_expr(expr)?;
       }
-      IrStmtKind::Local(id) => {}
+      IrStmtKind::Local(_) => {}
     }
     Ok(())
   }

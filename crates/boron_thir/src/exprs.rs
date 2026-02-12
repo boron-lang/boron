@@ -85,7 +85,7 @@ pub struct Stmt {
 #[derive(Debug, Clone)]
 pub enum StmtKind {
   Local(Box<Local>),
-  Expr(Expr),
+  Expr(Box<Expr>),
 }
 
 #[derive(Debug, Clone)]

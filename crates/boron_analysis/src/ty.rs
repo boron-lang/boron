@@ -77,7 +77,7 @@ pub enum ArrayLength {
 }
 
 impl ArrayLength {
-  pub fn len(&self) -> usize {
+  pub(crate) fn len(&self) -> usize {
     match self {
       Self::Len(num) => *num,
       Self::Poisoned => 0,
@@ -87,7 +87,7 @@ impl ArrayLength {
   pub fn expect_len(&self) -> usize {
     match self {
       Self::Len(len) => *len,
-      _ => unreachable!("compilation should be stopped before"),
+      Self::Poisoned => unreachable!("compilation should be stopped before"),
     }
   }
 }

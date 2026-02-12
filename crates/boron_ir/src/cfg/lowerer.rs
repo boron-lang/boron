@@ -74,7 +74,7 @@ impl IrLowerer<'_> {
 
       match &stmt.kind {
         ThirStmtKind::Local(local) => {
-          let ty = self.lower_semantic_ty(&local.ty, type_args);
+          let ty = Self::lower_semantic_ty(&local.ty, type_args);
           let mut projections = vec![];
           let hir_id = local.hir_id;
 
@@ -125,8 +125,12 @@ impl IrLowerer<'_> {
 
     let terminator = match fallthrough {
       Some(target) => match terminator {
-        Some(IrTerminator::Return(_) | IrTerminator::Unreachable) => terminator,
-        Some(IrTerminator::Branch { .. } | IrTerminator::Goto { .. }) => terminator,
+        Some(
+          IrTerminator::Branch { .. }
+          | IrTerminator::Goto { .. }
+          | IrTerminator::Return(_)
+          | IrTerminator::Unreachable,
+        ) => terminator,
         None => Some(IrTerminator::Goto { target }),
       },
       None => terminator,
@@ -154,7 +158,7 @@ impl IrLowerer<'_> {
       ThirExprKind::Return { value } => {
         let value = value.as_ref().map(|e| self.lower_expr(e, type_args));
         *terminator = Some(IrTerminator::Return(value));
-        self.flush_block(
+        Self::flush_block(
           builder,
           *current_id,
           std::mem::take(current_stmts),
@@ -172,7 +176,7 @@ impl IrLowerer<'_> {
           .map(|ctx| ctx.break_target)
           .unwrap_or_else(|| todo!("break outside of loop"));
         *terminator = Some(IrTerminator::Goto { target });
-        self.flush_block(
+        Self::flush_block(
           builder,
           *current_id,
           std::mem::take(current_stmts),
@@ -187,7 +191,7 @@ impl IrLowerer<'_> {
           .map(|ctx| ctx.continue_target)
           .unwrap_or_else(|| todo!("continue outside of loop"));
         *terminator = Some(IrTerminator::Goto { target });
-        self.flush_block(
+        Self::flush_block(
           builder,
           *current_id,
           std::mem::take(current_stmts),
@@ -208,7 +212,7 @@ impl IrLowerer<'_> {
           else_target: else_id,
         };
 
-        self.flush_block(
+        Self::flush_block(
           builder,
           *current_id,
           std::mem::take(current_stmts),
@@ -268,7 +272,7 @@ impl IrLowerer<'_> {
         let loop_body_id = builder.new_block_id();
         let loop_exit_id = builder.new_block_id();
 
-        self.flush_block(
+        Self::flush_block(
           builder,
           *current_id,
           std::mem::take(current_stmts),
@@ -304,7 +308,6 @@ impl IrLowerer<'_> {
   }
 
   fn flush_block(
-    &self,
     builder: &mut CfgBuilder,
     block_id: HirId,
     stmts: Vec<IrStmt>,

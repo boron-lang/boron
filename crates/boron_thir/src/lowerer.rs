@@ -1,6 +1,6 @@
-use crate::Param;
 use crate::exprs::{Block, Expr, ExprKind, FieldInit, Local, MatchArm, Stmt, StmtKind};
 use crate::items::{Field, Function, Struct};
+use crate::Param;
 use boron_analysis::float::construct_float;
 use boron_analysis::int::construct_i128;
 use boron_analysis::interpreter::{
@@ -161,7 +161,7 @@ impl<'a> ThirLowerer<'a> {
   pub fn lower_stmt(&mut self, stmt: &HirStmt) -> Stmt {
     let kind = match &stmt.kind {
       HirStmtKind::Local(local) => StmtKind::Local(Box::new(self.lower_local(local))),
-      HirStmtKind::Expr(expr) => StmtKind::Expr(self.lower_expr(expr)),
+      HirStmtKind::Expr(expr) => StmtKind::Expr(Box::new(self.lower_expr(expr))),
     };
 
     Stmt { hir_id: stmt.hir_id, kind, span: stmt.span }
@@ -446,7 +446,7 @@ impl<'a> ThirLowerer<'a> {
     ExprKind::Tuple(exprs.iter().map(|e| self.lower_expr(e)).collect())
   }
 
-  fn lower_array(&mut self, exprs: &[HirExpr], repeat: Option<&HirExpr>) -> ExprKind {
+  fn lower_array(&mut self, exprs: &[HirExpr], _: Option<&HirExpr>) -> ExprKind {
     ExprKind::Array(exprs.iter().map(|e| self.lower_expr(e)).collect())
   }
 

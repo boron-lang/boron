@@ -234,19 +234,19 @@ impl TyChecker<'_> {
 
       PatKind::Slice { prefix, middle, suffix } => {
         let elem_ty = self.slice_element_type(expected, pat.span);
-        let mut refutable = PatternRefutability::Refutable;
-
-        if let InferTy::Array { len, .. } = self.infcx.resolve(expected)
+        let mut refutable = if let InferTy::Array { len, .. } =
+          self.infcx.resolve(expected)
           && matches!(len, ArrayLength::Len(_))
           && self.slice_pattern_fits_array(
             prefix.len(),
             middle.is_some(),
             suffix.len(),
             len,
-          )
-        {
-          refutable = PatternRefutability::Irrefutable;
-        }
+          ) {
+          PatternRefutability::Irrefutable
+        } else {
+          PatternRefutability::Refutable
+        };
 
         for elem_pat in prefix {
           if self.check_pattern_internal(
@@ -299,7 +299,7 @@ impl TyChecker<'_> {
   }
 
   fn tuple_expected_types(
-    &mut self,
+    &self,
     len: usize,
     expected: &InferTy,
     span: Span,
@@ -317,10 +317,9 @@ impl TyChecker<'_> {
     }
   }
 
-  fn slice_element_type(&mut self, expected: &InferTy, span: Span) -> InferTy {
+  fn slice_element_type(&self, expected: &InferTy, span: Span) -> InferTy {
     match self.infcx.resolve(expected) {
-      InferTy::Array { ty, .. } => *ty,
-      InferTy::Slice(ty, _) => *ty,
+      InferTy::Array { ty, .. } | InferTy::Slice(ty, _) => *ty,
       _ => {
         let elem_ty = self.infcx.fresh(span);
         let slice_ty = InferTy::Slice(Box::new(elem_ty.clone()), span);
@@ -354,7 +353,7 @@ impl TyChecker<'_> {
       .unwrap_or(false)
   }
 
-  fn ensure_struct_type(&mut self, def_id: DefId, expected: &InferTy, span: Span) {
+  fn ensure_struct_type(&self, def_id: DefId, expected: &InferTy, span: Span) {
     if let Some(scheme) = self.table.def_type(def_id) {
       let (struct_ty, _subst) = self.instantiate(&scheme);
       let result = self.unify(expected, &struct_ty);
@@ -363,7 +362,7 @@ impl TyChecker<'_> {
   }
 
   fn struct_subst_from_expected(
-    &mut self,
+    &self,
     def_id: DefId,
     expected: &InferTy,
     span: Span,
