@@ -1,8 +1,8 @@
-use crate::parser::Parser;
 use crate::parser::errors::{
   ConstAloneInType, ExpectedIdentifierInGeneric, ExpectedType, ExpectedTypePathForBound,
   TrailingPlusInTypeBound,
 };
+use crate::parser::Parser;
 use crate::{
   ArrayType, FunctionType, GenericParam, GenericParams, Mutability, NodeId, OptionalType,
   PathParsingContext, PointerType, PrimitiveKind, PrimitiveType, TokenType, TupleType,
@@ -207,6 +207,7 @@ impl Parser<'_> {
       "f64" => Some(PrimitiveKind::F64),
       "bool" => Some(PrimitiveKind::Bool),
       "char" => Some(PrimitiveKind::Char),
+      "void" => Some(PrimitiveKind::Void),
       _ => None,
     }
   }

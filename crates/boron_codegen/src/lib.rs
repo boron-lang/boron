@@ -34,5 +34,5 @@ pub fn run_codegen(sess: &Session, ir: &Ir, main_function: Option<DefId>) -> Res
     ir,
   };
 
-  codegen.generate(ir)
+  codegen.generate(ir, &main_function)
 }

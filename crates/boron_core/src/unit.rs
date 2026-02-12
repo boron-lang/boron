@@ -1,13 +1,13 @@
-use crate::errors::{MainNoGenerics, MainNoParams, NoMainFunction};
+use crate::errors::{MainNoGenerics, MainNoParams, MainRetNotAUnit, NoMainFunction};
 use crate::prelude::*;
 use boron_analysis::results::BuiltInResults;
 use boron_analysis::validator::validate_comptime;
-use boron_analysis::{expand_builtins, typeck_hir, TypeTable};
+use boron_analysis::{expand_builtins, typeck_hir, InferTy, TypeTable};
 use boron_codegen::run_codegen;
+use boron_compiler::CompilerBuild;
 use boron_hir::hir::Hir;
 use boron_hir::lower::lower_to_hir;
 use boron_ir::{Ir, IrLowerer};
-use boron_compiler::CompilerBuild;
 use boron_parser::module::{Module, Modules};
 use boron_parser::parser::errors::ModuleNotFound;
 use boron_parser::parser::parse;
@@ -98,6 +98,10 @@ impl<'ctx> CompilationUnit<'ctx> {
         };
 
         self.sess.dcx().emit(MainNoParams { span })
+      }
+
+      if !matches!(main.return_type, InferTy::Unit(_)) {
+        self.sess.dcx().emit(MainRetNotAUnit { span: main.return_type.span() })
       }
 
       self.main_function = Some(main.def_id);
@@ -206,6 +210,7 @@ impl<'ctx> CompilationUnit<'ctx> {
   where
     F: FnOnce(&mut Self),
   {
+    debug!("starting {name}");
     let start = Instant::now();
     step(self);
     let end = start.elapsed();

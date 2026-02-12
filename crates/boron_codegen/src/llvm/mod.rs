@@ -6,7 +6,7 @@ mod structs;
 mod types;
 
 use crate::Codegen;
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use boron_ir::{Ir, IrId};
 use boron_resolver::DefId;
 use boron_session::prelude::{Mode, Session};
@@ -31,12 +31,8 @@ pub struct LLVMCodegen<'ctx> {
   pub ir: &'ctx Ir,
 }
 
-impl Codegen for LLVMCodegen<'_> {
-  fn backend_name(&self) -> &'static str {
-    "LLVM"
-  }
-
-  fn generate(&self, ir: &Ir) -> Result<()> {
+impl LLVMCodegen<'_> {
+  pub fn generate(&self, ir: &Ir, main_function: &Option<DefId>) -> Result<()> {
     for strukt in &ir.structs {
       self.create_struct_type(strukt);
     }
@@ -49,6 +45,16 @@ impl Codegen for LLVMCodegen<'_> {
     }
     for func in &ir.functions {
       self.generate_function_body(func)?;
+    }
+
+    if let Some(main_id) = main_function {
+      let main_ty = self.context.i32_type().fn_type(&[], false);
+      let main_fn = self.module.add_function("main", main_ty, None);
+      let entry = self.context.append_basic_block(main_fn, "start");
+      self.builder.position_at_end(entry);
+      self.generate_call(main_id, &vec![], &vec![])?;
+
+      self.builder.build_return(Some(&self.context.i32_type().const_int(0, false)))?;
     }
 
     let opt_level = if self.sess.config().mode == Mode::Release {

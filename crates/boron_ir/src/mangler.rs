@@ -43,7 +43,7 @@ impl<'a> SymbolMangler<'a> {
       .map(|s| s.name.text())
       .unwrap_or_else(|| format!("struct_{}", def_id.index()));
 
-    let mangled = self.mangle_with_type_args(&base_name, type_args);
+    let mangled = self.mangle_name(&base_name, type_args, false);
     self.cache.insert(key, mangled.clone());
     mangled
   }
@@ -55,13 +55,13 @@ impl<'a> SymbolMangler<'a> {
       return name.clone();
     }
 
-    let base_name = self
-      .hir
-      .get_function(def_id)
-      .map(|f| f.name.text())
-      .unwrap_or_else(|| format!("fn_{}", def_id.index()));
+    let func = self.hir.get_function(def_id).unwrap();
 
-    let mangled = self.mangle_with_type_args(&base_name, type_args);
+    let base_name = func.name.text();
+
+    let mangled =
+      self.mangle_name(&base_name, type_args, func.modifiers.external.is_some());
+
     self.cache.insert(key, mangled.clone());
     mangled
   }
@@ -79,7 +79,7 @@ impl<'a> SymbolMangler<'a> {
       .map(|e| e.name.text())
       .unwrap_or_else(|| format!("enum_{}", def_id.index()));
 
-    let mangled = self.mangle_with_type_args(&base_name, type_args);
+    let mangled = self.mangle_name(&base_name, type_args, false);
     self.cache.insert(key, mangled.clone());
     mangled
   }
@@ -97,7 +97,11 @@ impl<'a> SymbolMangler<'a> {
     self.cache.iter()
   }
 
-  fn mangle_with_type_args(&self, base_name: &str, type_args: &[SemanticTy]) -> String {
+  fn mangle_name_with_type_args(
+    &self,
+    base_name: &str,
+    type_args: &[SemanticTy],
+  ) -> String {
     if type_args.is_empty() {
       return base_name.to_owned();
     }
@@ -106,6 +110,19 @@ impl<'a> SymbolMangler<'a> {
       type_args.iter().map(|ty| self.mangle_type(ty)).collect();
 
     format!("{}${}", base_name, type_suffix.join("$"))
+  }
+
+  fn mangle_name(
+    &self,
+    base_name: &str,
+    type_args: &[SemanticTy],
+    is_extern: bool,
+  ) -> String {
+    if is_extern {
+      return base_name.to_owned();
+    }
+
+    format!("boron${}", self.mangle_name_with_type_args(base_name, type_args))
   }
 
   fn mangle_type(&self, ty: &SemanticTy) -> String {
@@ -194,6 +211,7 @@ impl<'a> SymbolMangler<'a> {
       PrimitiveKind::F64 => "f64".to_owned(),
       PrimitiveKind::Bool => "bool".to_owned(),
       PrimitiveKind::Char => "char".to_owned(),
+      PrimitiveKind::Void => "void".to_owned(),
     }
   }
 }

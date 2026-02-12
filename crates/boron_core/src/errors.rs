@@ -24,3 +24,11 @@ pub struct MainNoParams {
   #[error("remove these parameters")]
   pub span: Span,
 }
+
+#[derive(Diagnostic)]
+#[error("main function's return type must be a unit")]
+#[code(MAIN_NOT_A_UNIT)]
+pub struct MainRetNotAUnit {
+  #[error("remove this return type")]
+  pub span: Span,
+}

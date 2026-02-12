@@ -148,7 +148,8 @@ define_codes! {
   // Other (9000..9999)
   NO_MAIN_FUNCTION => 9000,
   MAIN_NO_GENERICS => 9001,
-  MAIN_NO_PARAMS => 9002
+  MAIN_NO_PARAMS => 9002,
+  MAIN_NOT_A_UNIT => 9003
 }
 
 #[cfg(test)]

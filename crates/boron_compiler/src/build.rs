@@ -139,6 +139,10 @@ impl<'a> CompilerBuild<'a> {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
+
+    debug!("{stdout}");
+    debug!("{stderr}");
+
     if !output.status.success() {
       if !stderr.is_empty() {
         bail!("Compiling failed with error: {stderr}");

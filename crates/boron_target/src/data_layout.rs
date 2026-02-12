@@ -3,6 +3,7 @@ use crate::target::Endian;
 use inkwell::AddressSpace;
 use inkwell::context::Context;
 use inkwell::targets::{ByteOrdering, TargetData};
+use std::ffi::c_uint;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DataLayout {
@@ -36,6 +37,9 @@ pub struct DataLayout {
   pub char_size: usize,
   pub char_align: usize,
 
+  pub void_size: usize,
+  pub void_align: usize,
+
   pub endian: Endian,
 }
 
@@ -52,6 +56,7 @@ impl DataLayout {
       PrimitiveKind::F64 => self.f64_size,
       PrimitiveKind::Bool => self.bool_size,
       PrimitiveKind::Char => self.char_size,
+      PrimitiveKind::Void => self.void_size,
     }
   }
 
@@ -67,6 +72,7 @@ impl DataLayout {
       PrimitiveKind::F64 => self.f64_align,
       PrimitiveKind::Bool => self.bool_align,
       PrimitiveKind::Char => self.char_align,
+      PrimitiveKind::Void => self.void_align,
     }
   }
 
@@ -120,6 +126,9 @@ impl DataLayout {
 
       char_size: target.get_abi_size(&i32) as usize,
       char_align: target.get_abi_alignment(&i32) as usize,
+
+      void_size: target.get_abi_size(&i8) as usize,
+      void_align: target.get_abi_alignment(&i8) as usize,
 
       endian,
     }

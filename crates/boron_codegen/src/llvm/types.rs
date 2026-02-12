@@ -36,6 +36,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
 
       PrimitiveKind::Bool => ctx.bool_type().into(),
       PrimitiveKind::Char => ctx.i32_type().into(),
+      PrimitiveKind::Void => ctx.i8_type().into(),
     }
   }
 

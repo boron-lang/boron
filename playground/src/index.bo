@@ -1,8 +1,8 @@
-mod vec;
-import * from vec;
-
-extern "C" func puts(text: *const u8) -> i32;
+extern "C" func malloc(size: i32) -> *mut void;
+extern "C" func free(ptr: *mut void);
 
 func main() {
-    puts("hello");
+    var x = malloc(0);
+
+    free(x);
 }
