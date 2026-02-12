@@ -1,10 +1,9 @@
 [package]
-name = "boron_utils"
+name = "boron_session"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "boron Utils"
 
 [dependencies]
 anstyle = { workspace = true }

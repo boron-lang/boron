@@ -6,11 +6,11 @@ use boron_analysis::ty::SubstitutionMap;
 use boron_analysis::{InferTy, TypeTable};
 use boron_hir::pat::PatKind;
 use boron_hir::{Hir, ParamKind, Pat, SemanticTy};
+use boron_session::prelude::debug;
 use boron_thir::{
   Expr as ThirExpr, ExprKind as ThirExprKind, FieldInit as ThirFieldInit,
   Function as ThirFunction, Struct as ThirStruct, Thir,
 };
-use boron_utils::prelude::debug;
 use itertools::Itertools as _;
 
 #[derive(Debug)]

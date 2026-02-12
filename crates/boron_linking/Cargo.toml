@@ -1,5 +1,5 @@
 [package]
-name = "boron_c_compiler"
+name = "boron_linking"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -8,12 +8,14 @@ repository.workspace = true
 [dependencies]
 anyhow = { workspace = true }
 log = { workspace = true }
-boron_utils = { workspace = true }
+boron_session = { workspace = true }
+boron_target = { workspace = true }
 serde = { workspace = true }
 thiserror = "2.0.16"
 which = { workspace = true }
-indicatif = "0.18.0"
+yansi = { workspace = true }
 fs-err = { workspace = true }
+find-msvc-tools = "0.1.9"
 
 [lints]
 workspace = true

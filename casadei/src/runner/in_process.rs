@@ -4,12 +4,12 @@ use crate::test::Test;
 use boron_core::prelude::*;
 use boron_diagnostics::DiagnosticWriter;
 use itertools::Itertools;
-use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use super::directives::matches_directive;
 use super::panic::{
-  clear_last_backtrace, install_panic_hook, panic_message, take_last_backtrace, PanicHookGuard,
-  PanicRunGuard,
+  PanicHookGuard, PanicRunGuard, clear_last_backtrace, install_panic_hook, panic_message,
+  take_last_backtrace,
 };
 
 pub fn run_single_test_in_process(test: &Test) -> TestResult {
@@ -38,6 +38,7 @@ pub fn run_single_test_in_process(test: &Test) -> TestResult {
         lib_type: LibType::Static,
         output: Default::default(),
         root: test.path.parent().unwrap().to_path_buf(),
+        linker: None,
         diagnostic_output_type: DiagnosticOutputType::HumanReadable,
         color: true,
         check_only: true,

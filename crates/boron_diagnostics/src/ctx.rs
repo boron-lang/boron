@@ -96,6 +96,17 @@ impl DiagnosticCtx {
     });
   }
 
+  /// Avoid using for normal diagnostics. 
+  /// This should only be used for handling results of operations like fs. 
+  pub fn error(&self, msg: impl Into<String>) {
+    self.emit(Diagnostic {
+      id: DiagnosticId::new(),
+      diag: Box::new(Diag::new(msg.into(), DiagnosticLevel::Error)),
+      cancelled: false,
+      emitted: false,
+    });
+  }
+  
   // actually emits the diagnostic to stderr
   fn emit_diag(&self, id: DiagnosticId, collected: &mut i32) {
     let diagnostic = {

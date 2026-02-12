@@ -35,8 +35,9 @@ strum = { version = "0.27", features = ["derive"] }
 clap = { version = "4.5.41", features = ["derive"] }
 lasso = { version = "0.7.3", features = ["multi-threaded"] }
 serde = { version = "1.0.219", features = ["derive"] }
+inkwell = { version = "0.8.0", features = ["llvm17-0"] }
 
-boron_c_compiler = { path = "crates/boron_c_compiler" }
+boron_linking = { path = "crates/boron_linking" }
 boron_cli = { path = "crates/boron_cli" }
 boron_core = { path = "crates/boron_core" }
 boron_diagnostic_macro = { path = "crates/boron_diagnostic_macro" }
@@ -44,7 +45,7 @@ boron_diagnostics = { path = "crates/boron_diagnostics" }
 boron_parser = { path = "crates/boron_parser" }
 boron_resolver = { path = "crates/boron_resolver" }
 boron_source = { path = "crates/boron_source" }
-boron_utils = { path = "crates/boron_utils" }
+boron_session = { path = "crates/boron_session" }
 boron_hir = { path = "crates/boron_hir" }
 boron_analysis = { path = "crates/boron_analysis" }
 boron_target = { path = "crates/boron_target" }

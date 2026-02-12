@@ -1,4 +1,4 @@
-use boron_utils::term_style;
+use boron_session::term_style;
 use clap::builder::Styles;
 
 pub const CLAP_STYLING: Styles = Styles::styled()

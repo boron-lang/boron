@@ -1,7 +1,8 @@
 use crate::CLAP_STYLING;
-use boron_utils::dependency::Dependency;
-use boron_utils::project_config::ProjectConfig;
-use boron_utils::{enums, term_style};
+use boron_session::dependency::Dependency;
+use boron_session::project_config::ProjectConfig;
+use boron_session::{enums, term_style};
+use boron_target::target::Linker;
 use clap::{Parser, ValueEnum};
 use std::env::current_dir;
 use std::path::PathBuf;
@@ -50,6 +51,28 @@ impl From<CliLibType> for enums::lib_type::LibType {
     match value {
       CliLibType::Static => Self::Static,
       CliLibType::Dynamic => Self::Dynamic,
+    }
+  }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
+pub enum CliLinker {
+  Ld,
+  Lld,
+  #[value(name = "link", alias("msvc"))]
+  MsvcLink,
+  Mold,
+  Gold,
+}
+
+impl From<CliLinker> for Linker {
+  fn from(value: CliLinker) -> Self {
+    match value {
+      CliLinker::Ld => Self::Ld,
+      CliLinker::Lld => Self::Lld,
+      CliLinker::MsvcLink => Self::MsvcLink,
+      CliLinker::Mold => Self::Mold,
+      CliLinker::Gold => Self::Gold,
     }
   }
 }
@@ -126,6 +149,13 @@ pub struct Cli {
   pub lib_type: CliLibType,
 
   #[arg(
+    value_name = "linker",
+    long = "linker",
+    help = "Linker to use (ld, lld, link, mold, gold)"
+  )]
+  pub linker: Option<CliLinker>,
+
+  #[arg(
     value_name = "diagnostic-output",
     long = "diagnostic-output",
     help = "Emitter for diagnostics",
@@ -171,8 +201,9 @@ impl TryFrom<Cli> for ProjectConfig {
       mode: cli.mode.into(),
       name: cli.name,
       lib_type: cli.lib_type.into(),
-      output: cli.output,
-      root,
+      output: canonicalize_with_strip(cli.output)?,
+      root: canonicalize_with_strip(root)?,
+      linker: cli.linker.map(Into::into),
       diagnostic_output_type: cli.diag_output_type.into(),
       color: !cli.no_color,
       check_only: cli.check_only,
@@ -183,7 +214,7 @@ impl TryFrom<Cli> for ProjectConfig {
 }
 
 use boron_diagnostics::prelude::DiagnosticOutputType;
-use boron_utils::prelude::canonicalize_with_strip;
+use boron_session::prelude::canonicalize_with_strip;
 pub use term_style::{
   ERROR, GOOD, HEADER, INVALID, LITERAL, NOP, NOTE, PLACEHOLDER, USAGE, VALID, WARN,
 };

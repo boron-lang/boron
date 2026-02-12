@@ -1,12 +1,12 @@
+use crate::Expr;
 use crate::expr::Block;
 use crate::generics::Generics;
 use crate::ids::HirId;
 use crate::ty::Ty;
-use crate::Expr;
-use boron_parser::ast::items::Visibility;
 use boron_parser::FunctionModifiers;
+use boron_parser::ast::items::Visibility;
 use boron_resolver::DefId;
-use boron_utils::prelude::{Identifier, Span};
+use boron_session::prelude::{Identifier, Span};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]

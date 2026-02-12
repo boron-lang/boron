@@ -8,7 +8,7 @@ use crate::results::BuiltInResults;
 use crate::TypeTable;
 use boron_hir::Hir;
 use boron_resolver::Resolver;
-use boron_utils::prelude::Session;
+use boron_session::prelude::Session;
 
 pub fn expand_builtins<'a>(
   sess: &'a Session,

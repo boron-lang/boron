@@ -1,9 +1,9 @@
 use crate::prelude::{CompilationUnit, FILE_EXTENSION};
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 use boron_diagnostics::DiagnosticWriter;
+use boron_session::prelude::{CompilationMode, ProjectConfig, Session, info};
 use boron_source::prelude::Sources;
-use boron_utils::prelude::{info, CompilationMode, ProjectConfig, Session};
 use std::sync::Arc;
 
 pub fn compiler_entrypoint(session: &Session) -> Result<()> {

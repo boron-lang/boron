@@ -5,27 +5,25 @@ mod output;
 mod structs;
 mod types;
 
-use std::fmt::Display;
 use crate::Codegen;
 use anyhow::{anyhow, Result};
 use boron_ir::{Ir, IrId};
 use boron_resolver::DefId;
-use boron_utils::prelude::{Mode, Session};
+use boron_session::prelude::{Mode, Session};
 use dashmap::DashMap;
 use inkwell::builder::Builder;
 use inkwell::context::Context as LLVMContext;
 use inkwell::module::Module;
 use inkwell::passes::PassBuilderOptions;
-use inkwell::targets::TargetMachine;
 use inkwell::types::StructType;
 use inkwell::values::{FunctionValue, PointerValue};
+use std::fmt::Display;
 
 pub struct LLVMCodegen<'ctx> {
   pub sess: &'ctx Session,
   pub context: &'ctx LLVMContext,
   pub module: Module<'ctx>,
   pub builder: Builder<'ctx>,
-  pub target_machine: TargetMachine,
   pub structs: DashMap<IrId, StructType<'ctx>>,
   pub funcs: DashMap<IrId, FunctionValue<'ctx>>,
   pub locals: DashMap<DefId, PointerValue<'ctx>>,
@@ -60,7 +58,7 @@ impl Codegen for LLVMCodegen<'_> {
     };
     self
       .module
-      .run_passes(opt_level, &self.target_machine, PassBuilderOptions::create())
+      .run_passes(opt_level, &self.sess.target().target_machine, PassBuilderOptions::create())
       .map_err(|s| anyhow!("Failed to run optimization passes: {s}"))?;
 
     self.output_ir()?;

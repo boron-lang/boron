@@ -1,6 +1,6 @@
 use crate::def::DefId;
 use crate::scope::ScopeId;
-use boron_utils::prelude::Identifier;
+use boron_session::prelude::Identifier;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]

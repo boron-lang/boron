@@ -1,6 +1,6 @@
 use crate::Path;
 use crate::ast::program::NodeId;
-use boron_utils::prelude::{Identifier, Span};
+use boron_session::prelude::{Identifier, Span};
 
 #[derive(Debug, Clone)]
 pub struct GenericParams {

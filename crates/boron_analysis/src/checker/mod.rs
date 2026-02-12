@@ -20,7 +20,7 @@ use boron_hir::item::SelfKind;
 use boron_hir::{Const, Function, Hir, ParamKind};
 use boron_parser::Mutability;
 use boron_resolver::{DefId, Resolver};
-use boron_utils::prelude::{Session, Span};
+use boron_session::prelude::{Session, Span};
 
 pub fn typeck_hir(hir: &Hir, sess: &Session, resolver: &Resolver) -> TypeTable {
   let mut checker = TyChecker::new(hir, sess, resolver);

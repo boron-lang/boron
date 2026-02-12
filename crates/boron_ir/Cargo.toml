@@ -7,7 +7,7 @@ edition.workspace = true
 
 [dependencies]
 boron_analysis = { workspace = true }
-boron_utils = { workspace = true }
+boron_session = { workspace = true }
 boron_hir = { workspace = true }
 boron_parser = { workspace = true }
 boron_thir = { workspace = true }

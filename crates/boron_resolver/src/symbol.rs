@@ -1,7 +1,7 @@
 use crate::def::DefId;
 use crate::scope::ScopeId;
 use boron_parser::ast::NodeId;
-use boron_utils::prelude::Identifier;
+use boron_session::prelude::Identifier;
 use dashmap::DashMap;
 
 #[derive(Debug, Clone)]

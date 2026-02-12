@@ -1,8 +1,8 @@
 use crate::ast::expressions::Expr;
 use crate::ast::program::NodeId;
 use crate::ast::types::Type;
+use boron_session::prelude::Span;
 use boron_source::ident_table::Identifier;
-use boron_utils::prelude::Span;
 
 #[derive(Debug, Clone)]
 pub enum Param {

@@ -1,5 +1,5 @@
 use boron_diagnostic_macro::Diagnostic;
-use boron_utils::prelude::Span;
+use boron_session::prelude::Span;
 
 #[derive(Diagnostic)]
 #[error("compile time functions don't take generic parameters")]

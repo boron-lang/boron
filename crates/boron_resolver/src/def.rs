@@ -1,8 +1,8 @@
 use boron_parser::Visibility;
 use boron_parser::ast::NodeId;
+use boron_session::prelude::{Identifier, Span};
 use boron_source::new_id;
 use boron_source::prelude::SourceFileId;
-use boron_utils::prelude::{Identifier, Span};
 use std::fmt::{Display, Formatter};
 
 new_id!(DefId);

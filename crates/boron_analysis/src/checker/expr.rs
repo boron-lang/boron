@@ -12,7 +12,7 @@ use boron_hir::expr::ComptimeArg;
 use boron_hir::{Expr, ExprKind, Literal};
 use boron_parser::Mutability;
 use boron_parser::ast::types::PrimitiveKind;
-use boron_utils::prelude::{Span, warn};
+use boron_session::prelude::{Span, warn};
 
 impl TyChecker<'_> {
   pub(crate) fn check_expr(

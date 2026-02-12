@@ -1,7 +1,7 @@
 use crate::lower::context::LoweringContext;
 use crate::pat::{FieldPat, Pat, PatKind};
 use boron_parser::ast::expressions::{FieldPat as AstFieldPat, Pattern, PatternKind};
-use boron_utils::prelude::debug;
+use boron_session::prelude::debug;
 
 impl LoweringContext<'_> {
   pub fn lower_ast_pattern(&mut self, pat: &Pattern) -> Pat {

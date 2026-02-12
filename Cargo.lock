@@ -151,25 +151,11 @@ dependencies = [
  "boron_hir",
  "boron_parser",
  "boron_resolver",
+ "boron_session",
  "boron_source",
- "boron_utils",
  "dashmap 7.0.0-rc2",
  "itertools",
  "rustc_apfloat",
-]
-
-[[package]]
-name = "boron_c_compiler"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "boron_utils",
- "fs-err",
- "indicatif",
- "log",
- "serde",
- "thiserror",
- "which",
 ]
 
 [[package]]
@@ -178,7 +164,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "boron_diagnostics",
- "boron_utils",
+ "boron_session",
+ "boron_target",
  "clap",
  "env_logger",
  "log",
@@ -191,16 +178,14 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "boron_analysis",
- "boron_hir",
  "boron_ir",
  "boron_parser",
  "boron_resolver",
+ "boron_session",
  "boron_target",
- "boron_utils",
  "dashmap 7.0.0-rc2",
  "fs-err",
  "inkwell",
- "itertools",
 ]
 
 [[package]]
@@ -209,16 +194,16 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "boron_analysis",
- "boron_c_compiler",
  "boron_codegen",
  "boron_diagnostics",
  "boron_hir",
  "boron_ir",
+ "boron_linking",
  "boron_parser",
  "boron_resolver",
+ "boron_session",
  "boron_source",
  "boron_thir",
- "boron_utils",
  "fs-err",
 ]
 
@@ -256,8 +241,8 @@ dependencies = [
  "boron_diagnostics",
  "boron_parser",
  "boron_resolver",
+ "boron_session",
  "boron_source",
- "boron_utils",
  "dashmap 7.0.0-rc2",
  "itertools",
 ]
@@ -270,11 +255,27 @@ dependencies = [
  "boron_hir",
  "boron_parser",
  "boron_resolver",
+ "boron_session",
  "boron_source",
  "boron_thir",
- "boron_utils",
  "dashmap 7.0.0-rc2",
  "itertools",
+]
+
+[[package]]
+name = "boron_linking"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "boron_session",
+ "boron_target",
+ "find-msvc-tools",
+ "fs-err",
+ "log",
+ "serde",
+ "thiserror",
+ "which",
+ "yansi",
 ]
 
 [[package]]
@@ -283,9 +284,9 @@ version = "0.1.0"
 dependencies = [
  "boron_diagnostic_macro",
  "boron_diagnostics",
+ "boron_session",
  "boron_source",
  "boron_target",
- "boron_utils",
  "dashmap 7.0.0-rc2",
  "stringcase",
  "strum 0.27.2",
@@ -300,47 +301,15 @@ dependencies = [
  "boron_diagnostic_macro",
  "boron_diagnostics",
  "boron_parser",
+ "boron_session",
  "boron_source",
- "boron_utils",
  "dashmap 7.0.0-rc2",
  "parking_lot",
  "petgraph",
 ]
 
 [[package]]
-name = "boron_source"
-version = "0.1.0"
-dependencies = [
- "dashmap 7.0.0-rc2",
- "lasso",
- "parking_lot",
- "paste",
-]
-
-[[package]]
-name = "boron_target"
-version = "0.1.0"
-dependencies = [
- "strum 0.27.2",
-]
-
-[[package]]
-name = "boron_thir"
-version = "0.1.0"
-dependencies = [
- "boron_analysis",
- "boron_diagnostics",
- "boron_hir",
- "boron_parser",
- "boron_resolver",
- "boron_source",
- "boron_utils",
- "dashmap 7.0.0-rc2",
- "itertools",
-]
-
-[[package]]
-name = "boron_utils"
+name = "boron_session"
 version = "0.1.0"
 dependencies = [
  "anstyle",
@@ -357,6 +326,39 @@ dependencies = [
  "serde",
  "strum 0.27.2",
  "thiserror",
+]
+
+[[package]]
+name = "boron_source"
+version = "0.1.0"
+dependencies = [
+ "dashmap 7.0.0-rc2",
+ "lasso",
+ "parking_lot",
+ "paste",
+]
+
+[[package]]
+name = "boron_target"
+version = "0.1.0"
+dependencies = [
+ "inkwell",
+ "strum 0.27.2",
+]
+
+[[package]]
+name = "boron_thir"
+version = "0.1.0"
+dependencies = [
+ "boron_analysis",
+ "boron_diagnostics",
+ "boron_hir",
+ "boron_parser",
+ "boron_resolver",
+ "boron_session",
+ "boron_source",
+ "dashmap 7.0.0-rc2",
+ "itertools",
 ]
 
 [[package]]

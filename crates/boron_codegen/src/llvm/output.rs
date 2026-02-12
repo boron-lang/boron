@@ -12,16 +12,12 @@ impl LLVMCodegen<'_> {
     let output_path = output_dir.join(format!("{}.ll", config.name));
     fs_err::write(&output_path, module)?;
 
-    let obj_dir = config.output.join("obj");
-    fs_err::create_dir_all(&obj_dir)?;
-
+    self.sess.create_obj_dir();
     self
+      .sess
+      .target()
       .target_machine
-      .write_to_file(
-        &self.module,
-        FileType::Object,
-        &obj_dir.join(format!("{}{}", config.name, self.sess.target().obj_file_suffix())),
-      )
+      .write_to_file(&self.module, FileType::Object, &self.sess.obj_file())
       .map_err(|e| anyhow!("Failed to write object file {e}"))
   }
 }

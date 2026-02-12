@@ -3,7 +3,7 @@ use boron_analysis::InferTy;
 use boron_hir::item::ItemId;
 use boron_hir::{Generics, HirId};
 use boron_resolver::DefId;
-use boron_utils::prelude::{Identifier, Span};
+use boron_session::prelude::{Identifier, Span};
 
 #[derive(Debug, Clone)]
 pub struct Function {

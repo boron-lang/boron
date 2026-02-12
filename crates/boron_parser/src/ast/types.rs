@@ -1,6 +1,6 @@
 use crate::ast::expressions::Expr;
 use crate::ast::import::Path;
-use boron_utils::prelude::Span;
+use boron_session::prelude::Span;
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone)]

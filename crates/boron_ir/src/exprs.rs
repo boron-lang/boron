@@ -2,8 +2,8 @@ use boron_analysis::literal_table::FullLiteral;
 use boron_hir::{HirId, SemanticTy};
 use boron_parser::{BinaryOp, UnaryOp};
 use boron_resolver::DefId;
+use boron_session::prelude::Span;
 use boron_source::ident_table::Identifier;
-use boron_utils::prelude::Span;
 
 use crate::cfg::IrTerminator;
 

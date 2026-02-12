@@ -1,7 +1,7 @@
 mod vec;
 import * from vec;
 
-extern "C" func test() {};
+extern "C" func test();
 
 func main() {
     var Vec2 { .x, .y } = Vec2 { .x = 10.0, .y = 15.0 };

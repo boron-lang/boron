@@ -13,7 +13,7 @@ boron_diagnostic_macro = { workspace = true }
 boron_diagnostics = { workspace = true }
 boron_parser = { workspace = true }
 boron_source = { workspace = true }
-boron_utils = { workspace = true }
+boron_session = { workspace = true }
 
 [lints]
 workspace = true

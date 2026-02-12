@@ -2,8 +2,8 @@ use crate::lower::context::LoweringContext;
 use crate::ty::{ArrayLen, PathSegment, Ty, TyKind};
 use boron_parser::Path;
 use boron_parser::ast::types::Type;
+use boron_session::prelude::Identifier;
 use boron_source::prelude::Span;
-use boron_utils::prelude::Identifier;
 
 impl LoweringContext<'_> {
   pub fn lower_path(&mut self, path: &Path) -> Vec<PathSegment> {

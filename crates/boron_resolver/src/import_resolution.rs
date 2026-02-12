@@ -3,9 +3,9 @@ use crate::{
   DefId, DefKind, Definition, ModuleResolver, ResolveVisitor, Symbol, SymbolKind,
 };
 use boron_parser::{ImportDecl, ImportKind, ImportSpec, NodeId, Visibility};
+use boron_session::prelude::debug;
 use boron_source::ident_table::Identifier;
 use boron_source::prelude::{SourceFileId, Span};
-use boron_utils::prelude::debug;
 use dashmap::DashMap;
 
 impl<'a> ResolveVisitor<'a> {

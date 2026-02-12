@@ -8,8 +8,8 @@ use boron_parser::ast::expressions::{
 };
 use boron_parser::ast::statements;
 use boron_parser::{AssignOp, IntBase, IntSuffix};
+use boron_session::prelude::{Identifier, debug};
 use boron_source::prelude::Span;
-use boron_utils::prelude::{Identifier, debug};
 use expressions::Literal as AstLiteral;
 use itertools::Itertools as _;
 

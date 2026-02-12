@@ -2,7 +2,7 @@ use crate::Pattern;
 use crate::ast::expressions::Expr;
 use crate::ast::program::NodeId;
 use crate::ast::types::Type;
-use boron_utils::prelude::Span;
+use boron_session::prelude::Span;
 
 #[derive(Debug, Clone)]
 pub struct Block {

@@ -1,3 +1,4 @@
+use crate::DefId;
 use crate::builtin_kind::BuiltInKind;
 use crate::def::{DefKind, Definition};
 use crate::errors::{
@@ -7,7 +8,7 @@ use crate::module_resolver::ModuleResolver;
 use crate::resolver::Resolver;
 use crate::scope::ScopeKind;
 use crate::symbol::{Symbol, SymbolKind};
-use crate::DefId;
+use boron_parser::ast::ProgramNode;
 use boron_parser::ast::expressions::{Expr, ExprKind};
 use boron_parser::ast::items::{
   ConstItem, EnumItem, FunctionItem, Item, ItemKind, ModItem, StructItem, Visibility,
@@ -15,14 +16,13 @@ use boron_parser::ast::items::{
 use boron_parser::ast::params::Param;
 use boron_parser::ast::statements::{Block, Statement};
 use boron_parser::ast::types::Type;
-use boron_parser::ast::ProgramNode;
 use boron_parser::module::Modules;
 use boron_parser::{
   ComptimeArg, ElseBranch, GenericParams, IfExpr, NodeId, Path, Pattern, PatternKind,
   StructMember, VariantField, VariantPayload,
 };
+use boron_session::prelude::{Identifier, Session, get_or_intern};
 use boron_source::prelude::{SourceFileId, Span};
-use boron_utils::prelude::{get_or_intern, Identifier, Session};
 
 #[derive(Clone, Debug, Copy, Hash, PartialEq, Eq)]
 pub enum Namespace {

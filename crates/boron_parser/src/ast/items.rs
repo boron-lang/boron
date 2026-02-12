@@ -1,11 +1,11 @@
-use boron_target::abi::ABI;
 use crate::ast::expressions::Expr;
 use crate::ast::generics::GenericParams;
 use crate::ast::params::Param;
 use crate::ast::program::{Attribute, NodeId};
 use crate::ast::statements::Block;
 use crate::ast::types::Type;
-use boron_utils::prelude::{Identifier, Span};
+use boron_session::prelude::{Identifier, Span};
+use boron_target::abi::ABI;
 
 #[derive(Debug, Clone)]
 pub struct Item {

@@ -2,8 +2,8 @@ use crate::def::DefId;
 use crate::resolver::Resolver;
 use crate::ribs::{Rib, RibKind};
 use crate::scope::{ScopeId, ScopeKind};
+use boron_session::prelude::Identifier;
 use boron_source::prelude::SourceFileId;
-use boron_utils::prelude::Identifier;
 
 /// This holds the mutable state needed during resolution of a single module.
 pub struct ModuleResolver<'a> {

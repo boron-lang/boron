@@ -9,9 +9,9 @@ use crate::{
   ConstItem, FunctionModifiers, ItemKind, ModItem, NodeId, Path, PathParsingContext,
   TokenType, Type, Visibility, log_parse_failure,
 };
+use boron_session::prelude::debug;
 use boron_source::prelude::Span;
 use boron_target::abi::ABI;
-use boron_utils::prelude::debug;
 
 mod functions;
 mod import;

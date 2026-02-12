@@ -1,6 +1,7 @@
 use crate::dependency::Dependency;
 use crate::prelude::{LibType, Mode, PackageType};
 use boron_diagnostics::prelude::DiagnosticOutputType;
+use boron_target::target::Linker;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone)]
@@ -13,9 +14,10 @@ pub struct ProjectConfig {
   pub lib_type: LibType,
   pub output: PathBuf,
   pub root: PathBuf,
+  pub linker: Option<Linker>,
   pub diagnostic_output_type: DiagnosticOutputType,
   pub color: bool,
   pub check_only: bool,
   pub verbose: bool,
-  pub no_backtrace: bool
+  pub no_backtrace: bool,
 }

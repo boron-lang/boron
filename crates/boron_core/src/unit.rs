@@ -6,6 +6,7 @@ use boron_codegen::run_codegen;
 use boron_hir::hir::Hir;
 use boron_hir::lower::lower_to_hir;
 use boron_ir::{Ir, IrLowerer};
+use boron_linking::LinkerBuild;
 use boron_parser::module::{Module, Modules};
 use boron_parser::parser::errors::ModuleNotFound;
 use boron_parser::parser::parse;
@@ -82,10 +83,22 @@ impl<'ctx> CompilationUnit<'ctx> {
     match run_codegen(self.sess, ir) {
       Err(err) => {
         self.emit_errors();
-        Err(err)
+        return Err(err);
       }
-      _ => Ok(()),
+      _ => {}
     }
+
+    match self.link() {
+      Ok(path) => Ok(()),
+      Err(err) => Err(err),
+    }
+  }
+
+  fn link(&mut self) -> Result<PathBuf> {
+    let mut build = LinkerBuild::new(self.sess)?;
+    build.add_source(self.sess.obj_file());
+
+    build.link(self.sess.config.name.clone())
   }
 
   fn lower_to_thir(&mut self) {
@@ -189,8 +202,7 @@ impl<'ctx> CompilationUnit<'ctx> {
       let mut files = Vec::new();
 
       for module in &this.node.discover_modules {
-        let full_path =
-          module.construct_file(self.sess.root(), source_file.path());
+        let full_path = module.construct_file(self.sess.root(), source_file.path());
 
         let Some(path) = full_path else {
           dcx.emit(ModuleNotFound { module: module.clone(), span: module.span });

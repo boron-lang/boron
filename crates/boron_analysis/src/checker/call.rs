@@ -4,7 +4,7 @@ use crate::table::TypeEnv;
 use crate::ty::{InferTy, SubstitutionMap, TyParam};
 use crate::unify::{Expectation, UnifyError, UnifyResult};
 use boron_hir::{Expr, ExprKind, HirId};
-use boron_utils::prelude::Span;
+use boron_session::prelude::Span;
 
 impl TyChecker<'_> {
   pub fn check_call(

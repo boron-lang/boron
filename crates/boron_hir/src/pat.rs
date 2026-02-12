@@ -2,8 +2,8 @@ use crate::ids::HirId;
 
 use crate::{Expr, Literal};
 use boron_resolver::DefId;
+use boron_session::prelude::Span;
 use boron_source::ident_table::Identifier;
-use boron_utils::prelude::Span;
 
 #[derive(Debug, Clone)]
 pub struct Pat {

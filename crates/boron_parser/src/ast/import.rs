@@ -1,6 +1,6 @@
-use crate::ast::program::NodeId;
 use crate::Type;
-use boron_utils::prelude::{Identifier, Span};
+use crate::ast::program::NodeId;
+use boron_session::prelude::{Identifier, Span};
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 

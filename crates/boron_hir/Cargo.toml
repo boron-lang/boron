@@ -10,7 +10,7 @@ boron_diagnostics = { workspace = true }
 boron_parser = { workspace = true }
 boron_resolver = { workspace = true }
 boron_source = { workspace = true }
-boron_utils = { workspace = true }
+boron_session = { workspace = true }
 dashmap = { workspace = true }
 itertools = { workspace = true }
 

@@ -1,7 +1,7 @@
 use crate::TyVar;
 use boron_diagnostic_macro::Diagnostic;
+use boron_session::prelude::Span;
 use boron_source::ident_table::Identifier;
-use boron_utils::prelude::Span;
 
 #[derive(Diagnostic)]
 #[error("array length needs to be a number found `{found}`")]

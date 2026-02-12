@@ -9,6 +9,6 @@ pub mod prelude {
   pub use crate::{check::*, unit::*, vars::*};
   pub use boron_diagnostics::prelude::*;
   pub use boron_parser::*;
+  pub use boron_session::{prelude::*, *};
   pub use boron_source::prelude::*;
-  pub use boron_utils::{prelude::*, *};
 }

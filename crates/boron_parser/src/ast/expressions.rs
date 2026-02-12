@@ -3,8 +3,8 @@ use crate::ast::program::NodeId;
 use crate::ast::statements::Block;
 use crate::ast::types::{Mutability, Type};
 use crate::{IntBase, PrimitiveKind};
+use boron_session::prelude::Span;
 use boron_source::ident_table::Identifier;
-use boron_utils::prelude::Span;
 use strum::Display;
 
 #[derive(Debug, Clone)]

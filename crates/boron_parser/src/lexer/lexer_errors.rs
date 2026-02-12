@@ -1,7 +1,7 @@
 use boron_diagnostics::ToDiagnostic;
 use boron_diagnostics::codes as diag_codes;
 use boron_diagnostics::prelude::{Diag, DiagnosticCode, DiagnosticLevel, Label};
-use boron_utils::prelude::Span;
+use boron_session::prelude::Span;
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]

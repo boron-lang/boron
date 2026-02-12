@@ -3,7 +3,7 @@ use crate::monomorphizations::MonomorphizationEntry;
 use crate::ty::{InferTy, SubstitutionMap, TyVar, TyVarKind, TypeScheme};
 use boron_hir::HirId;
 use boron_resolver::DefId;
-use boron_utils::prelude::Span;
+use boron_session::prelude::Span;
 use dashmap::DashMap;
 use std::collections::{HashMap, HashSet};
 

@@ -1,7 +1,7 @@
 use crate::InferTy;
 use boron_parser::PrimitiveKind;
 use boron_resolver::prelude::BuiltInKind;
-use boron_utils::prelude::Span;
+use boron_session::prelude::Span;
 use std::collections::HashMap;
 
 #[derive(Debug)]

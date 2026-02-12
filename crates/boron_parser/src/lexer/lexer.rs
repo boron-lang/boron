@@ -2,8 +2,8 @@ use crate::lexer::lexer_errors::{LexError, LexErrorKind, LexResult};
 use crate::lexer::nfc::is_xid_start;
 use crate::lexer::tokens::{Token, TokenType};
 use boron_diagnostics::DiagnosticCtx;
+use boron_session::prelude::{SourceFileId, Span};
 use boron_source::prelude::SourceFile;
-use boron_utils::prelude::{SourceFileId, Span};
 
 #[derive(Debug)]
 pub struct Lexer<'ctx> {

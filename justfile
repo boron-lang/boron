@@ -28,4 +28,4 @@ check-playground args='':
     cargo run -p boron playground/src/index.bo {{ args }} --name std -o playground/build --type library --check-only
 
 build-playground args='':
-    cargo run -p boron playground/src/index.bo {{ args }} --name std -o playground/build --type library --mode release
+    cargo run -p boron playground/src/index.bo {{ args }} --name playground -o playground/build --type binary --mode release

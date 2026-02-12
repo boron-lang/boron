@@ -1,7 +1,7 @@
 use crate::InferTy;
 use boron_hir::Hir;
 use boron_resolver::{DefId, DefKind, Resolver};
-use boron_utils::prelude::Session;
+use boron_session::prelude::Session;
 
 pub struct SizeOfContext<'a> {
   pub sess: &'a Session,

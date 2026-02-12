@@ -1,9 +1,9 @@
-use crate::ids::HirId;
 use crate::Expr;
+use crate::ids::HirId;
 use boron_parser::ast::types::{Mutability, PrimitiveKind};
 use boron_resolver::DefId;
+use boron_session::prelude::Span;
 use boron_source::ident_table::Identifier;
-use boron_utils::prelude::Span;
 
 #[derive(Debug, Clone)]
 pub struct Ty {

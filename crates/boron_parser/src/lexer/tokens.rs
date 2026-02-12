@@ -1,4 +1,4 @@
-use boron_utils::prelude::Span;
+use boron_session::prelude::Span;
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]

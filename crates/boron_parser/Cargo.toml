@@ -8,7 +8,7 @@ repository.workspace = true
 [dependencies]
 unicode-xid = "0.2.6"
 unicode-normalization = "0.1.25"
-boron_utils = { workspace = true }
+boron_session = { workspace = true }
 boron_diagnostics = { workspace = true }
 boron_diagnostic_macro = { workspace = true }
 boron_source = { workspace = true }

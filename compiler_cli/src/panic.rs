@@ -1,7 +1,7 @@
 use anyhow::Result;
-use boron_core::prelude::{Session, strip_same_root};
+use boron_core::prelude::{strip_same_root, Session};
 use std::env::current_dir;
-use std::io::{Write, stderr};
+use std::io::{stderr, Write};
 use std::panic::PanicHookInfo;
 use std::path::PathBuf;
 use sysinfo::System;
@@ -40,7 +40,7 @@ const SYSTEM_FUNCTION_PATTERNS: &[&str] = &[
 
 pub fn setup_panic_handler(sess: &Session) {
   let no_backtrace = sess.config.no_backtrace;
-  let triple = sess.target().triple;
+  let triple = sess.target().triple();
   std::panic::set_hook(Box::new(move |info| {
     let buf = &mut Vec::new();
     let message = extract_panic_message(info);
@@ -48,7 +48,7 @@ pub fn setup_panic_handler(sess: &Session) {
 
     let _ = writeln!(buf, "");
     let _ = writeln!(buf, "  {} {}", "panic:".bright_red(), message);
-    print_system_info(&location, triple, buf);
+    print_system_info(&location, &triple, buf);
 
     if !no_backtrace {
       let mut frames = Vec::new();
@@ -83,7 +83,7 @@ fn extract_location(info: &PanicHookInfo<'_>) -> String {
     .replace('\\', "/")
 }
 
-fn print_system_info(location: &str, triple: &'static str, buf: &mut Vec<u8>) {
+fn print_system_info(location: &str, triple: &str, buf: &mut Vec<u8>) {
   let mut sys = System::new_all();
   sys.refresh_all();
 
