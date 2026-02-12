@@ -143,7 +143,12 @@ define_codes! {
 
   // Target/ABI codes (0600..0699)
   ABI_INVALID => 600,
-  ABI_EXTERN_NO_BODY => 601
+  ABI_EXTERN_NO_BODY => 601,
+
+  // Other (9000..9999)
+  NO_MAIN_FUNCTION => 9000,
+  MAIN_NO_GENERICS => 9001,
+  MAIN_NO_PARAMS => 9002
 }
 
 #[cfg(test)]

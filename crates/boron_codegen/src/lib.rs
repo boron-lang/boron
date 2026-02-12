@@ -1,7 +1,9 @@
 mod llvm;
 
 use crate::llvm::LLVMCodegen;
+use anyhow::Result;
 use boron_ir::Ir;
+use boron_resolver::DefId;
 use boron_session::prelude::Session;
 use dashmap::DashMap;
 use inkwell::context::Context as LLVMContext;
@@ -9,10 +11,10 @@ use inkwell::context::Context as LLVMContext;
 pub trait Codegen {
   fn backend_name(&self) -> &str;
 
-  fn generate(&self, ir: &Ir) -> anyhow::Result<()>;
+  fn generate(&self, ir: &Ir) -> Result<()>;
 }
 
-pub fn run_codegen(sess: &Session, ir: &Ir) -> anyhow::Result<()> {
+pub fn run_codegen(sess: &Session, ir: &Ir, main_function: Option<DefId>) -> Result<()> {
   let llvm_ctx = LLVMContext::create();
   let module = llvm_ctx.create_module("program");
 

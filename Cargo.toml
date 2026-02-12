@@ -37,7 +37,7 @@ lasso = { version = "0.7.3", features = ["multi-threaded"] }
 serde = { version = "1.0.219", features = ["derive"] }
 inkwell = { version = "0.8.0", features = ["llvm17-0"] }
 
-boron_linking = { path = "crates/boron_linking" }
+boron_compiler = { path = "crates/boron_compiler" }
 boron_cli = { path = "crates/boron_cli" }
 boron_core = { path = "crates/boron_core" }
 boron_diagnostic_macro = { path = "crates/boron_diagnostic_macro" }

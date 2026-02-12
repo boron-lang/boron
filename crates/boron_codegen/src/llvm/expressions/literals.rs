@@ -4,7 +4,7 @@ use boron_analysis::literal_table::FullLiteral;
 use boron_ir::{IrExpr, SemanticTy};
 use boron_target::primitive::PrimitiveKind;
 use inkwell::types::{BasicTypeEnum, StringRadix};
-use inkwell::values::BasicValueEnum;
+use inkwell::values::{BasicValue, BasicValueEnum};
 
 impl<'ctx> LLVMCodegen<'ctx> {
   pub fn build_literal(
@@ -47,9 +47,18 @@ impl<'ctx> LLVMCodegen<'ctx> {
           _ => unreachable!("Float literal should be f32 or f64"),
         }
       }
-      FullLiteral::String(string) => {
-        Ok(self.context.const_string(string.as_bytes(), false).into())
-      }
+      FullLiteral::String(string) => match &expr.ty {
+        SemanticTy::Ptr { .. } => {
+          let name = format!("str.{}", expr.hir_id);
+          let ptr = self.builder.build_global_string_ptr(string.as_str(), &name);
+
+          Ok(self.require_llvm(ptr, "global string ptr")?.as_basic_value_enum())
+        }
+        SemanticTy::Array { .. } => {
+          Ok(self.context.const_string(string.as_bytes(), true).into())
+        }
+        _ => Ok(self.context.const_string(string.as_bytes(), true).into()),
+      },
       _ => todo!(),
     }
   }

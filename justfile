@@ -25,7 +25,7 @@ fix:
     git status
 
 check-playground args='':
-    cargo run -p boron playground/src/index.bo {{ args }} --name std -o playground/build --type library --check-only
+    cargo run -p boron playground/src/index.bo {{ args }} --name playground -o playground/build --type binary --check-only
 
 build-playground args='':
-    cargo run -p boron playground/src/index.bo {{ args }} --name playground -o playground/build --type binary --mode release
+    cargo run -p boron playground/src/index.bo {{ args }} --name playground -o playground/build --type binary --mode release --compiler clang

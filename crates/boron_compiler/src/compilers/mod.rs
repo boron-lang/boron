@@ -1,39 +1,30 @@
-use crate::linker::LinkerKind;
-use anyhow::{Result, anyhow};
+use crate::compiler::CompilerKind;
+use anyhow::{anyhow, Result};
 use boron_session::prelude::Session;
 use boron_target::target::Os;
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-mod gold;
-mod ld;
-mod lld;
-mod mold;
-mod msvc;
+mod clang;
+mod gcc;
 
-pub use gold::GoldLinker;
-pub use ld::LdLinker;
-pub use lld::LldLinker;
-pub use mold::MoldLinker;
-pub use msvc::MsvcLinker;
+pub use clang::ClangCompiler;
+pub use gcc::GccCompiler;
 
-pub trait LinkerTool {
-  fn kind(&self) -> LinkerKind;
+pub trait CompilerTool {
+  fn kind(&self) -> CompilerKind;
   fn resolve_path(&self, sess: &Session) -> Result<PathBuf>;
-  fn arg_style(&self, sess: &Session) -> LinkerArgStyle;
+  fn arg_style(&self, sess: &Session) -> CompilerArgStyle;
   fn is_available_on(&self, _sess: &Session) -> bool {
     true
   }
 }
 
-pub fn linker_tool(kind: LinkerKind) -> Box<dyn LinkerTool> {
+pub fn compiler_tool(kind: CompilerKind) -> Box<dyn CompilerTool> {
   match kind {
-    LinkerKind::Ld => Box::new(LdLinker),
-    LinkerKind::Lld => Box::new(LldLinker),
-    LinkerKind::MsvcLink => Box::new(MsvcLinker),
-    LinkerKind::Mold => Box::new(MoldLinker),
-    LinkerKind::Gold => Box::new(GoldLinker),
+    CompilerKind::Clang => Box::new(ClangCompiler),
+    CompilerKind::Gcc => Box::new(GccCompiler),
   }
 }
 
@@ -43,11 +34,11 @@ pub fn resolve_executable(names: &[&str]) -> Result<PathBuf> {
       return Ok(path);
     }
   }
-  Err(anyhow!("linker not found in PATH: {names:?}"))
+  Err(anyhow!("compiler not found in PATH: {names:?}"))
 }
 
-#[derive(Copy, Clone)]
-pub struct LinkerArgStyle {
+#[derive(Clone)]
+pub struct CompilerArgStyle {
   lib_dir_prefix: &'static str,
   lib_prefix: &'static str,
   output_prefix: &'static str,
@@ -56,9 +47,10 @@ pub struct LinkerArgStyle {
   output_is_prefix: bool,
   lib_dir_is_prefix: bool,
   lib_is_prefix: bool,
+  additional_args: Vec<String>,
 }
 
-impl LinkerArgStyle {
+impl CompilerArgStyle {
   pub fn msvc() -> Self {
     Self {
       lib_dir_prefix: "/LIBPATH:",
@@ -69,7 +61,12 @@ impl LinkerArgStyle {
       output_is_prefix: true,
       lib_dir_is_prefix: true,
       lib_is_prefix: true,
+      additional_args: vec![],
     }
+  }
+  
+  pub fn add_arg(&mut self, arg: String) {
+    self.additional_args.push(arg);
   }
 
   pub fn unix() -> Self {
@@ -82,6 +79,13 @@ impl LinkerArgStyle {
       output_is_prefix: false,
       lib_dir_is_prefix: false,
       lib_is_prefix: false,
+      additional_args: vec![],
+    }
+  }
+
+  pub fn push_additional_args(&self, command: &mut Command) {
+    for arg in &self.additional_args {
+      command.arg(arg);
     }
   }
 

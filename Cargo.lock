@@ -189,16 +189,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "boron_compiler"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "boron_session",
+ "boron_target",
+ "find-msvc-tools",
+ "fs-err",
+ "log",
+ "serde",
+ "thiserror",
+ "which",
+ "yansi",
+]
+
+[[package]]
 name = "boron_core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "boron_analysis",
  "boron_codegen",
+ "boron_compiler",
+ "boron_diagnostic_macro",
  "boron_diagnostics",
  "boron_hir",
  "boron_ir",
- "boron_linking",
  "boron_parser",
  "boron_resolver",
  "boron_session",
@@ -260,22 +277,6 @@ dependencies = [
  "boron_thir",
  "dashmap 7.0.0-rc2",
  "itertools",
-]
-
-[[package]]
-name = "boron_linking"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "boron_session",
- "boron_target",
- "find-msvc-tools",
- "fs-err",
- "log",
- "serde",
- "thiserror",
- "which",
- "yansi",
 ]
 
 [[package]]

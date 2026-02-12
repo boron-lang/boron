@@ -1,9 +1,9 @@
 use crate::module_graph::ModuleGraph;
-use crate::prelude::create_dir_all;
+use crate::prelude::{create_dir_all, PackageType};
 use crate::project_config::ProjectConfig;
 use boron_diagnostics::{DiagnosticCtx, DiagnosticWriter};
 use boron_source::prelude::Sources;
-use boron_target::target::{Linker, Target};
+use boron_target::target::{Compiler, Target};
 use parking_lot::RwLock;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -15,7 +15,7 @@ pub struct Session {
   dcx: DiagnosticCtx,
   module_graph: ModuleGraph,
   target: Target,
-  linker: Option<Linker>,
+  compiler: Option<Compiler>,
   compilation_mode: CompilationMode,
   sources: Arc<Sources>,
   timings: RwLock<Vec<(String, Duration)>>,
@@ -36,7 +36,7 @@ impl Session {
     compilation_mode: CompilationMode,
   ) -> Self {
     let sources = Arc::new(Sources::with_root(config.root.clone()));
-    let linker = config.linker;
+    let compiler = config.compiler;
 
     Self {
       dcx: DiagnosticCtx::new(
@@ -48,7 +48,7 @@ impl Session {
       config,
       module_graph: ModuleGraph::new(),
       target: Target::host(),
-      linker,
+      compiler,
       compilation_mode,
       sources,
       timings: RwLock::new(Vec::new()),
@@ -63,8 +63,8 @@ impl Session {
     &self.target
   }
 
-  pub fn linker(&self) -> Option<Linker> {
-    self.linker
+  pub fn compiler(&self) -> Option<Compiler> {
+    self.compiler
   }
 
   pub fn config(&self) -> &ProjectConfig {
@@ -138,5 +138,13 @@ impl Session {
 
     println!("{}", "─".repeat(max_len + 20));
     println!("{:<width$}  {:>8.2?}", "Total".bold(), total.bold(), width = max_len);
+  }
+
+  pub fn is_lib(&self) -> bool {
+    self.config.package_type == PackageType::Library
+  }
+
+  pub fn is_binary(&self) -> bool {
+    self.config.package_type == PackageType::Binary
   }
 }

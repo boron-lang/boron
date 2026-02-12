@@ -1,4 +1,5 @@
 mod check;
+mod errors;
 mod unit;
 
 pub mod vars {

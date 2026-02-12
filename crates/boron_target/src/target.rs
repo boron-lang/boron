@@ -24,17 +24,11 @@ pub enum Os {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, EnumString)]
-pub enum Linker {
-  #[strum(serialize = "ld")]
-  Ld,
-  #[strum(serialize = "lld")]
-  Lld,
-  #[strum(serialize = "link")]
-  MsvcLink,
-  #[strum(serialize = "mold")]
-  Mold,
-  #[strum(serialize = "gold")]
-  Gold,
+pub enum Compiler {
+  #[strum(serialize = "clang")]
+  Clang,
+  #[strum(serialize = "gcc")]
+  Gcc,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, EnumString)]
@@ -81,11 +75,12 @@ pub struct Target {
   pub arch: Arch,
   pub os: Os,
   pub pointer_width: PointerWidth,
-  pub linker: Linker,
+  pub compiler: Compiler,
   pub archiver: Archiver,
   pub data_layout: DataLayout,
   pub triple: TargetTriple,
   pub target_machine: TargetMachine,
+  pub is_msvc: bool,
 }
 
 impl Target {
@@ -131,15 +126,19 @@ impl Target {
       )
       .expect("Could not create target machine");
 
+    let triple_str = triple.as_str().to_string_lossy().to_ascii_lowercase();
+
     let data_layout = DataLayout::create_from_llvm(&target_machine.get_target_data());
-    let linker = Self::default_linker_for_triple(&triple);
+    let compiler = Self::default_compiler_for_triple(&triple_str);
     let archiver = Self::default_archiver_for_triple(&triple);
+    let is_msvc = triple_str.contains("msvc");
 
     Self {
+      is_msvc,
       arch,
       os,
       pointer_width,
-      linker,
+      compiler,
       archiver,
       data_layout,
       triple,
@@ -214,8 +213,7 @@ impl Target {
     }
   }
 
-  fn default_linker_for_triple(triple: &TargetTriple) -> Linker {
-    let triple_str = triple.as_str().to_string_lossy().to_ascii_lowercase();
+  fn default_compiler_for_triple(triple_str: &str) -> Compiler {
     let is_windows = triple_str.contains("windows");
     let is_msvc = triple_str.contains("msvc");
     let is_apple = triple_str.contains("apple")
@@ -223,19 +221,17 @@ impl Target {
       || triple_str.contains("macos")
       || triple_str.contains("ios");
 
-    if is_windows && is_msvc {
-      return Linker::MsvcLink;
-    }
-
     if is_apple {
-      return Linker::Ld;
+      return Compiler::Clang;
+    }
+    if is_windows && !is_msvc {
+      return Compiler::Gcc
     }
 
     if is_windows {
-      return Linker::Lld;
+      return Compiler::Clang;
     }
-
-    Linker::Lld
+    Compiler::Gcc
   }
 
   fn default_archiver_for_triple(triple: &TargetTriple) -> Archiver {

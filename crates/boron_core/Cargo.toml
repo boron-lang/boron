@@ -12,8 +12,9 @@ boron_resolver = { workspace = true }
 boron_hir = { workspace = true }
 boron_session = { workspace = true }
 boron_diagnostics = { workspace = true }
+boron_diagnostic_macro = { workspace = true }
 anyhow = { workspace = true }
-boron_linking = { workspace = true }
+boron_compiler = { workspace = true }
 fs-err = { workspace = true }
 boron_source = { workspace = true }
 boron_analysis = { workspace = true }

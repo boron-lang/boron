@@ -66,7 +66,10 @@ impl<'ctx> LLVMCodegen<'ctx> {
   }
 
   pub fn generate_var_allocas(&self, function: IrId) -> Result<()> {
-    let locals = self.require_some(self.ir.locals.get(&function), "locals missing")?;
+    let locals=  self.ir.locals.get(&function);
+    let Some(locals) = locals else {
+      return Ok(());
+    };
     for local in locals.iter() {
       let name = format!("local.alloc.{}", local.hir_id);
       let struct_ty = self.ty(&local.ty)?;

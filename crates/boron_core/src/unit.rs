@@ -1,3 +1,4 @@
+use crate::errors::{MainNoGenerics, MainNoParams, NoMainFunction};
 use crate::prelude::*;
 use boron_analysis::results::BuiltInResults;
 use boron_analysis::validator::validate_comptime;
@@ -6,11 +7,11 @@ use boron_codegen::run_codegen;
 use boron_hir::hir::Hir;
 use boron_hir::lower::lower_to_hir;
 use boron_ir::{Ir, IrLowerer};
-use boron_linking::LinkerBuild;
+use boron_compiler::CompilerBuild;
 use boron_parser::module::{Module, Modules};
 use boron_parser::parser::errors::ModuleNotFound;
 use boron_parser::parser::parse;
-use boron_resolver::{ResolveVisitor, Resolver};
+use boron_resolver::{DefId, ResolveVisitor, Resolver};
 use boron_source::source_file::SourceFileId;
 use boron_thir::{Thir, ThirLowerer};
 use std::process::exit;
@@ -26,6 +27,7 @@ pub struct CompilationUnit<'ctx> {
   pub builtin_results: Option<BuiltInResults>,
   pub thir: Option<Thir>,
   pub ir: Option<Ir>,
+  pub main_function: Option<DefId>,
 }
 
 impl<'ctx> CompilationUnit<'ctx> {
@@ -40,6 +42,7 @@ impl<'ctx> CompilationUnit<'ctx> {
       builtin_results: None,
       thir: None,
       ir: None,
+      main_function: None,
     }
   }
 
@@ -52,10 +55,10 @@ impl<'ctx> CompilationUnit<'ctx> {
     if self.run_step("Name resolution", |this| this.resolve_names()) {
       return;
     }
-    if self.run_step("HIR lowering" ,|this| this.lower_to_hir()) {
+    if self.run_step("HIR lowering", |this| this.lower_to_hir()) {
       return;
     }
-    if self.run_step("Comptime validation",|this| this.validate_comptime()) {
+    if self.run_step("Comptime validation", |this| this.validate_comptime()) {
       return;
     }
 
@@ -68,8 +71,39 @@ impl<'ctx> CompilationUnit<'ctx> {
     if self.run_step("THIR lowering", |this| this.lower_to_thir()) {
       return;
     }
+    self.find_main_function();
 
     let _ = self.run_step("IR lowering", |this| this.lower_to_ir());
+  }
+
+  fn find_main_function(&mut self) {
+    if self.sess.is_lib() {
+      return;
+    }
+    let Some(thir) = &self.thir else {
+      return;
+    };
+
+    let main = thir.functions.iter().find(|func| func.name.text() == "main");
+
+    if let Some(main) = main {
+      if !main.generics.is_empty() {
+        self.sess.dcx().emit(MainNoGenerics { span: main.generics.span })
+      }
+      if !main.params.is_empty() {
+        let span = match (main.params.first(), main.params.last()) {
+          (Some(first), Some(last)) => first.span.to(last.span),
+          (Some(first), None) => first.span,
+          _ => unreachable!(),
+        };
+
+        self.sess.dcx().emit(MainNoParams { span })
+      }
+
+      self.main_function = Some(main.def_id);
+    } else {
+      self.sess.dcx().emit(NoMainFunction { pkg: self.sess.config.name.clone() });
+    }
   }
 
   pub fn build(&mut self) -> Result<()> {
@@ -81,8 +115,9 @@ impl<'ctx> CompilationUnit<'ctx> {
     let Some(ir) = &self.ir else {
       return Ok(());
     };
+
     let start = Instant::now();
-    if let Err(err) = run_codegen(self.sess, ir) {
+    if let Err(err) = run_codegen(self.sess, ir, self.main_function) {
       self.emit_errors();
       return Err(err);
     }
@@ -93,16 +128,16 @@ impl<'ctx> CompilationUnit<'ctx> {
       Ok(path) => {
         self.sess.store_timing("Linking", linking_start.elapsed());
         Ok(())
-      },
+      }
       Err(err) => Err(err),
     }
   }
 
   fn link(&mut self) -> Result<PathBuf> {
-    let mut build = LinkerBuild::new(self.sess)?;
+    let mut build = CompilerBuild::new(self.sess)?;
     build.add_source(self.sess.obj_file());
 
-    build.link(self.sess.config.name.clone())
+    build.compile(self.sess.config.name.clone())
   }
 
   fn lower_to_thir(&mut self) {
