@@ -134,7 +134,6 @@ impl Target {
     let is_msvc = triple_str.contains("msvc");
 
     Self {
-      is_msvc,
       arch,
       os,
       pointer_width,
@@ -143,6 +142,7 @@ impl Target {
       data_layout,
       triple,
       target_machine,
+      is_msvc,
     }
   }
 
@@ -225,7 +225,7 @@ impl Target {
       return Compiler::Clang;
     }
     if is_windows && !is_msvc {
-      return Compiler::Gcc
+      return Compiler::Gcc;
     }
 
     if is_windows {

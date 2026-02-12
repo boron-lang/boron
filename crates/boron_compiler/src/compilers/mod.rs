@@ -1,5 +1,5 @@
 use crate::compiler::CompilerKind;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use boron_session::prelude::Session;
 use boron_target::target::Os;
 use std::ffi::OsStr;
@@ -64,7 +64,7 @@ impl CompilerArgStyle {
       additional_args: vec![],
     }
   }
-  
+
   pub fn add_arg(&mut self, arg: String) {
     self.additional_args.push(arg);
   }

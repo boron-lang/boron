@@ -1,9 +1,9 @@
 use crate::{
   compiler::{Compiler, CompilerKind},
-  compilers::{compiler_tool, CompilerArgStyle},
+  compilers::{CompilerArgStyle, compiler_tool},
   detect::resolve_from_kind,
 };
-use anyhow::{bail, ensure, Context as _, Result};
+use anyhow::{Context as _, Result, bail, ensure};
 use boron_session::prelude::{LibType, PackageType, Session};
 use fs_err::create_dir_all;
 use log::{debug, info};
@@ -130,7 +130,11 @@ impl<'a> CompilerBuild<'a> {
 
     debug!("Executing compiler command: {command:?}");
 
-    info!("{} {}", "Compiling with".bold().underline(), self.compiler.kind().name().bold());
+    info!(
+      "{} {}",
+      "Compiling with".bold().underline(),
+      self.compiler.kind().name().bold()
+    );
 
     let output = command
       .current_dir(self.build_dir())

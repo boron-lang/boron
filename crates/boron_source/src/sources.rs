@@ -1,7 +1,7 @@
 use crate::source_file::{SourceFile, SourceFileId};
+use dashmap::DashMap;
 use dashmap::iter::Iter;
 use dashmap::mapref::one::Ref;
-use dashmap::DashMap;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Default)]
@@ -66,7 +66,7 @@ impl Sources {
       return path.to_path_buf();
     };
 
-    strip_same_root(path, &root)
+    strip_same_root(path, root)
   }
 }
 

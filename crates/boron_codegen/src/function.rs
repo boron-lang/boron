@@ -1,5 +1,5 @@
-use crate::blocks::generator::BlockContext;
 use crate::blocks::BlockGeneratorContext;
+use crate::blocks::generator::BlockContext;
 use crate::codegen::LLVMCodegen;
 use anyhow::Result;
 use boron_ir::{IrFunction, IrId, Projection, SemanticTy};

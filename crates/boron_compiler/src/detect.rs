@@ -1,8 +1,7 @@
 use crate::compiler::{Compiler, CompilerKind};
 use crate::compilers::compiler_tool;
-use anyhow::{anyhow, Context as _, Result};
+use anyhow::{Context as _, Result, anyhow};
 use boron_session::prelude::Session;
-use boron_target::target::Os;
 use log::debug;
 use std::path::PathBuf;
 

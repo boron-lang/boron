@@ -1,11 +1,11 @@
 use crate::codegen::LLVMCodegen;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use boron_ir::SemanticTy;
 use boron_parser::PrimitiveKind;
 use boron_resolver::DefId;
 use boron_session::prelude::warn;
-use inkwell::types::{BasicType as _, BasicTypeEnum, StructType};
 use inkwell::AddressSpace;
+use inkwell::types::{BasicType as _, BasicTypeEnum, StructType};
 
 impl<'ctx> LLVMCodegen<'ctx> {
   pub fn primitive_ty(&self, prim: &PrimitiveKind) -> BasicTypeEnum<'ctx> {

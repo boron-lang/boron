@@ -3,7 +3,6 @@ use crate::target::Endian;
 use inkwell::AddressSpace;
 use inkwell::context::Context;
 use inkwell::targets::{ByteOrdering, TargetData};
-use std::ffi::c_uint;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DataLayout {

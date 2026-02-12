@@ -6,13 +6,13 @@ mod output;
 mod structs;
 mod types;
 
+use crate::codegen::LLVMCodegen;
 use anyhow::Result;
 use boron_ir::Ir;
 use boron_resolver::DefId;
 use boron_session::prelude::Session;
 use dashmap::DashMap;
 use inkwell::context::Context as LLVMContext;
-use crate::codegen::LLVMCodegen;
 
 pub trait Codegen {
   fn backend_name(&self) -> &str;

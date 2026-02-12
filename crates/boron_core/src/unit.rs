@@ -2,7 +2,7 @@ use crate::errors::{MainNoGenerics, MainNoParams, MainRetNotAUnit, NoMainFunctio
 use crate::prelude::*;
 use boron_analysis::results::BuiltInResults;
 use boron_analysis::validator::validate_comptime;
-use boron_analysis::{expand_builtins, typeck_hir, InferTy, TypeTable};
+use boron_analysis::{InferTy, TypeTable, expand_builtins, typeck_hir};
 use boron_codegen::run_codegen;
 use boron_compiler::CompilerBuild;
 use boron_hir::hir::Hir;
@@ -15,7 +15,7 @@ use boron_resolver::{DefId, ResolveVisitor, Resolver};
 use boron_source::source_file::SourceFileId;
 use boron_thir::{Thir, ThirLowerer};
 use std::process::exit;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 pub struct CompilationUnit<'ctx> {
   pub entry_point: SourceFileId,
@@ -88,7 +88,7 @@ impl<'ctx> CompilationUnit<'ctx> {
 
     if let Some(main) = main {
       if !main.generics.is_empty() {
-        self.sess.dcx().emit(MainNoGenerics { span: main.generics.span })
+        self.sess.dcx().emit(MainNoGenerics { span: main.generics.span });
       }
       if !main.params.is_empty() {
         let span = match (main.params.first(), main.params.last()) {
@@ -97,11 +97,11 @@ impl<'ctx> CompilationUnit<'ctx> {
           _ => unreachable!(),
         };
 
-        self.sess.dcx().emit(MainNoParams { span })
+        self.sess.dcx().emit(MainNoParams { span });
       }
 
       if !matches!(main.return_type, InferTy::Unit(_)) {
-        self.sess.dcx().emit(MainRetNotAUnit { span: main.return_type.span() })
+        self.sess.dcx().emit(MainRetNotAUnit { span: main.return_type.span() });
       }
 
       self.main_function = Some(main.def_id);

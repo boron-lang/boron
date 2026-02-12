@@ -1,5 +1,5 @@
 use crate::module_graph::ModuleGraph;
-use crate::prelude::{create_dir_all, PackageType};
+use crate::prelude::{PackageType, create_dir_all};
 use crate::project_config::ProjectConfig;
 use boron_diagnostics::{DiagnosticCtx, DiagnosticWriter};
 use boron_source::prelude::Sources;
@@ -8,7 +8,7 @@ use parking_lot::RwLock;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
-use yansi::Paint;
+use yansi::Paint as _;
 
 pub struct Session {
   pub config: ProjectConfig,
@@ -112,7 +112,7 @@ impl Session {
 
   pub fn store_timing(&self, step: &str, duration: Duration) {
     let mut write = self.timings.write();
-    write.push((step.to_string(), duration));
+    write.push((step.to_owned(), duration));
   }
 
   pub fn print_timings(&self) {
@@ -127,13 +127,7 @@ impl Session {
     for (step, duration) in timings.iter() {
       let percentage = duration.as_secs_f64() / total.as_secs_f64() * 100.0;
 
-      println!(
-        "{:<width$}  {:>8.2?}  {:>5.1}%",
-        step,
-        duration,
-        percentage,
-        width = max_len
-      );
+      println!("{step:<max_len$}  {duration:>8.2?}  {percentage:>5.1}%");
     }
 
     println!("{}", "─".repeat(max_len + 20));

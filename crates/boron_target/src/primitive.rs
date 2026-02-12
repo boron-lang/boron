@@ -43,7 +43,7 @@ pub enum PrimitiveKind {
   #[strum(serialize = "char")]
   Char,
   #[strum(serialize = "void")]
-  Void
+  Void,
 }
 
 impl PrimitiveKind {

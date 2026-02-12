@@ -1,4 +1,4 @@
-use super::{resolve_executable, CompilerArgStyle, CompilerTool};
+use super::{CompilerArgStyle, CompilerTool, resolve_executable};
 use crate::compiler::CompilerKind;
 use anyhow::Result;
 use boron_session::prelude::Session;

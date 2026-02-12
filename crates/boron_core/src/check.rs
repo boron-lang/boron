@@ -1,8 +1,8 @@
-use crate::prelude::{info, CompilationUnit, FILE_EXTENSION};
-use anyhow::bail;
+use crate::prelude::{CompilationUnit, FILE_EXTENSION, info};
 use anyhow::Result;
+use anyhow::bail;
 use boron_session::prelude::Session;
-use yansi::Paint;
+use yansi::Paint as _;
 
 pub fn compiler_entrypoint(session: &Session) -> Result<()> {
   let file = &session.config.entrypoint;
@@ -24,7 +24,7 @@ pub fn compiler_entrypoint(session: &Session) -> Result<()> {
 
   if session.config().check_only {
     unit.check();
-    info!("{} without any problems", "Checked".underline().bold())
+    info!("{} without any problems", "Checked".underline().bold());
   } else {
     unit.build()?;
   }
