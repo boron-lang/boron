@@ -1,11 +1,11 @@
-use boron_session::term_style;
+use clap::builder::styling::{AnsiColor, Effects};
 use clap::builder::Styles;
 
 pub const CLAP_STYLING: Styles = Styles::styled()
-  .header(term_style::HEADER)
-  .usage(term_style::USAGE)
-  .literal(term_style::LITERAL)
-  .placeholder(term_style::PLACEHOLDER)
-  .error(term_style::ERROR)
-  .valid(term_style::VALID)
-  .invalid(term_style::INVALID);
+  .header(AnsiColor::Green.on_default().effects(Effects::BOLD))
+  .usage(AnsiColor::Green.on_default().effects(Effects::BOLD))
+  .literal(AnsiColor::Cyan.on_default().effects(Effects::BOLD))
+  .placeholder(AnsiColor::Cyan.on_default())
+  .error(AnsiColor::Red.on_default().effects(Effects::BOLD))
+  .valid(AnsiColor::Cyan.on_default().effects(Effects::BOLD))
+  .invalid(AnsiColor::Yellow.on_default().effects(Effects::BOLD));

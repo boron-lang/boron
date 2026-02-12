@@ -5,7 +5,6 @@ mod module_graph;
 mod path;
 pub mod project_config;
 mod session;
-pub mod term_style;
 
 pub mod prelude {
   pub use crate::{path::*, project_config::*, session::*};
@@ -14,8 +13,6 @@ pub mod prelude {
   pub use log::{debug, error, info, warn};
   pub use parking_lot::*;
   pub use rayon::prelude::*;
-
-  pub use crate::term_style::*;
 
   pub use crate::enums::lib_type::*;
   pub use crate::enums::mode::*;

@@ -312,7 +312,6 @@ dependencies = [
 name = "boron_session"
 version = "0.1.0"
 dependencies = [
- "anstyle",
  "anyhow",
  "boron_diagnostics",
  "boron_source",

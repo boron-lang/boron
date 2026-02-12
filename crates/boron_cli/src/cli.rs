@@ -1,7 +1,7 @@
 use crate::CLAP_STYLING;
 use boron_session::dependency::Dependency;
+use boron_session::enums;
 use boron_session::project_config::ProjectConfig;
-use boron_session::{enums, term_style};
 use boron_target::target::Linker;
 use clap::{Parser, ValueEnum};
 use std::env::current_dir;
@@ -215,6 +215,3 @@ impl TryFrom<Cli> for ProjectConfig {
 
 use boron_diagnostics::prelude::DiagnosticOutputType;
 use boron_session::prelude::canonicalize_with_strip;
-pub use term_style::{
-  ERROR, GOOD, HEADER, INVALID, LITERAL, NOP, NOTE, PLACEHOLDER, USAGE, VALID, WARN,
-};
