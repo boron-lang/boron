@@ -1,5 +1,5 @@
-use crate::parser::errors::{ExpectedParenToOpenList, ExternNoBody, FunctionCamelCase};
 use crate::parser::Parser;
+use crate::parser::errors::{ExpectedParenToOpenList, ExternNoBody, FunctionCamelCase};
 use crate::{
   FunctionItem, FunctionModifiers, NeverType, NodeId, TokenType, Type, UnitType,
 };
@@ -54,7 +54,7 @@ impl Parser<'_> {
     if let Some(body) = &body
       && modifiers.external.is_some()
     {
-      self.emit(ExternNoBody { span: body.span })
+      self.emit(ExternNoBody { span: body.span });
     }
 
     Some(FunctionItem {

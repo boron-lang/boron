@@ -92,7 +92,7 @@ impl Session {
 
   pub fn create_obj_dir(&self) {
     if let Err(err) = fs_err::create_dir_all(self.obj_dir()) {
-      self.dcx.error(format!("Couldn't create obj director: {}", err));
+      self.dcx.error(format!("Couldn't create obj director: {err}"));
     }
   }
 

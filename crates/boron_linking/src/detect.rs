@@ -1,6 +1,6 @@
 use crate::linker::{Linker, LinkerKind};
 use crate::linkers::linker_tool;
-use anyhow::{anyhow, Context as _, Result};
+use anyhow::{Context as _, Result, anyhow};
 use boron_session::prelude::Session;
 use boron_target::target::Os;
 use log::debug;
@@ -11,14 +11,14 @@ pub fn detect_linker(sess: &Session) -> Result<Linker> {
 
   let linker_kinds = linker_kinds_for_os(sess.target().os);
 
-  for kind in linker_kinds {
+  if let Some(kind) = linker_kinds.into_iter().next() {
     return match resolve_from_kind(kind.clone(), sess) {
       Ok(linker) => {
         debug!("Successfully detected {} linker", linker.kind().name());
         Ok(linker)
       }
       Err(e) => Err(anyhow!("Failed to resolve {kind} linker: {e}")),
-    }
+    };
   }
 
   Err(anyhow!("No suitable linker found"))

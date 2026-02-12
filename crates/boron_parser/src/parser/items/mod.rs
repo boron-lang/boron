@@ -11,7 +11,7 @@ use crate::{
 };
 use boron_session::prelude::debug;
 use boron_source::prelude::Span;
-use boron_target::abi::ABI;
+use boron_target::abi::Abi;
 
 mod functions;
 mod import;
@@ -175,7 +175,7 @@ impl Parser<'_> {
     FunctionModifiers { comptime, external }
   }
 
-  fn parse_extern_abi(&mut self) -> Option<ABI> {
+  fn parse_extern_abi(&mut self) -> Option<Abi> {
     let abi_span = self.peek().span;
     let abi = if let TokenType::StringLiteral(string) = self.peek().kind.clone() {
       self.advance();
@@ -186,7 +186,7 @@ impl Parser<'_> {
     };
 
     if let Some(abi_str) = abi {
-      let abi = ABI::parse_from_string(abi_str.clone());
+      let abi = Abi::parse_from_string(abi_str.clone());
       if abi.is_none() {
         self.emit(InvalidAbi { abi: abi_str, span: abi_span });
       }

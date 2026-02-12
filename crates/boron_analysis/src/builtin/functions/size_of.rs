@@ -1,7 +1,7 @@
+use crate::InferTy;
 use crate::expander::BuiltInExpander;
 use crate::interpreter::values::ConstValue;
-use crate::size_of::{size_of_ty, SizeOfContext};
-use crate::InferTy;
+use crate::size_of::{SizeOfContext, size_of_ty};
 
 impl BuiltInExpander<'_> {
   pub fn size_of(&self, ty: &InferTy) -> ConstValue {

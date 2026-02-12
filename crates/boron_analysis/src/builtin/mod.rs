@@ -3,9 +3,9 @@ pub mod expander;
 pub mod functions;
 pub mod results;
 
+use crate::TypeTable;
 use crate::builtin::expander::BuiltInExpander;
 use crate::results::BuiltInResults;
-use crate::TypeTable;
 use boron_hir::Hir;
 use boron_resolver::Resolver;
 use boron_session::prelude::Session;

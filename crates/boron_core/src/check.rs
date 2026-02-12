@@ -1,10 +1,7 @@
 use crate::prelude::{CompilationUnit, FILE_EXTENSION};
 use anyhow::Result;
 use anyhow::bail;
-use boron_diagnostics::DiagnosticWriter;
-use boron_session::prelude::{CompilationMode, ProjectConfig, Session, info};
-use boron_source::prelude::Sources;
-use std::sync::Arc;
+use boron_session::prelude::{Session, info};
 
 pub fn compiler_entrypoint(session: &Session) -> Result<()> {
   let file = &session.config.entrypoint;
@@ -14,7 +11,7 @@ pub fn compiler_entrypoint(session: &Session) -> Result<()> {
     if ext != FILE_EXTENSION {
       bail!(
         "Found an entry point with invalid extension: {}. It must be {}",
-        file.display().to_string(),
+        file.display(),
         FILE_EXTENSION
       );
     }

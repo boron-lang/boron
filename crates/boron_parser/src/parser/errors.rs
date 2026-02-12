@@ -491,5 +491,5 @@ pub struct InvalidAbi {
 #[code(ABI_EXTERN_NO_BODY)]
 pub struct ExternNoBody {
   #[error("in this function")]
-  pub span: Span
+  pub span: Span,
 }

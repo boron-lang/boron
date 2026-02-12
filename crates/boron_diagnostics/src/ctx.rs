@@ -1,14 +1,14 @@
-use crate::emitters::human_readable::HumanReadableEmitter;
 use crate::emitters::Emitter;
+use crate::emitters::human_readable::HumanReadableEmitter;
 use crate::output_type::DiagnosticOutputType;
 use crate::writer::DiagnosticWriter;
 use crate::{Diag, Diagnostic, DiagnosticId, DiagnosticLevel};
 use boron_source::prelude::Sources;
-use dashmap::mapref::one::{Ref, RefMut};
 use dashmap::DashMap;
+use dashmap::mapref::one::{Ref, RefMut};
 use derivative::Derivative;
 use log::debug;
-use std::io::{stderr, Write as _, Write as _};
+use std::io::{Write as _, Write as _, stderr};
 use std::sync::Arc;
 
 #[derive(Derivative)]
@@ -96,8 +96,8 @@ impl DiagnosticCtx {
     });
   }
 
-  /// Avoid using for normal diagnostics. 
-  /// This should only be used for handling results of operations like fs. 
+  /// Avoid using for normal diagnostics.
+  /// This should only be used for handling results of operations like fs.
   pub fn error(&self, msg: impl Into<String>) {
     self.emit(Diagnostic {
       id: DiagnosticId::new(),
@@ -106,7 +106,7 @@ impl DiagnosticCtx {
       emitted: false,
     });
   }
-  
+
   // actually emits the diagnostic to stderr
   fn emit_diag(&self, id: DiagnosticId, collected: &mut i32) {
     let diagnostic = {

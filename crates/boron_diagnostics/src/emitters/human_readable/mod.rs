@@ -3,14 +3,14 @@ mod label;
 mod margins;
 mod source_groups;
 
+use crate::Diag;
+use crate::emitters::Emitter;
 use crate::emitters::fmt::Fmt as _;
-use crate::emitters::human_readable::chars::{ascii, Characters};
+use crate::emitters::human_readable::chars::{Characters, ascii};
 use crate::emitters::human_readable::label::{LabelInfo, LabelKind, LineLabel};
 use crate::emitters::human_readable::margins::{MarginContext, MarginLabelContext};
 use crate::emitters::human_readable::source_groups::SourceGroup;
 use crate::emitters::show::Show;
-use crate::emitters::Emitter;
-use crate::Diag;
 use anyhow::Result;
 use boron_source::line::Line;
 use boron_source::prelude::{SourceFile, Sources, Span};

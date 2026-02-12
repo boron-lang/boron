@@ -1,6 +1,6 @@
 pub mod build;
 pub mod detect;
-pub mod linkers;
 pub mod linker;
+pub mod linkers;
 
 pub use build::LinkerBuild;

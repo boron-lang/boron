@@ -1,5 +1,5 @@
 use crate::llvm::LLVMCodegen;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use inkwell::targets::FileType;
 
 impl LLVMCodegen<'_> {

@@ -1,6 +1,6 @@
 use log::{Level, LevelFilter};
-use std::io::Write;
-use yansi::Paint;
+use std::io::Write as _;
+use yansi::Paint as _;
 
 pub fn setup_logger(verbose: bool, no_color: bool) {
   if no_color {

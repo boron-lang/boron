@@ -5,7 +5,7 @@ use crate::ast::program::{Attribute, NodeId};
 use crate::ast::statements::Block;
 use crate::ast::types::Type;
 use boron_session::prelude::{Identifier, Span};
-use boron_target::abi::ABI;
+use boron_target::abi::Abi;
 
 #[derive(Debug, Clone)]
 pub struct Item {
@@ -70,7 +70,7 @@ pub struct ConstItem {
 #[derive(Debug, Clone)]
 pub struct FunctionModifiers {
   pub comptime: bool,
-  pub external: Option<ABI>,
+  pub external: Option<Abi>,
 }
 
 impl FunctionModifiers {

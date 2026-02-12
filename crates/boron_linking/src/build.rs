@@ -1,9 +1,9 @@
 use crate::{
   detect::{detect_linker, resolve_from_kind},
   linker::{Linker, LinkerKind},
-  linkers::{linker_tool, LinkerArgStyle},
+  linkers::{LinkerArgStyle, linker_tool},
 };
-use anyhow::{bail, ensure, Context as _, Result};
+use anyhow::{Context as _, Result, bail, ensure};
 use boron_session::prelude::{LibType, PackageType, Session};
 use log::{debug, info};
 use std::{
@@ -13,7 +13,7 @@ use std::{
   process::Command,
   sync::Arc,
 };
-use yansi::Paint;
+use yansi::Paint as _;
 
 pub struct LinkerBuild<'a> {
   sess: &'a Session,
@@ -141,10 +141,10 @@ impl<'a> LinkerBuild<'a> {
     let stderr = String::from_utf8_lossy(&output.stderr);
 
     if !output.stdout.is_empty() {
-      debug!("Linker stdout: {}", stdout);
+      debug!("Linker stdout: {stdout}");
     }
     if !output.stderr.is_empty() {
-      debug!("Linker stderr: {}", stderr);
+      debug!("Linker stderr: {stderr}");
     }
 
     if !output.status.success() {
@@ -202,10 +202,10 @@ impl<'a> LinkerBuild<'a> {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
     if !output.stdout.is_empty() {
-      debug!("Library creation stdout: {}", stdout);
+      debug!("Library creation stdout: {stdout}");
     }
     if !output.stderr.is_empty() {
-      debug!("Library creation stderr: {}", stderr);
+      debug!("Library creation stderr: {stderr}");
     }
 
     if !output.status.success() {
@@ -272,7 +272,7 @@ impl<'a> LinkerBuild<'a> {
       PackageType::Binary => {
         let output_path = self.get_output_path(output_name);
         style.push_output(command, &output_path);
-        return output_path;
+        output_path
       }
     }
   }

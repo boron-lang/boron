@@ -1,11 +1,11 @@
 use anyhow::Result;
-use boron_core::prelude::{strip_same_root, Session};
+use boron_core::prelude::{Session, strip_same_root};
 use std::env::current_dir;
-use std::io::{stderr, Write};
+use std::io::{Write as _, stderr};
 use std::panic::PanicHookInfo;
 use std::path::PathBuf;
 use sysinfo::System;
-use yansi::Paint;
+use yansi::Paint as _;
 
 const SYSTEM_PATH_PATTERNS: &[&str] = &[
   "/std/",
@@ -46,7 +46,7 @@ pub fn setup_panic_handler(sess: &Session) {
     let message = extract_panic_message(info);
     let location = extract_location(info);
 
-    let _ = writeln!(buf, "");
+    let _ = writeln!(buf);
     let _ = writeln!(buf, "  {} {}", "panic:".bright_red(), message);
     print_system_info(&location, &triple, buf);
 
@@ -58,10 +58,10 @@ pub fn setup_panic_handler(sess: &Session) {
       });
       let formatted = format_backtrace_frames(frames);
 
-      let _ = write!(buf, "{}", formatted);
+      let _ = write!(buf, "{formatted}");
     }
 
-    let _ = writeln!(buf, "");
+    let _ = writeln!(buf);
     let _ = stderr().write_all(buf);
   }));
 }
@@ -70,9 +70,9 @@ fn extract_panic_message(info: &PanicHookInfo<'_>) -> String {
   info
     .payload()
     .downcast_ref::<&str>()
-    .map(|s| (*s).to_string())
+    .map(|s| (*s).to_owned())
     .or_else(|| info.payload().downcast_ref::<String>().cloned())
-    .unwrap_or_else(|| "unknown error".to_string())
+    .unwrap_or_else(|| "unknown error".to_owned())
 }
 
 fn extract_location(info: &PanicHookInfo<'_>) -> String {
@@ -87,7 +87,7 @@ fn print_system_info(location: &str, triple: &str, buf: &mut Vec<u8>) {
   let mut sys = System::new_all();
   sys.refresh_all();
 
-  let _ = writeln!(buf, "");
+  let _ = writeln!(buf);
   let _ = writeln!(
     buf,
     "  {} {}",
@@ -105,7 +105,7 @@ fn print_system_info(location: &str, triple: &str, buf: &mut Vec<u8>) {
     "please report at:".dim(),
     "https://github.com/boron-lang/boron".bright_cyan().underline()
   );
-  let _ = writeln!(buf, "");
+  let _ = writeln!(buf);
 }
 
 fn format_backtrace_frames(frames: Vec<backtrace::Frame>) -> String {
@@ -173,13 +173,12 @@ fn format_frame_symbol(symbol: &backtrace::Symbol) -> (String, bool) {
     let line = symbol.lineno().unwrap_or(0);
     let col = symbol.colno().unwrap_or(0);
 
-    let shortened_path =
-      shorten_path(file_path).unwrap_or_else(|_| file_path.to_string());
+    let shortened_path = shorten_path(file_path).unwrap_or_else(|_| file_path.to_owned());
 
     frame_text = format!(
       "{}: {}",
       frame_text,
-      format!("({}:{}:{})", shortened_path, line, col).bright_cyan()
+      format!("({shortened_path}:{line}:{col})").bright_cyan()
     );
   }
 
@@ -197,9 +196,9 @@ fn is_system_path(path: &str) -> bool {
 
 fn append_system_frames_summary(output: &mut String, count: usize, last_frame: &str) {
   if count == 1 {
-    output.push_str(&format!("  {}\n", last_frame));
+    output.push_str(&format!("  {last_frame}\n"));
   } else {
-    let collapse_msg = format!("... collapsed {} lines from system code ...", count);
+    let collapse_msg = format!("... collapsed {count} lines from system code ...");
     output.push_str(&format!("  {}\n", collapse_msg.bright_magenta().italic()));
   }
 }

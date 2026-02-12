@@ -6,7 +6,7 @@ mod structs;
 mod types;
 
 use crate::Codegen;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use boron_ir::{Ir, IrId};
 use boron_resolver::DefId;
 use boron_session::prelude::{Mode, Session};
@@ -58,7 +58,11 @@ impl Codegen for LLVMCodegen<'_> {
     };
     self
       .module
-      .run_passes(opt_level, &self.sess.target().target_machine, PassBuilderOptions::create())
+      .run_passes(
+        opt_level,
+        &self.sess.target().target_machine,
+        PassBuilderOptions::create(),
+      )
       .map_err(|s| anyhow!("Failed to run optimization passes: {s}"))?;
 
     self.output_ir()?;

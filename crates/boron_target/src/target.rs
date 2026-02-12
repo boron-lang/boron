@@ -1,8 +1,8 @@
 use crate::data_layout::DataLayout;
 use crate::primitive::PrimitiveKind;
+use inkwell::OptimizationLevel;
 use inkwell::targets::{CodeModel, InitializationConfig, RelocMode, TargetMachine};
 use inkwell::targets::{Target as LLVMTarget, TargetTriple};
-use inkwell::OptimizationLevel;
 use strum::{Display, EnumString};
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Display)]
@@ -85,7 +85,7 @@ pub struct Target {
   pub archiver: Archiver,
   pub data_layout: DataLayout,
   pub triple: TargetTriple,
-  pub target_machine: TargetMachine
+  pub target_machine: TargetMachine,
 }
 
 impl Target {
@@ -135,7 +135,16 @@ impl Target {
     let linker = Self::default_linker_for_triple(&triple);
     let archiver = Self::default_archiver_for_triple(&triple);
 
-    Self { arch, pointer_width, os, triple, data_layout, linker, archiver, target_machine }
+    Self {
+      arch,
+      os,
+      pointer_width,
+      linker,
+      archiver,
+      data_layout,
+      triple,
+      target_machine,
+    }
   }
 
   pub fn exe_suffix(&self) -> &'static str {
@@ -234,10 +243,6 @@ impl Target {
     let is_windows = triple_str.contains("windows");
     let is_msvc = triple_str.contains("msvc");
 
-    if is_windows && is_msvc {
-      Archiver::MsvcLib
-    } else {
-      Archiver::LlvmAr
-    }
+    if is_windows && is_msvc { Archiver::MsvcLib } else { Archiver::LlvmAr }
   }
 }

@@ -1,5 +1,5 @@
-use clap::builder::styling::{AnsiColor, Effects};
 use clap::builder::Styles;
+use clap::builder::styling::{AnsiColor, Effects};
 
 pub const CLAP_STYLING: Styles = Styles::styled()
   .header(AnsiColor::Green.on_default().effects(Effects::BOLD))

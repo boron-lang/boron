@@ -1,8 +1,8 @@
 use crate::primitive::PrimitiveKind;
 use crate::target::Endian;
+use inkwell::AddressSpace;
 use inkwell::context::Context;
 use inkwell::targets::{ByteOrdering, TargetData};
-use inkwell::AddressSpace;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DataLayout {

@@ -3,9 +3,9 @@ use crate::results::BuiltInResults;
 use crate::{InferTy, TypeTable};
 use boron_diagnostics::DiagnosticCtx;
 use boron_hir::{Block, Expr, ExprKind, Function, Hir, ParamKind, StmtKind};
-use boron_resolver::prelude::BuiltInKind;
 use boron_resolver::Resolver;
-use boron_session::prelude::{debug, Session};
+use boron_resolver::prelude::BuiltInKind;
+use boron_session::prelude::{Session, debug};
 
 pub struct BuiltInExpander<'a> {
   pub sess: &'a Session,
