@@ -10,3 +10,5 @@ struct Vec3 {
     y: f32,
     z: f32
 }
+
+func main() {}

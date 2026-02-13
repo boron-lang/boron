@@ -1,7 +1,7 @@
 extern "C" func malloc(size: i32) -> *mut void;
 extern "C" func free(ptr: *mut void);
 
-func testFunc(a: i32, b: i32, c: i32, d: i32) -> i32 {
+func testFunc(a: i32, b: f32, c: *const u8, d: bool) -> i32 {
     0
 };
 

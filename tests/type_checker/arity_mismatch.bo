@@ -3,6 +3,6 @@ func sum(x: i32, y: i32) -> i32 {
 }
 
 func main() {
-    //#error: function `sum` expected `2` arguments, found `1`
+    //#error: function sum expected `2` arguments, found `1`
     var value = sum(1);
 }

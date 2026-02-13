@@ -1,4 +1,4 @@
-//#error: cannot apply binary operator `+` to `<integer>` and `*const u8`
+//#error: cannot apply binary operator `+` to `i32` and `*const u8`
 const X: i32 = 10 + "10";
 //#error: cannot apply unary operator `~` to `*const u8`
 const Y: i32 = ~"10";

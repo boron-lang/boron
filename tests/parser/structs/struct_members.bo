@@ -6,3 +6,5 @@ struct Vec2 {
         Vec2 { .x, .y }
     }
 }
+
+func main() {}

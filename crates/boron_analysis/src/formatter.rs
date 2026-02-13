@@ -1,5 +1,7 @@
 use crate::ty::ArrayLength;
 use crate::{InferTy, TyChecker, TyVarKind};
+use boron_parser::PrimitiveKind;
+use boron_source::span::Span;
 use std::fmt::Write as _;
 
 impl TyChecker<'_> {
@@ -15,8 +17,10 @@ impl TyChecker<'_> {
   fn _format_into(&self, f: &mut String, ty: &InferTy) -> Result<(), std::fmt::Error> {
     match &self.infcx.resolve(ty) {
       InferTy::Var(var, _) => match self.infcx.var_kinds.get(var).map(|k| *k.value()) {
-        Some(TyVarKind::Integer) => write!(f, "<integer>")?,
-        Some(TyVarKind::Float) => write!(f, "<float>")?,
+        Some(TyVarKind::Integer) => self
+          ._format_into(f, &InferTy::Primitive(PrimitiveKind::I32, Span::default()))?,
+        Some(TyVarKind::Float) => self
+          ._format_into(f, &InferTy::Primitive(PrimitiveKind::F64, Span::default()))?,
         Some(TyVarKind::General) => {
           if let Some(subst) = self.infcx.substitution.get(var) {
             debug_assert!(
