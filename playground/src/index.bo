@@ -1,3 +1,5 @@
+mod vec;
+import * from vec;
 extern "C" func malloc(size: i32) -> *mut void;
 extern "C" func free(ptr: *mut void);
 
@@ -6,5 +8,5 @@ func testFunc(a: i32, b: f32, c: *const u8, d: bool) -> i32 {
 };
 
 func main() {
-    var x = testFunc(c = 10, b = 20, d = 50, a = 70);
+    var x = testFunc(10, b = 20, d = 50, a = 70);
 }

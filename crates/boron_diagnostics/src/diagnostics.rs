@@ -81,8 +81,11 @@ impl Label {
   }
 }
 
-#[derive(Debug, Copy, PartialEq, Eq, Clone, Hash, Default)]
+#[derive(Debug, Copy, PartialEq, Eq, Clone, Hash, Default, PartialOrd, Ord)]
 pub enum DiagnosticLevel {
+  /// This is a bug in the compiler
+  Bug,
+
   /// Error that prevents the compilation from continuing
   #[default]
   Error,
@@ -90,8 +93,7 @@ pub enum DiagnosticLevel {
   /// Warning that doesn't affect the compilation.
   Warning,
 
-  /// This is a bug in the compiler
-  Bug,
+  Help,
 }
 
 impl DiagnosticLevel {
@@ -100,6 +102,7 @@ impl DiagnosticLevel {
       Self::Error => "error",
       Self::Warning => "warn",
       Self::Bug => "bug",
+      Self::Help => "help",
     }
   }
 
@@ -108,6 +111,7 @@ impl DiagnosticLevel {
       Self::Error => Color::BrightRed,
       Self::Warning => Color::BrightYellow,
       Self::Bug => Color::Red,
+      Self::Help => Color::BrightCyan,
     }
   }
 }

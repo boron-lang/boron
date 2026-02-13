@@ -493,3 +493,13 @@ pub struct ExternNoBody {
   #[error("in this function")]
   pub span: Span,
 }
+
+#[derive(Diagnostic)]
+#[error("positional arguments can't appear after named arguments")]
+#[code(PARSE_POSITIONAL_AFTER_NAMED)]
+pub struct PositionalArgAfterNamed {
+  #[error("positional found here")]
+  pub positional: Span,
+  #[error("first named argument found here")]
+  pub named: Span,
+}

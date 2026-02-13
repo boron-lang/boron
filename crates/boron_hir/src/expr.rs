@@ -3,7 +3,7 @@ use crate::pat::Pat;
 use crate::ty::Ty;
 use boron_parser::ast::expressions::{BinaryOp, UnaryOp};
 use boron_parser::ast::types::Mutability;
-use boron_parser::{FloatSuffix, IntBase, IntSuffix};
+use boron_parser::{FloatSuffix, IntBase, IntSuffix, NodeId};
 use boron_resolver::DefId;
 use boron_session::prelude::Span;
 use boron_source::ident_table::Identifier;
@@ -12,6 +12,14 @@ use boron_source::ident_table::Identifier;
 pub struct Expr {
   pub hir_id: HirId,
   pub kind: ExprKind,
+  pub span: Span,
+}
+
+#[derive(Debug, Clone)]
+pub struct Argument {
+  pub id: HirId,
+  pub name: Option<Identifier>,
+  pub value: Expr,
   pub span: Span,
 }
 
@@ -45,7 +53,7 @@ pub enum ExprKind {
 
   Call {
     callee: Box<Expr>,
-    args: Vec<Expr>,
+    args: Vec<Argument>,
   },
 
   Comptime {

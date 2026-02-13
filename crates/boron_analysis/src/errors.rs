@@ -312,3 +312,14 @@ pub struct RefutablePatternInLocalBinding {
   #[error("in this pattern")]
   pub span: Span,
 }
+
+#[derive(Diagnostic)]
+#[error("no value passed for parameter `{param}`")]
+#[code(TYPE_CHECKER_NO_VALUE_PASSED_FOR_PARAMETER)]
+pub struct NoValuePassedForParameter {
+  #[error("in this function call")]
+  pub func_call: Span,
+  #[help_label("for this parameter")]
+  pub param_span: Span,
+  pub param: Identifier,
+}

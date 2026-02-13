@@ -288,6 +288,7 @@ dependencies = [
  "boron_source",
  "boron_target",
  "dashmap 7.0.0-rc2",
+ "indexmap",
  "stringcase",
  "strum 0.27.2",
  "unicode-normalization",

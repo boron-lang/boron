@@ -1,0 +1,8 @@
+func testFunc(a: i32, b: f32) -> i32 {
+    0
+};
+
+func main() {
+    //#error: positional arguments can't appear after named arguments
+    var x = testFunc(a = 10, 10);
+}

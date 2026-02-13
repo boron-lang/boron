@@ -1,17 +1,17 @@
 use crate::ast::expressions::*;
 use crate::ast::types::Mutability;
 use crate::lexer::IntBase as LexIntBase;
-use crate::parser::Parser;
 use crate::parser::errors::{
   DuplicateNamedArg, EmptyMatch, ExpectedExpressionFound, ExpectedFatArrow,
   ExpectedFieldName, InvalidAssignTarget, InvalidFieldInit, InvalidRepeatSyntax,
-  MissingColonInTernary, MissingInKeyword, RepeatSyntaxOnlyAtStart,
-  RepeatSyntaxRequiredValue,
+  MissingColonInTernary, MissingInKeyword, PositionalArgAfterNamed,
+  RepeatSyntaxOnlyAtStart, RepeatSyntaxRequiredValue,
 };
+use crate::parser::Parser;
 use crate::{IntBase, NodeId, Path, PathParsingContext, PathSegment, TokenType};
 use boron_session::prelude::Identifier;
 use boron_source::prelude::Span;
-use std::collections::HashMap;
+use indexmap::IndexMap;
 
 impl Parser<'_> {
   pub fn parse_expr(&mut self) -> Expr {
@@ -144,7 +144,6 @@ impl Parser<'_> {
 
     loop {
       if self.eat(TokenType::LeftParen) {
-        // Function call
         let args = self.parse_call_args();
         self.expect(TokenType::RightParen, "to close function call");
         expr = Expr::new(
@@ -848,34 +847,38 @@ impl Parser<'_> {
 
   fn parse_call_args(&mut self) -> Vec<Argument> {
     let mut args = vec![];
-    let mut named_args: HashMap<String, Span> = HashMap::new();
+    let mut named_args: IndexMap<String, Span> = IndexMap::new();
 
     while !self.check(TokenType::RightParen) && !self.is_at_end() {
       let arg_start = self.current_span();
 
-      let (name, value) = if self.is_identifier() {
-        if self.peek_ahead(1).is_some_and(|t| t.kind == TokenType::Assign) {
-          let name = self.parse_identifier();
-          self.advance(); // consume =
-          let value = self.parse_expr();
+      let (name, value) = if self.is_identifier()
+        && self.peek_ahead(1).is_some_and(|t| t.kind == TokenType::Assign)
+      {
+        let name = self.parse_identifier();
+        self.eat(TokenType::Assign);
+        let value = self.parse_expr();
 
-          let name_str = name.text();
-          if let Some(&first_span) = named_args.get(&name_str) {
-            self.emit(DuplicateNamedArg {
-              name: name_str.clone(),
-              first_span,
-              span: *name.span(),
-            });
-          } else {
-            named_args.insert(name_str, *name.span());
-          }
-
-          (Some(name), value)
+        let name_str = name.text();
+        if let Some(&first_span) = named_args.get(&name_str) {
+          self.emit(DuplicateNamedArg {
+            name: name_str.clone(),
+            first_span,
+            span: *name.span(),
+          });
         } else {
-          (None, self.parse_expr())
+          named_args.insert(name_str, *name.span());
         }
+
+        (Some(name), value)
       } else {
-        (None, self.parse_expr())
+        let expr = self.parse_expr();
+        if !named_args.is_empty() {
+          self
+            .emit(PositionalArgAfterNamed { named: named_args[0], positional: expr.span })
+        }
+
+        (None, expr)
       };
 
       args.push(Argument {

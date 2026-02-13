@@ -1,7 +1,7 @@
 use crate::panic::setup_panic_handler;
 use anyhow::Result;
-use boron_cli::Cli;
 use boron_cli::prelude::setup_logger;
+use boron_cli::Cli;
 use boron_core::prelude::*;
 use clap::Parser as _;
 use std::process::exit;

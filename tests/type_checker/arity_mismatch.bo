@@ -4,5 +4,6 @@ func sum(x: i32, y: i32) -> i32 {
 
 func main() {
     //#error: function sum expected `2` arguments, found `1`
+    //#error: no value passed for parameter `y`
     var value = sum(1);
 }

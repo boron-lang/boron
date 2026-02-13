@@ -66,7 +66,7 @@ impl<'a> BuiltInExpander<'a> {
       ExprKind::Call { callee, args } => {
         self.walk_expr(callee);
         for arg in args {
-          self.walk_expr(arg);
+          self.walk_expr(&arg.value);
         }
       }
 

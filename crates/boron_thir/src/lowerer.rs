@@ -11,7 +11,7 @@ use boron_analysis::results::BuiltInResults;
 use boron_analysis::ty::SubstitutionMap;
 use boron_analysis::{InferTy, TypeTable};
 use boron_diagnostics::DiagnosticCtx;
-use boron_hir::expr::{FieldInit as HirFieldInit, PathExpr as HirPathExpr};
+use boron_hir::expr::{Argument, FieldInit as HirFieldInit, PathExpr as HirPathExpr};
 use boron_hir::{
   Block as HirBlock, Expr as HirExpr, ExprKind as HirExprKind, Function as HirFunction,
   Hir, HirId, Literal, Local as HirLocal, MatchArm as HirMatchArm, Stmt as HirStmt,
@@ -309,7 +309,7 @@ impl<'a> ThirLowerer<'a> {
   fn lower_call(
     &mut self,
     callee: &HirExpr,
-    args: &[HirExpr],
+    args: &Vec<Argument>,
     call_hir_id: HirId,
   ) -> ExprKind {
     let callee_def_id = match &callee.kind {
@@ -317,7 +317,7 @@ impl<'a> ThirLowerer<'a> {
       _ => todo!("handle correctly"),
     };
 
-    let args = args.iter().map(|a| self.lower_expr(a)).collect();
+    let args = args.iter().map(|a| self.lower_expr(&a.value)).collect();
     let type_args = self.lower_call_type_args(call_hir_id, callee_def_id);
     ExprKind::Call { callee: callee_def_id, type_args, args }
   }

@@ -1,5 +1,6 @@
 use crate::directives::LineDirection;
 use boron_core::prelude::{Diagnostic, Sources};
+use boron_diagnostics::DiagnosticLevel;
 
 pub(crate) fn matches_directive(
   diagnostic: &Diagnostic,
@@ -25,11 +26,13 @@ pub(crate) fn matches_directive(
 }
 
 fn get_diagnostic_line(diagnostic: &Diagnostic, sources: &Sources) -> Option<usize> {
-  diagnostic.diag.labels.iter().find_map(|label| {
-    let file_id = label.file();
-    let src = sources.get(file_id)?;
-    src.get_byte_line(label.span.start).map(|(_, line_idx, _)| line_idx)
-  })
+  diagnostic.diag.labels.iter().filter(|l| l.level != DiagnosticLevel::Help).find_map(
+    |label| {
+      let file_id = label.file();
+      let src = sources.get(file_id)?;
+      src.get_byte_line(label.span.start).map(|(_, line_idx, _)| line_idx)
+    },
+  )
 }
 
 fn matches_pattern(message: &str, pattern: &str) -> bool {

@@ -36,6 +36,7 @@ clap = { version = "4.5.41", features = ["derive"] }
 lasso = { version = "0.7.3", features = ["multi-threaded"] }
 serde = { version = "1.0.219", features = ["derive"] }
 inkwell = { version = "0.8.0", features = ["llvm17-0"] }
+indexmap = "2.13.0"
 
 boron_compiler = { path = "crates/boron_compiler" }
 boron_cli = { path = "crates/boron_cli" }

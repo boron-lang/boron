@@ -1,18 +1,21 @@
 use crate::checker::TyChecker;
-use crate::errors::{ArityMismatch, FuncArgMismatch};
+use crate::errors::{ArityMismatch, FuncArgMismatch, NoValuePassedForParameter};
 use crate::table::TypeEnv;
 use crate::ty::{InferTy, SubstitutionMap, TyParam};
 use crate::unify::{Expectation, UnifyError, UnifyResult};
 use crate::TypeScheme;
+use boron_hir::expr::Argument;
 use boron_hir::{Expr, ExprKind, HirId};
 use boron_resolver::DefId;
 use boron_session::prelude::Span;
+use itertools::Itertools;
+use std::collections::HashSet;
 
 impl TyChecker<'_> {
   pub fn check_call(
     &mut self,
     callee: &Expr,
-    args: &[Expr],
+    args: &Vec<Argument>,
     env: &mut TypeEnv,
     span: Span,
     call_hir_id: HirId,
@@ -62,25 +65,57 @@ impl TyChecker<'_> {
   fn check_fn_call(
     &mut self,
     callee: &Expr,
-    args: &[Expr],
-    params: &[InferTy],
+    args: &Vec<Argument>,
+    ty_params: &[InferTy],
     env: &mut TypeEnv,
     def: DefId,
   ) {
+    let function = self.hir.get_function(def).expect("should exist");
     let def = self.resolver.get_definition(def).expect("couldn't find def");
-    if args.len() != params.len() {
+    if args.len() != ty_params.len() {
       self.dcx().emit(ArityMismatch {
         callee: format!("function {}", def.name),
         span: callee.span,
-        expected: params.len(),
+        expected: ty_params.len(),
         found: args.len(),
       });
     }
 
-    for (arg, param_ty) in args.iter().zip(params.iter()) {
-      let arg_ty = self.check_expr(arg, env, &Expectation::has_type(param_ty.clone()));
+    let mut set = HashSet::new();
+    for (arg_idx, arg) in args.iter().enumerate() {
+      let expected_ty = if let Some(name) = arg.name {
+        let param = function.params.iter().find_position(|param| {
+          let def =
+            self.resolver.get_definition(param.def_id).expect("couldn't find parameter");
 
-      self.check_arg_unification(arg, param_ty, &arg_ty);
+          def.name == name
+        });
+
+        let Some((index, p)) = param else { continue };
+        set.insert(p.def_id);
+        &ty_params[index]
+      } else {
+        let param_id = function.params[arg_idx].def_id;
+        set.insert(param_id);
+        &ty_params[arg_idx]
+      };
+
+      let arg_ty =
+        self.check_expr(&arg.value, env, &Expectation::has_type(expected_ty.clone()));
+
+      self.check_arg_unification(&arg.value, expected_ty, &arg_ty);
+    }
+
+    for param in &function.params {
+      if set.get(&param.def_id).is_none() {
+        let def = self.resolver.get_definition(param.def_id).unwrap();
+
+        self.dcx().emit(NoValuePassedForParameter {
+          param: def.name,
+          func_call: callee.span,
+          param_span: def.span,
+        })
+      }
     }
   }
 
@@ -104,12 +139,12 @@ impl TyChecker<'_> {
   fn infer_call_from_var(
     &mut self,
     callee_ty: InferTy,
-    args: &[Expr],
+    args: &Vec<Argument>,
     env: &mut TypeEnv,
     span: Span,
   ) -> InferTy {
     let arg_tys: Vec<InferTy> =
-      args.iter().map(|a| self.check_expr(a, env, &Expectation::none())).collect();
+      args.iter().map(|a| self.check_expr(&a.value, env, &Expectation::none())).collect();
 
     let ret_ty = self.infcx.fresh(span);
 

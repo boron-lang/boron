@@ -604,9 +604,8 @@ impl<'a> HumanReadableEmitter {
         } else {
           draw.underline
         };
-            
+
         let [c, tail] = if underline.is_some() {
-          #[expect(clippy::overly_complex_bool_expr)]
           if ExactSizeIterator::len(&vbar_ll.label.char_span) <= 1 || true {
             [draw.underbar, draw_underline]
           } else if ctx.line.offset() + col == vbar_ll.label.char_span.start {
@@ -783,7 +782,7 @@ impl<'a> HumanReadableEmitter {
     Ok(())
   }
 
-  fn write_helps( 
+  fn write_helps(
     &self,
     diag: &Diag,
     multi_labels_with_message: &[&LabelInfo<'a>],

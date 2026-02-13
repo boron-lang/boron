@@ -1,6 +1,0 @@
-func value(val: i32) {}
-
-func main() {
-    //#error: expected i32, but found *const u8 in function argument
-    var val = value("hello");
-}

@@ -1,6 +1,6 @@
 use crate::expr::{
-  Block, ComptimeArg, Expr, ExprKind, FieldInit, Literal, Local, MatchArm, PathExpr,
-  PathSegment, Stmt, StmtKind,
+  Argument, Block, ComptimeArg, Expr, ExprKind, FieldInit, Literal, Local, MatchArm,
+  PathExpr, PathSegment, Stmt, StmtKind,
 };
 use crate::lower::context::LoweringContext;
 use boron_parser::ast::expressions::{
@@ -115,7 +115,15 @@ impl LoweringContext<'_> {
 
       AstExprKind::Call { callee, args } => ExprKind::Call {
         callee: Box::new(self.lower_expr(callee)),
-        args: args.iter().map(|a| self.lower_expr(&a.value)).collect(),
+        args: args
+          .iter()
+          .map(|a| Argument {
+            id: self.next_hir_id(),
+            value: self.lower_expr(&a.value),
+            name: a.name,
+            span: a.span,
+          })
+          .collect(),
       },
 
       AstExprKind::Field { object, field } => {
