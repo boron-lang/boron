@@ -8,7 +8,7 @@ use boron_parser::ast::expressions::{
 };
 use boron_parser::ast::statements;
 use boron_parser::{AssignOp, IntBase, IntSuffix};
-use boron_session::prelude::{Identifier, debug};
+use boron_session::prelude::{debug, Identifier};
 use boron_source::prelude::Span;
 use expressions::Literal as AstLiteral;
 use itertools::Itertools as _;
@@ -37,9 +37,6 @@ impl LoweringContext<'_> {
             .collect_vec();
 
           ExprKind::Array(values, None)
-        } else if let AstLiteral::Byte(byte) = lit {
-          println!("{byte:#?}");
-          ExprKind::Literal(byte_literal(byte.value))
         } else {
           ExprKind::Literal(Self::lower_literal(lit))
         }
@@ -329,12 +326,7 @@ impl LoweringContext<'_> {
         Literal::Int { value: i.value.clone(), base: i.base, suffix: i.suffix }
       }
       AstLiteral::Float(f) => Literal::Float { value: f.value.clone(), suffix: f.suffix },
-      AstLiteral::Byte(b) => Literal::Int {
-        value: b.value.to_string(),
-        base: IntBase::Decimal,
-        suffix: Some(IntSuffix::U8),
-      },
-      AstLiteral::ByteString(b) => todo!("byte strings"),
+      AstLiteral::Byte(b) => byte_literal(b.value),
       AstLiteral::Bool(b) => Literal::Bool(b.value),
       AstLiteral::Char(c) => Literal::Char(c.value),
       AstLiteral::String(s) => Literal::String(s.value.clone()),

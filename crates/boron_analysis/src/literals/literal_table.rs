@@ -9,7 +9,6 @@ pub enum FullLiteral {
   Float(IeeeFloat<DoubleS>),
   Bool(bool),
   Char(char),
-  Byte(u8),
   String(String),
   Unit,
 }
