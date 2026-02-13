@@ -192,12 +192,14 @@ impl<'a> TyChecker<'a> {
 
       let result = self.unify(&body_ty, &expected_ret);
       if let UnifyResult::Err(err) = &result {
+        let body_span = if ret_span.is_dummy() { None } else { Some(ret_span) };
+
         match err {
           UnifyError::Mismatch { .. } => {
             self.dcx().emit(ReturnTypeMismatch {
               expected_span: func.return_type.span,
               expected: self.format_type(&expected_ret),
-              body_span: ret_span,
+              body_span,
               found: self.format_type(&body_ty),
             });
           }

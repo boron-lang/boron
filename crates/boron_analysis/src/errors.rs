@@ -259,7 +259,7 @@ pub struct ReturnTypeMismatch {
   pub expected_span: Span,
   pub expected: String,
   #[error("but body evaluates to `{found}`")]
-  pub body_span: Span,
+  pub body_span: Option<Span>,
   pub found: String,
 }
 

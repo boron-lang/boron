@@ -20,7 +20,7 @@ impl HumanReadableEmitter {
 
       let src_display = self.sources.display(label_source);
       let Some(src) = self.sources.get(label_source) else {
-        eprintln!("Unable to fetch source '{}'", Show(src_display));
+        eprintln!("Unable to fetch source {:?}", label_source);
         continue;
       };
 
