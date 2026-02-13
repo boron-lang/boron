@@ -25,6 +25,7 @@ pub struct Characters {
 
   pub underbar: char,
   pub underline: char,
+  pub underline_help: char
 }
 
 pub fn ascii() -> Characters {
@@ -48,5 +49,6 @@ pub fn ascii() -> Characters {
     rcross: '|',
     underbar: '|',
     underline: '^',
+    underline_help: 'ˉ'
   }
 }

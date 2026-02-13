@@ -10,7 +10,7 @@ use crate::emitters::human_readable::margins::{MarginContext, MarginLabelContext
 use crate::emitters::human_readable::source_groups::SourceGroup;
 use crate::emitters::show::Show;
 use crate::emitters::Emitter;
-use crate::Diag;
+use crate::{Diag, DiagnosticLevel};
 use anyhow::Result;
 use boron_source::line::Line;
 use boron_source::prelude::{SourceFile, Sources, Span};
@@ -535,7 +535,6 @@ impl<'a> HumanReadableEmitter {
     }
     writeln!(w)?;
 
-    // Write arrows for labels
     self.write_label_arrows(ctx, w)?;
 
     Ok(())
@@ -600,25 +599,39 @@ impl<'a> HumanReadableEmitter {
         Self::get_underline(col, ctx.line, ctx.line_labels).filter(|_| row == 0);
 
       let [c, tail] = if let Some(vbar_ll) = vbar {
+        let draw_underline = if vbar_ll.label.info.level == DiagnosticLevel::Help {
+          draw.underline_help
+        } else {
+          draw.underline
+        };
+            
         let [c, tail] = if underline.is_some() {
           #[expect(clippy::overly_complex_bool_expr)]
           if ExactSizeIterator::len(&vbar_ll.label.char_span) <= 1 || true {
-            [draw.underbar, draw.underline]
+            [draw.underbar, draw_underline]
           } else if ctx.line.offset() + col == vbar_ll.label.char_span.start {
             [draw.ltop, draw.underbar]
           } else if ctx.line.offset() + col == vbar_ll.label.last_offset() {
             [draw.rtop, draw.underbar]
           } else {
-            [draw.underbar, draw.underline]
+            [draw.underbar, draw_underline]
           }
         } else if vbar_ll.multi && row == 0 && MULTILINE_ARROWS {
           [draw.uarrow, ' ']
         } else {
           [draw.vbar, ' ']
         };
-        [c.fg(vbar_ll.label.info.color()), tail.fg(vbar_ll.label.info.color())]
+        [
+          c.fg(vbar_ll.label.info.color()).bold(),
+          tail.fg(vbar_ll.label.info.color()).bold(),
+        ]
       } else if let Some(underline_ll) = underline {
-        [draw.underline.fg(underline_ll.label.info.color()); 2]
+        let draw_underline = if underline_ll.label.info.level == DiagnosticLevel::Help {
+          draw.underline_help
+        } else {
+          draw.underline
+        };
+        [draw_underline.fg(underline_ll.label.info.color()).bold(); 2]
       } else {
         [' '.fg(None); 2]
       };
@@ -657,17 +670,18 @@ impl<'a> HumanReadableEmitter {
       .expect("line text should exist")
       .trim_end()
       .chars();
+    let label_msg = &line_label.label.info.message;
+    let label_color = line_label.label.info.color();
+
     for col in 0..arrow_len {
       let width = chars.next().map_or(1, |c| Self::char_width(c, col).1);
 
       let is_hbar = (((col > line_label.col) ^ line_label.multi)
-        || (line_label.label.info.message.is_some()
-          && line_label.draw_msg
-          && col > line_label.col))
-        && line_label.label.info.message.is_some();
+        || (label_msg.is_some() && line_label.draw_msg && col > line_label.col))
+        && label_msg.is_some();
 
       let [c, tail] = if col == line_label.col
-        && line_label.label.info.message.is_some()
+        && label_msg.is_some()
         && ctx
           .margin_label
           .as_ref()
@@ -679,29 +693,28 @@ impl<'a> HumanReadableEmitter {
           } else {
             draw.lbot
           }
-          .fg(line_label.label.info.color()),
-          draw.hbar.fg(line_label.label.info.color()),
+          .fg(label_color)
+          .bold(),
+          draw.hbar.fg(label_color).bold(),
         ]
       } else if let Some(vbar_ll) =
         Self::get_vbar(col, row, ctx.line_labels, ctx.margin_label)
-          .filter(|_| col != line_label.col || line_label.label.info.message.is_some())
+          .filter(|_| col != line_label.col || label_msg.is_some())
       {
         if !CROSS_GAPS && is_hbar {
-          [
-            draw.xbar.fg(line_label.label.info.color()),
-            ' '.fg(line_label.label.info.color()),
-          ]
+          [draw.xbar.fg(label_color).bold(), ' '.fg(label_color).bold()]
         } else if is_hbar {
-          [draw.hbar.fg(line_label.label.info.color()); 2]
+          [draw.hbar.fg(label_color); 2]
         } else {
           [
             if vbar_ll.multi && row == 0 { draw.uarrow } else { draw.vbar }
-              .fg(vbar_ll.label.info.color()),
-            ' '.fg(line_label.label.info.color()),
+              .fg(vbar_ll.label.info.color())
+              .bold(),
+            ' '.fg(label_color),
           ]
         }
       } else if is_hbar {
-        [draw.hbar.fg(line_label.label.info.color()); 2]
+        [draw.hbar.fg(label_color).bold(); 2]
       } else {
         [' '.fg(None); 2]
       };
@@ -718,9 +731,7 @@ impl<'a> HumanReadableEmitter {
       write!(
         w,
         " {}",
-        Show(line_label.label.info.message.as_ref())
-          .bold()
-          .fg(line_label.label.info.color())
+        Show(label_msg.as_ref()).bold().fg(line_label.label.info.color())
       )?;
     }
     writeln!(w)?;
@@ -772,7 +783,7 @@ impl<'a> HumanReadableEmitter {
     Ok(())
   }
 
-  fn write_helps(
+  fn write_helps( 
     &self,
     diag: &Diag,
     multi_labels_with_message: &[&LabelInfo<'a>],

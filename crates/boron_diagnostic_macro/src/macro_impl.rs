@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use quote::quote;
 use std::collections::{BTreeSet, HashMap};
-use syn::{DeriveInput, Expr, parse_macro_input, spanned::Spanned};
+use syn::{parse_macro_input, spanned::Spanned, DeriveInput, Expr};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -15,7 +15,7 @@ pub enum MacroFunctionError {
 }
 
 const VALID_SEVERITIES: &[&str] = &["help", "warning", "error", "bug", "note"];
-const VALID_LABEL_SEVERITIES: &[&str] = &["error", "warning", "help"];
+const VALID_LABEL_SEVERITIES: &[&str] = &["error", "warning", "help_label"];
 
 fn is_span_type(ty: &syn::Type) -> bool {
   match ty {
@@ -279,6 +279,7 @@ fn get_diagnostic_level(severity: &str) -> proc_macro2::TokenStream {
     "error" => quote! { boron_diagnostics::DiagnosticLevel::Error },
     "warning" => quote! { boron_diagnostics::DiagnosticLevel::Warning },
     "bug" => quote! { boron_diagnostics::DiagnosticLevel::Bug },
+    "help_label" => quote! { boron_diagnostics::DiagnosticLevel::Help },
     _ => quote! { boron_diagnostics::DiagnosticLevel::Error },
   }
 }
@@ -410,12 +411,6 @@ fn impl_diagnostic_derive(ast: &DeriveInput) -> Result<TokenStream, MacroFunctio
     main_message_used_fields.push(*ident);
   }
 
-  // Fields with #[note] attribute
-  let note_fields = get_note_fields(fields);
-
-  // Fields with #[help] attribute
-  let help_fields = get_help_fields(fields);
-
   let label_fields: Vec<_> = fields
     .named
     .iter()
@@ -449,6 +444,12 @@ fn impl_diagnostic_derive(ast: &DeriveInput) -> Result<TokenStream, MacroFunctio
       Some((field_ident.clone(), message, severity, is_vec_span))
     })
     .collect();
+
+  // Fields with #[note] attribute
+  let note_fields = get_note_fields(fields);
+
+  // Fields with #[help] attribute
+  let help_fields = get_help_fields(fields);
 
   let main_message_field_refs = main_message_used_fields.iter().map(|&ident| {
     quote! { let #ident = &self.#ident; }
