@@ -33,6 +33,9 @@ impl Lexer<'_> {
           lexeme.push(ch);
           self.advance();
         }
+        '_' => {
+          self.advance();
+        }
         _ if ch.is_ascii_alphanumeric() => {
           let span = self.make_char_span();
           return Err(LexError::new(
@@ -57,23 +60,23 @@ impl Lexer<'_> {
     Ok(Token::new(TokenType::IntegerLiteral(IntBase::Binary, digits), span, lexeme))
   }
 
-  /// Lex octal integer (0o...)
   fn lex_octal(&mut self) -> LexResult<Token> {
     let start_offset = self.offset;
     let mut lexeme = String::new();
 
-    // Consume '0o' or '0O'
     lexeme.push(self.advance().unwrap());
     lexeme.push(self.advance().unwrap());
 
     let mut digits = String::new();
 
-    // Read octal digits
     while let Some(ch) = self.peek() {
       match ch {
         '0'..='7' => {
           digits.push(ch);
           lexeme.push(ch);
+          self.advance();
+        }
+        '_' => {
           self.advance();
         }
         _ if ch.is_ascii_alphanumeric() => {
@@ -100,12 +103,10 @@ impl Lexer<'_> {
     Ok(Token::new(TokenType::IntegerLiteral(IntBase::Octal, digits), span, lexeme))
   }
 
-  /// Lex hexadecimal integer (0x...)
   fn lex_hexadecimal(&mut self) -> LexResult<Token> {
     let start_offset = self.offset;
     let mut lexeme = String::new();
 
-    // Consume '0x' or '0X'
     lexeme.push(self.advance().unwrap());
     lexeme.push(self.advance().unwrap());
 
@@ -115,6 +116,8 @@ impl Lexer<'_> {
       if ch.is_ascii_hexdigit() {
         digits.push(ch);
         lexeme.push(ch);
+        self.advance();
+      } else if ch == '_' {
         self.advance();
       } else if ch.is_ascii_alphanumeric() {
         let span = self.make_char_span();
@@ -149,6 +152,8 @@ impl Lexer<'_> {
     while let Some(ch) = self.peek() {
       if ch.is_ascii_digit() {
         lexeme.push(ch);
+        self.advance();
+      } else if ch == '_' {
         self.advance();
       } else {
         break;

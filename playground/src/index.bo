@@ -2,7 +2,7 @@ extern "C" func malloc(size: i32) -> *mut void;
 extern "C" func free(ptr: *mut void);
 
 func main() {
-    var x = malloc(0);
+    var x = malloc(10);
 
     free(x);
 }
