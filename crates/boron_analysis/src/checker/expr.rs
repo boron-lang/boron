@@ -10,8 +10,8 @@ use crate::ty::{ArrayLength, InferTy};
 use crate::unify::{Expectation, UnifyError, UnifyResult};
 use boron_hir::expr::ComptimeArg;
 use boron_hir::{Expr, ExprKind, Literal};
-use boron_parser::Mutability;
 use boron_parser::ast::types::PrimitiveKind;
+use boron_parser::{BinaryOp, Mutability};
 use boron_session::prelude::{Span, warn};
 
 impl TyChecker<'_> {
@@ -37,22 +37,94 @@ impl TyChecker<'_> {
       ExprKind::Binary { op, lhs, rhs } => {
         let lhs_ty = self.check_expr(lhs, env, &Expectation::none());
         let rhs_ty = self.check_expr(rhs, env, &Expectation::none());
-        let result = self.unify(&lhs_ty, &rhs_ty);
+        let lhs_resolved = self.infcx.resolve(&lhs_ty);
+        let rhs_resolved = self.infcx.resolve(&rhs_ty);
 
-        if let UnifyResult::Err(err) = &result
-          && let UnifyError::Mismatch { .. } = err
-        {
+        let invalid = || {
           self.dcx().emit(InvalidBinaryOp {
             op: op.to_string(),
-            lhs: self.format_type(&lhs_ty),
-            rhs: self.format_type(&rhs_ty),
+            lhs: self.format_type(&lhs_resolved),
+            rhs: self.format_type(&rhs_resolved),
             span: expr.span,
           });
-        } else {
-          self.handle_unify_result(result, expr.span);
-        }
+          InferTy::Err(expr.span)
+        };
 
-        lhs_ty
+        match op {
+          BinaryOp::Eq
+          | BinaryOp::Ne
+          | BinaryOp::Lt
+          | BinaryOp::Le
+          | BinaryOp::Gt
+          | BinaryOp::Ge => {
+            let result = self.unify(&lhs_ty, &rhs_ty);
+
+            if let UnifyResult::Err(err) = &result
+              && let UnifyError::Mismatch { .. } = err
+            {
+              invalid()
+            } else {
+              self.handle_unify_result(result, expr.span);
+              InferTy::Primitive(PrimitiveKind::Bool, expr.span)
+            }
+          }
+
+          BinaryOp::And | BinaryOp::Or => {
+            let expected = InferTy::Primitive(PrimitiveKind::Bool, expr.span);
+            let left = self.unify(&lhs_ty, &expected);
+            let right = self.unify(&rhs_ty, &expected);
+
+            if matches!(left, UnifyResult::Err(UnifyError::Mismatch { .. }))
+              || matches!(right, UnifyResult::Err(UnifyError::Mismatch { .. }))
+            {
+              invalid()
+            } else {
+              self.handle_unify_result(left, expr.span);
+              self.handle_unify_result(right, expr.span);
+              expected
+            }
+          }
+
+          BinaryOp::BitAnd
+          | BinaryOp::BitOr
+          | BinaryOp::BitXor
+          | BinaryOp::Shl
+          | BinaryOp::Shr => {
+            if !self.is_int(&lhs_resolved) || !self.is_int(&rhs_resolved) {
+              invalid()
+            } else {
+              let result = self.unify(&lhs_ty, &rhs_ty);
+              if let UnifyResult::Err(err) = &result
+                && let UnifyError::Mismatch { .. } = err
+              {
+                invalid()
+              } else {
+                self.handle_unify_result(result, expr.span);
+                lhs_ty
+              }
+            }
+          }
+
+          BinaryOp::Add
+          | BinaryOp::Sub
+          | BinaryOp::Mul
+          | BinaryOp::Div
+          | BinaryOp::Mod => {
+            if !self.is_numeric(&lhs_resolved) || !self.is_numeric(&rhs_resolved) {
+              invalid()
+            } else {
+              let result = self.unify(&lhs_ty, &rhs_ty);
+              if let UnifyResult::Err(err) = &result
+                && let UnifyError::Mismatch { .. } = err
+              {
+                invalid()
+              } else {
+                self.handle_unify_result(result, expr.span);
+                lhs_ty
+              }
+            }
+          }
+        }
       }
 
       ExprKind::Unary { op, operand } => self.check_unary(env, expr, op, operand),
@@ -67,6 +139,7 @@ impl TyChecker<'_> {
           env,
           &Expectation::has_type(InferTy::Primitive(PrimitiveKind::Bool, condition.span)),
         );
+
         let cond_result =
           self.unify(&cond_ty, &InferTy::Primitive(PrimitiveKind::Bool, condition.span));
         self.handle_unify_result(cond_result, condition.span);

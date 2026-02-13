@@ -1,12 +1,10 @@
 mod vec;
 import * from vec;
-extern "C" func malloc(size: i32) -> *mut void;
-extern "C" func free(ptr: *mut void);
 
-func testFunc(a: i32, b: f32, c: *const u8, d: bool) -> i32 {
-    0
-};
+extern "C" func puts(text: *const u8);
 
 func main() {
-    var x = testFunc(10, b = 20, d = 50, a = 70);
+    if 10 + 10 == 20 {
+        puts("true");
+    }
 }
