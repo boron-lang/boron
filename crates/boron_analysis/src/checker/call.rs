@@ -3,7 +3,9 @@ use crate::errors::{ArityMismatch, FuncArgMismatch};
 use crate::table::TypeEnv;
 use crate::ty::{InferTy, SubstitutionMap, TyParam};
 use crate::unify::{Expectation, UnifyError, UnifyResult};
+use crate::TypeScheme;
 use boron_hir::{Expr, ExprKind, HirId};
+use boron_resolver::DefId;
 use boron_session::prelude::Span;
 
 impl TyChecker<'_> {
@@ -15,110 +17,173 @@ impl TyChecker<'_> {
     span: Span,
     call_hir_id: HirId,
   ) -> InferTy {
-    let (callee_def_id, explicit_type_args) = match &callee.kind {
-      ExprKind::Path(path) => {
-        let args: Vec<InferTy> = path
-          .segments
-          .iter()
-          .flat_map(|seg| seg.args.iter())
-          .map(|ty| self.lower_hir_ty(ty))
-          .collect();
-        (Some(path.def_id), args)
-      }
-      _ => (None, vec![]),
-    };
+    let (callee_def_id, explicit_type_args) = self.resolve_callee_metadata(callee);
+    let Some(def_id) = callee_def_id else { panic!() };
 
     let callee_ty = self.check_expr(callee, env, &Expectation::none());
     let resolved = self.infcx.resolve(&callee_ty);
 
     match resolved {
-      InferTy::Fn { params, ret, span: _fn_span } => {
-        let def = self.resolver.get_definition(callee_def_id.unwrap()).unwrap();
+      InferTy::Fn { params, ret, .. } => {
+        self.check_fn_call(callee, args, &params, env, def_id);
 
-        if args.len() != params.len() {
-          self.dcx().emit(ArityMismatch {
-            callee: format!("function `{}`", def.name),
-            span: callee.span,
-            expected: params.len(),
-            found: args.len(),
-          });
-        }
-        for (arg, param_ty) in args.iter().zip(params.iter()) {
-          let arg_ty =
-            self.check_expr(arg, env, &Expectation::has_type(param_ty.clone()));
-          let result = self.unify(param_ty, &arg_ty);
-
-          if let UnifyResult::Err(err) = &result {
-            match err {
-              UnifyError::Mismatch { .. } => {
-                self.dcx().emit(FuncArgMismatch {
-                  span: arg.span,
-                  expected: self.format_type(param_ty),
-                  found: self.format_type(&arg_ty),
-                });
-              }
-              _ => self.handle_unify_result(result, arg.span),
-            }
-          }
-        }
-
-        if let Some(def_id) = callee_def_id {
-          if let Some(scheme) = self.table.def_type(def_id) {
-            let mut subst = SubstitutionMap::new();
-            if !scheme.vars.is_empty() {
-              if !explicit_type_args.is_empty()
-                && explicit_type_args.len() == scheme.vars.len()
-              {
-                for (var, arg) in scheme.vars.iter().zip(explicit_type_args.iter()) {
-                  subst.add(*var, self.infcx.resolve(arg));
-                }
-              } else if let InferTy::Fn { params: inst_params, ret: inst_ret, .. } =
-                &callee_ty
-              {
-                if let InferTy::Fn { params: scheme_params, ret: scheme_ret, .. } =
-                  &scheme.ty
-                {
-                  for (scheme_param, inst_param) in
-                    scheme_params.iter().zip(inst_params.iter())
-                  {
-                    Self::collect_param_substitutions(
-                      scheme_param,
-                      &self.infcx.resolve(inst_param),
-                      &scheme.vars,
-                      &mut subst,
-                    );
-                  }
-                  Self::collect_param_substitutions(
-                    scheme_ret,
-                    &self.infcx.resolve(inst_ret),
-                    &scheme.vars,
-                    &mut subst,
-                  );
-                }
-              }
-              self.table.record_monomorphization(def_id, subst.clone());
-            }
-
-            self.table.record_expr_monomorphization(call_hir_id, def_id, subst);
-          }
-        }
+        self.handle_monomorphization(
+          callee_def_id,
+          &callee_ty,
+          &explicit_type_args,
+          call_hir_id,
+        );
 
         *ret
       }
-      InferTy::Var(_, _var_span) => {
-        let arg_tys: Vec<InferTy> =
-          args.iter().map(|a| self.check_expr(a, env, &Expectation::none())).collect();
-        let ret_ty = self.infcx.fresh(span);
-        let expected_fn =
-          InferTy::Fn { params: arg_tys, ret: Box::new(ret_ty.clone()), span };
-        let result = self.unify(&callee_ty, &expected_fn);
-        self.handle_unify_result(result, span);
-        ret_ty
+
+      InferTy::Var(_, _) => self.infer_call_from_var(callee_ty, args, env, span),
+
+      _ => InferTy::Err(span),
+    }
+  }
+
+  fn resolve_callee_metadata(&mut self, callee: &Expr) -> (Option<DefId>, Vec<InferTy>) {
+    match &callee.kind {
+      ExprKind::Path(path) => {
+        let args = path
+          .segments
+          .iter()
+          .flat_map(|seg| seg.args.iter())
+          .map(|ty| self.lower_hir_ty(ty))
+          .collect();
+
+        (Some(path.def_id), args)
       }
-      _ => {
-        // TODO: Report error - not callable
-        InferTy::Err(span)
+      _ => (None, vec![]),
+    }
+  }
+
+  fn check_fn_call(
+    &mut self,
+    callee: &Expr,
+    args: &[Expr],
+    params: &[InferTy],
+    env: &mut TypeEnv,
+    def: DefId,
+  ) {
+    let def = self.resolver.get_definition(def).expect("couldn't find def");
+    if args.len() != params.len() {
+      self.dcx().emit(ArityMismatch {
+        callee: format!("function {}", def.name),
+        span: callee.span,
+        expected: params.len(),
+        found: args.len(),
+      });
+    }
+
+    for (arg, param_ty) in args.iter().zip(params.iter()) {
+      let arg_ty = self.check_expr(arg, env, &Expectation::has_type(param_ty.clone()));
+
+      self.check_arg_unification(arg, param_ty, &arg_ty);
+    }
+  }
+
+  fn check_arg_unification(&mut self, arg: &Expr, expected: &InferTy, found: &InferTy) {
+    let result = self.unify(expected, found);
+
+    if let UnifyResult::Err(err) = &result {
+      match err {
+        UnifyError::Mismatch { .. } => {
+          self.dcx().emit(FuncArgMismatch {
+            span: arg.span,
+            expected: self.format_type(expected),
+            found: self.format_type(found),
+          });
+        }
+        _ => self.handle_unify_result(result, arg.span),
       }
+    }
+  }
+
+  fn infer_call_from_var(
+    &mut self,
+    callee_ty: InferTy,
+    args: &[Expr],
+    env: &mut TypeEnv,
+    span: Span,
+  ) -> InferTy {
+    let arg_tys: Vec<InferTy> =
+      args.iter().map(|a| self.check_expr(a, env, &Expectation::none())).collect();
+
+    let ret_ty = self.infcx.fresh(span);
+
+    let expected_fn =
+      InferTy::Fn { params: arg_tys, ret: Box::new(ret_ty.clone()), span };
+
+    let result = self.unify(&callee_ty, &expected_fn);
+    self.handle_unify_result(result, span);
+
+    ret_ty
+  }
+
+  fn handle_monomorphization(
+    &mut self,
+    callee_def_id: Option<DefId>,
+    callee_ty: &InferTy,
+    explicit_type_args: &[InferTy],
+    call_hir_id: HirId,
+  ) {
+    let Some(def_id) = callee_def_id else { return };
+    let Some(scheme) = self.table.def_type(def_id) else { return };
+
+    let mut subst = SubstitutionMap::new();
+
+    if !scheme.vars.is_empty() {
+      if self.apply_explicit_type_args(&scheme, explicit_type_args, &mut subst) {
+      } else {
+        self.infer_substitutions_from_instantiation(&scheme, callee_ty, &mut subst);
+      }
+
+      self.table.record_monomorphization(def_id, subst.clone());
+    }
+
+    self.table.record_expr_monomorphization(call_hir_id, def_id, subst);
+  }
+
+  fn apply_explicit_type_args(
+    &mut self,
+    scheme: &TypeScheme,
+    explicit: &[InferTy],
+    subst: &mut SubstitutionMap,
+  ) -> bool {
+    if explicit.len() != scheme.vars.len() {
+      return false;
+    }
+
+    for (var, arg) in scheme.vars.iter().zip(explicit.iter()) {
+      subst.add(*var, self.infcx.resolve(arg));
+    }
+
+    true
+  }
+
+  fn infer_substitutions_from_instantiation(
+    &mut self,
+    scheme: &TypeScheme,
+    callee_ty: &InferTy,
+    subst: &mut SubstitutionMap,
+  ) {
+    if let (
+      InferTy::Fn { params: inst_params, ret: inst_ret, .. },
+      InferTy::Fn { params: scheme_params, ret: scheme_ret, .. },
+    ) = (callee_ty, &scheme.ty)
+    {
+      for (s, r) in scheme_params.iter().zip(inst_params.iter()) {
+        Self::collect_param_substitutions(s, &self.infcx.resolve(r), &scheme.vars, subst);
+      }
+
+      Self::collect_param_substitutions(
+        scheme_ret,
+        &self.infcx.resolve(inst_ret),
+        &scheme.vars,
+        subst,
+      );
     }
   }
 

@@ -1,8 +1,10 @@
 extern "C" func malloc(size: i32) -> *mut void;
 extern "C" func free(ptr: *mut void);
 
-func main() {
-    var x = malloc(10);
+func testFunc(a: i32, b: i32, c: i32, d: i32) -> i32 {
+    0
+};
 
-    free(x);
+func main() {
+    var x = testFunc(c = 10, b = 20, d = 50, a = 70);
 }
