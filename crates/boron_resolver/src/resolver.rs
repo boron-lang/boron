@@ -33,6 +33,10 @@ pub struct Resolver {
   pub inline_module_exports_values: DashMap<DefId, DashMap<Identifier, DefId>>,
   /// Per-DefId exported symbols for inline modules
   pub inline_module_exports_types: DashMap<DefId, DashMap<Identifier, DefId>>,
+  /// Associated items (static methods) for structs
+  pub struct_members: DashMap<DefId, DashMap<Identifier, DefId>>,
+  /// Associated items for enums
+  pub enum_members: DashMap<DefId, DashMap<Identifier, DefId>>,
   module_ribs: DashMap<SourceFileId, RwLock<(ScopeId, Rib)>>,
   pub comptime_using_builtins: DashMap<NodeId, BuiltInKind>,
 }
@@ -48,6 +52,8 @@ impl Resolver {
       module_exports_types: DashMap::new(),
       inline_module_exports_values: DashMap::new(),
       inline_module_exports_types: DashMap::new(),
+      struct_members: DashMap::new(),
+      enum_members: DashMap::new(),
       path_to_files: DashMap::new(),
       module_ribs: DashMap::new(),
       comptime_using_builtins: DashMap::new(),
@@ -182,6 +188,32 @@ impl Resolver {
   ) -> Option<DefId> {
     let exports = self.inline_module_exports_types.get(&module_def)?;
     exports.get(name).map(|r| *r)
+  }
+
+  pub fn add_struct_member(&self, struct_def: DefId, name: Identifier, def_id: DefId) {
+    self
+      .struct_members
+      .entry(struct_def)
+      .or_insert_with(DashMap::new)
+      .insert(name, def_id);
+  }
+
+  pub fn lookup_struct_member(
+    &self,
+    struct_def: DefId,
+    name: &Identifier,
+  ) -> Option<DefId> {
+    let members = self.struct_members.get(&struct_def)?;
+    members.get(name).map(|r| *r)
+  }
+
+  pub fn add_enum_member(&self, enum_def: DefId, name: Identifier, def_id: DefId) {
+    self.enum_members.entry(enum_def).or_insert_with(DashMap::new).insert(name, def_id);
+  }
+
+  pub fn lookup_enum_member(&self, enum_def: DefId, name: &Identifier) -> Option<DefId> {
+    let members = self.enum_members.get(&enum_def)?;
+    members.get(name).map(|r| *r)
   }
 
   pub fn lookup_file_for_path(&self, path: &Path) -> Option<SourceFileId> {

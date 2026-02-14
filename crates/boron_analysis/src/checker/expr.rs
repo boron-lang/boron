@@ -1,4 +1,4 @@
-use crate::builtins::{BuiltInParam, get_builtin};
+use crate::builtins::{get_builtin, BuiltInParam};
 use crate::checker::TyChecker;
 use crate::errors::{
   ArityMismatch, AssignTypeMismatch, FuncArgMismatch, IndexTypeMismatch, InvalidBinaryOp,
@@ -12,7 +12,7 @@ use boron_hir::expr::ComptimeArg;
 use boron_hir::{Expr, ExprKind, Literal};
 use boron_parser::ast::types::PrimitiveKind;
 use boron_parser::{BinaryOp, Mutability};
-use boron_session::prelude::{Span, warn};
+use boron_session::prelude::{warn, Span};
 
 impl TyChecker<'_> {
   pub(crate) fn check_expr(

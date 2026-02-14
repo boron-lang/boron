@@ -88,3 +88,14 @@ pub struct InvalidPathRoot {
   #[error("not allowed here")]
   pub span: Span,
 }
+
+#[derive(Diagnostic)]
+#[error("no method `{method}` found on {kind} `{name}`")]
+#[code(RESOLVE_NO_METHOD_FOUND)]
+pub struct NoMethodFound {
+  pub method: Identifier,
+  pub kind: String,
+  pub name: String,
+  #[error("in this method call")]
+  pub span: Span,
+}

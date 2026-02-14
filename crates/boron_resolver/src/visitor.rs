@@ -1,14 +1,11 @@
-use crate::DefId;
 use crate::builtin_kind::BuiltInKind;
 use crate::def::{DefKind, Definition};
-use crate::errors::{
-  DuplicateDefinition, InvalidPathRoot, PrivateItem, UndefinedName, UndefinedNameInModule,
-};
+use crate::errors::{DuplicateDefinition, InvalidPathRoot, NoMethodFound, PrivateItem, UndefinedName, UndefinedNameInModule};
 use crate::module_resolver::ModuleResolver;
 use crate::resolver::Resolver;
 use crate::scope::ScopeKind;
 use crate::symbol::{Symbol, SymbolKind};
-use boron_parser::ast::ProgramNode;
+use crate::DefId;
 use boron_parser::ast::expressions::{Expr, ExprKind};
 use boron_parser::ast::items::{
   ConstItem, EnumItem, FunctionItem, Item, ItemKind, ModItem, StructItem, Visibility,
@@ -16,12 +13,13 @@ use boron_parser::ast::items::{
 use boron_parser::ast::params::Param;
 use boron_parser::ast::statements::{Block, Statement};
 use boron_parser::ast::types::Type;
+use boron_parser::ast::ProgramNode;
 use boron_parser::module::Modules;
 use boron_parser::{
   ComptimeArg, ElseBranch, GenericParams, IfExpr, NodeId, Path, Pattern, PatternKind,
   StructMember, VariantField, VariantPayload,
 };
-use boron_session::prelude::{Identifier, Session, get_or_intern};
+use boron_session::prelude::{get_or_intern, Identifier, Session};
 use boron_source::prelude::{SourceFileId, Span};
 
 #[derive(Clone, Debug, Copy, Hash, PartialEq, Eq)]
@@ -186,11 +184,29 @@ impl<'a> ResolveVisitor<'a> {
   }
 
   fn define_struct(&mut self, s: &StructItem, vis: Visibility) {
-    self.define_item(s.name, s.id, DefKind::Struct, *s.name.span(), vis, Namespace::Type);
+    let struct_def_id = self.define_item(
+      s.name,
+      s.id,
+      DefKind::Struct,
+      *s.name.span(),
+      vis,
+      Namespace::Type,
+    );
 
     for member in &s.members {
       if let StructMember::Item(i) = member {
         self.collect_item(i);
+
+        if let Some(struct_def_id) = struct_def_id {
+          let (name, node_id) = match &i.kind {
+            ItemKind::Function(f) => (f.name, f.id),
+            ItemKind::Const(c) => (c.name, c.id),
+            _ => continue,
+          };
+          if let Some(def_id) = self.resolver().symbols.get_resolution(node_id) {
+            self.resolver().add_struct_member(struct_def_id, name, def_id);
+          }
+        }
       }
     }
   }
@@ -585,8 +601,34 @@ impl<'a> ResolveVisitor<'a> {
             return;
           }
         }
-        DefKind::Enum | DefKind::Struct => {
-          break;
+        DefKind::Struct => {
+          if let Some(def_id) =
+            self.resolver().lookup_struct_member(current_def, &seg_name)
+          {
+            current_def = def_id;
+          } else {
+            self.sess.dcx().emit(NoMethodFound {
+              method: seg_name, 
+              name: module_name,
+              kind: "struct".to_owned(),
+              span: *segment.identifier.span(),
+            });
+            return;
+          }
+        }
+        DefKind::Enum => {
+          if let Some(def_id) = self.resolver().lookup_enum_member(current_def, &seg_name)
+          {
+            current_def = def_id;
+          } else {
+            self.sess.dcx().emit(NoMethodFound {
+              method: seg_name,
+              name: module_name,
+              kind: "enum".to_owned(),
+              span: *segment.identifier.span(),
+            });
+            return;
+          }
         }
         _ => {
           break;

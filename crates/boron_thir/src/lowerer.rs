@@ -217,7 +217,10 @@ impl<'a> ThirLowerer<'a> {
 
     Expr {
       hir_id: expr.hir_id,
-      ty: self.type_table.node_type(expr.hir_id).unwrap(),
+      ty: self
+        .type_table
+        .node_type(expr.hir_id)
+        .expect(&format!("couldn't find node ty for expr {:#?}", expr)),
       kind,
       span: expr.span,
     }
