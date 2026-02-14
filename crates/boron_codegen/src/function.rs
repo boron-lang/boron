@@ -51,6 +51,19 @@ impl<'ctx> LLVMCodegen<'ctx> {
     self.locals.clear();
 
     if let Some(body) = &func.body {
+      // Pass 1: Create all LLVM basic blocks up front so that forward
+      // references (branches/gotos to later blocks) can be resolved.
+      for block in &body.blocks {
+        let name = if block.hir_id == body.entry {
+          "start".to_owned()
+        } else {
+          format!("bb.{}", block.hir_id)
+        };
+        let bb = self.context.append_basic_block(function, &name);
+        self.blocks.insert(block.hir_id, bb);
+      }
+
+      // Pass 2: Generate the contents of each block.
       for block in &body.blocks {
         let context = if block.hir_id == body.entry {
           BlockContext::FunctionStart

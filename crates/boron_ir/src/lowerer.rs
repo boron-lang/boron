@@ -1,9 +1,9 @@
 use crate::{
   Ir, IrExpr, IrExprKind, IrFieldInit, IrFunction, IrId, IrParam, IrStruct, Projection,
-  SymbolMangler,
+  SymbolMangler, cfg::lowerer::CfgLoweringContext,
 };
 use boron_analysis::ty::SubstitutionMap;
-use boron_analysis::{InferTy, TypeTable};
+use boron_analysis::{InferTy, TypeScheme, TypeTable};
 use boron_hir::pat::PatKind;
 use boron_hir::{Hir, ParamKind, Pat, SemanticTy};
 use boron_session::prelude::debug;
@@ -21,6 +21,7 @@ pub struct IrLowerer<'a> {
   pub ir: Ir,
   mangler: SymbolMangler<'a>,
   pub current_function: IrId,
+  cfg_context: Option<CfgLoweringContext>,
 }
 
 impl<'a> IrLowerer<'a> {
@@ -32,11 +33,28 @@ impl<'a> IrLowerer<'a> {
       ir: Ir::default(),
       mangler: SymbolMangler::new(hir),
       current_function: IrId::dummy(),
+      cfg_context: None,
     }
   }
 
   pub fn mangler(&self) -> &SymbolMangler<'a> {
     &self.mangler
+  }
+
+  pub(crate) fn set_cfg_context(&mut self, ctx: CfgLoweringContext) {
+    self.cfg_context = Some(ctx);
+  }
+
+  pub(crate) fn clear_cfg_context(&mut self) {
+    self.cfg_context = None;
+  }
+
+  pub(crate) fn cfg_context(&self) -> &CfgLoweringContext {
+    self.cfg_context.as_ref().expect("cfg lowering context is missing")
+  }
+
+  pub(crate) fn cfg_context_mut(&mut self) -> &mut CfgLoweringContext {
+    self.cfg_context.as_mut().expect("cfg lowering context is missing")
   }
 
   pub fn lower(&mut self) -> Ir {
@@ -53,58 +71,51 @@ impl<'a> IrLowerer<'a> {
 
   pub fn lower_function(&mut self, func: &ThirFunction) {
     let scheme = self.type_table.def_type(func.def_id).unwrap();
-    let is_generic = !scheme.vars.is_empty();
     let id = IrId::new();
 
     self.current_function = id;
-    if let Some(monomorphizations) = self.type_table.monomorphizations.get(&func.def_id) {
-      for mono in monomorphizations.iter() {
-        if mono.type_args.map().iter().any(|(_, ty)| ty.has_params()) {
-          continue;
-        }
-
-        let params = self.lower_function_params(func, &mono.type_args);
-        let type_args: Vec<SemanticTy> = scheme
-          .vars
-          .iter()
-          .filter_map(|param| mono.type_args.get(param.def_id).map(Self::lower_type))
-          .collect();
-
-        let mangled_name = self.mangler.mangle_function(func.def_id, &type_args);
-        let return_ty = Self::apply_subst_by_def_id(&func.return_type, &mono.type_args);
-
-        let body =
-          func.body.as_ref().map(|b| self.lower_body(b, &mono.type_args, func.def_id));
-
-        self.ir.functions.push(IrFunction {
-          name: mangled_name,
-          params,
-          id,
-          type_args,
-          return_type: Self::lower_type(&return_ty),
-          def_id: func.def_id,
-          body,
-        });
+    let Some(monomorphizations) = self.type_table.monomorphizations.get(&func.def_id)
+    else {
+      if scheme.vars.is_empty() {
+        let empty_subst = SubstitutionMap::new();
+        self.push_function_instance(func, &scheme, &empty_subst, id);
       }
-    } else if !is_generic {
-      let params = self.lower_function_params(func, &SubstitutionMap::new());
-      let mangled_name = self.mangler.mangle_function(func.def_id, &[]);
-      let body = func
-        .body
-        .as_ref()
-        .map(|b| self.lower_body(b, &SubstitutionMap::new(), func.def_id));
-      self.ir.functions.push(IrFunction {
-        name: mangled_name,
-        params,
-        id,
-        type_args: vec![],
-        return_type: Self::lower_type(&func.return_type),
-        def_id: func.def_id,
-        body,
-      });
+      self.current_function = IrId::dummy();
+      return;
+    };
+
+    for mono in monomorphizations
+      .iter()
+      .filter(|mono| !mono.type_args.map().iter().any(|(_, ty)| ty.has_params()))
+    {
+      self.push_function_instance(func, &scheme, &mono.type_args, id);
     }
 
     self.current_function = IrId::dummy();
+  }
+
+  fn push_function_instance(
+    &mut self,
+    func: &ThirFunction,
+    scheme: &TypeScheme,
+    type_args: &SubstitutionMap,
+    id: IrId,
+  ) {
+    let params = self.lower_function_params(func, type_args);
+    let concrete_type_args = Self::collect_type_args(scheme, type_args);
+    let mangled_name = self.mangler.mangle_function(func.def_id, &concrete_type_args);
+    let return_ty = Self::apply_subst_by_def_id(&func.return_type, type_args);
+    let body = func.body.as_ref().map(|b| self.lower_body(b, type_args, func.def_id));
+
+    self.ir.functions.push(IrFunction {
+      name: mangled_name,
+      params,
+      id,
+      type_args: concrete_type_args,
+      return_type: Self::lower_type(&return_ty),
+      def_id: func.def_id,
+      body,
+    });
   }
 
   fn lower_function_params(
@@ -112,22 +123,19 @@ impl<'a> IrLowerer<'a> {
     func: &ThirFunction,
     type_args: &SubstitutionMap,
   ) -> Vec<IrParam> {
+    let hir_func = self.hir.get_function(func.def_id);
     func
       .params
       .iter()
       .map(|p| {
-        let name = self
-          .hir
-          .get_function(func.def_id)
-          .and_then(|hir_func| {
-            hir_func.params.iter().find(|hp| hp.hir_id == p.hir_id).map(|hp| {
-              match &hp.kind {
-                ParamKind::Regular { name, .. } | ParamKind::Variadic { name, .. } => {
-                  name.text()
-                }
-                ParamKind::SelfParam { .. } => "self".to_owned(),
-              }
-            })
+        let name = hir_func
+          .as_ref()
+          .and_then(|hir_func| hir_func.params.iter().find(|hp| hp.hir_id == p.hir_id))
+          .map(|hp| match &hp.kind {
+            ParamKind::Regular { name, .. } | ParamKind::Variadic { name, .. } => {
+              name.text()
+            }
+            ParamKind::SelfParam { .. } => "self".to_owned(),
           })
           .unwrap_or_else(|| format!("param_{}", p.def_id.index()));
 
@@ -139,43 +147,51 @@ impl<'a> IrLowerer<'a> {
 
   pub fn lower_struct(&mut self, strukt: &ThirStruct) {
     let scheme = self.type_table.def_type(strukt.def_id).unwrap();
-    let is_generic = !scheme.vars.is_empty();
-
-    if let Some(monomorphizations) = self.type_table.monomorphizations.get(&strukt.def_id)
-    {
-      for mono in monomorphizations.iter() {
-        if mono.type_args.map().iter().any(|(_, ty)| ty.has_params()) {
-          continue;
-        }
-
-        let fields = Self::lower_struct_fields(strukt, &mono.type_args);
-        let type_args: Vec<SemanticTy> = scheme
-          .vars
-          .iter()
-          .filter_map(|param| mono.type_args.get(param.def_id).map(Self::lower_type))
-          .collect();
-
-        let mangled_name = self.mangler.mangle_struct(strukt.def_id, &type_args);
-
-        self.ir.structs.push(IrStruct {
-          name: mangled_name,
-          fields,
-          id: IrId::new(),
-          type_args,
-          def_id: strukt.def_id,
-        });
+    let Some(monomorphizations) = self.type_table.monomorphizations.get(&strukt.def_id)
+    else {
+      if scheme.vars.is_empty() {
+        let empty_subst = SubstitutionMap::new();
+        self.push_struct_instance(strukt, &scheme, &empty_subst);
       }
-    } else if !is_generic {
-      let fields = Self::lower_struct_fields(strukt, &SubstitutionMap::new());
-      let mangled_name = self.mangler.mangle_struct(strukt.def_id, &[]);
-      self.ir.structs.push(IrStruct {
-        name: mangled_name,
-        fields,
-        id: IrId::new(),
-        type_args: vec![],
-        def_id: strukt.def_id,
-      });
+      return;
+    };
+
+    for mono in monomorphizations
+      .iter()
+      .filter(|mono| !mono.type_args.map().iter().any(|(_, ty)| ty.has_params()))
+    {
+      self.push_struct_instance(strukt, &scheme, &mono.type_args);
     }
+  }
+
+  fn push_struct_instance(
+    &mut self,
+    strukt: &ThirStruct,
+    scheme: &TypeScheme,
+    type_args: &SubstitutionMap,
+  ) {
+    let fields = Self::lower_struct_fields(strukt, type_args);
+    let concrete_type_args = Self::collect_type_args(scheme, type_args);
+    let mangled_name = self.mangler.mangle_struct(strukt.def_id, &concrete_type_args);
+
+    self.ir.structs.push(IrStruct {
+      name: mangled_name,
+      fields,
+      id: IrId::new(),
+      type_args: concrete_type_args,
+      def_id: strukt.def_id,
+    });
+  }
+
+  fn collect_type_args(
+    scheme: &TypeScheme,
+    type_args: &SubstitutionMap,
+  ) -> Vec<SemanticTy> {
+    scheme
+      .vars
+      .iter()
+      .filter_map(|param| type_args.get(param.def_id).map(Self::lower_type))
+      .collect()
   }
 
   fn lower_struct_fields(
@@ -206,7 +222,7 @@ impl<'a> IrLowerer<'a> {
           self.lower_local_pattern(local_ty, subpat, projections);
         }
       }
-      PatKind::Struct { fields, def_id, rest } => {
+      PatKind::Struct { fields, def_id, rest: _ } => {
         let struct_fields = self.hir.get_struct(*def_id).unwrap();
 
         for field in fields {
@@ -231,103 +247,6 @@ impl<'a> IrLowerer<'a> {
         }
       }
       _ => todo!("lower complex pattern bindings in IR"),
-    }
-  }
-
-  pub(crate) fn lower_expr(
-    &self,
-    expr: &ThirExpr,
-    type_args: &SubstitutionMap,
-  ) -> IrExpr {
-    let kind = match &expr.kind {
-      ThirExprKind::Literal(lit) => IrExprKind::Literal(lit.clone()),
-      ThirExprKind::LocalRef(def_id) => IrExprKind::LocalRef(*def_id),
-      ThirExprKind::Path(def_id) => IrExprKind::GlobalRef(*def_id),
-      ThirExprKind::Binary { op, lhs, rhs } => IrExprKind::Binary {
-        op: *op,
-        lhs: Box::new(self.lower_expr(lhs, type_args)),
-        rhs: Box::new(self.lower_expr(rhs, type_args)),
-      },
-      ThirExprKind::Unary { op, operand } => IrExprKind::Unary {
-        op: *op,
-        operand: Box::new(self.lower_expr(operand, type_args)),
-      },
-      ThirExprKind::Assign { target, value } => IrExprKind::Assign {
-        target: Box::new(self.lower_expr(target, type_args)),
-        value: Box::new(self.lower_expr(value, type_args)),
-      },
-      ThirExprKind::Cast { expr: inner, ty } => IrExprKind::Cast {
-        expr: Box::new(self.lower_expr(inner, type_args)),
-        ty: Self::lower_semantic_ty(ty, type_args),
-      },
-      ThirExprKind::Call { callee, type_args: call_type_args, args } => {
-        IrExprKind::Call {
-          callee: *callee,
-          type_args: call_type_args
-            .iter()
-            .map(|ty| Self::lower_semantic_ty(ty, type_args))
-            .collect(),
-          args: args.iter().map(|a| self.lower_expr(a, type_args)).collect(),
-        }
-      }
-      ThirExprKind::Field { object, field } => IrExprKind::Field {
-        object: Box::new(self.lower_expr(object, type_args)),
-        field: *field,
-      },
-      ThirExprKind::Index { object, index } => IrExprKind::Index {
-        object: Box::new(self.lower_expr(object, type_args)),
-        index: Box::new(self.lower_expr(index, type_args)),
-      },
-      ThirExprKind::AddrOf { operand } => {
-        IrExprKind::AddrOf { operand: Box::new(self.lower_expr(operand, type_args)) }
-      }
-      ThirExprKind::Struct { def_id, type_args: struct_type_args, fields } => {
-        IrExprKind::Struct {
-          def_id: *def_id,
-          type_args: struct_type_args
-            .iter()
-            .map(|ty| Self::lower_semantic_ty(ty, type_args))
-            .collect(),
-          fields: fields.iter().map(|f| self.lower_field_init(f, type_args)).collect(),
-        }
-      }
-      ThirExprKind::Tuple(exprs) => {
-        IrExprKind::Tuple(exprs.iter().map(|e| self.lower_expr(e, type_args)).collect())
-      }
-      ThirExprKind::Array(exprs) => {
-        IrExprKind::Array(exprs.iter().map(|e| self.lower_expr(e, type_args)).collect())
-      }
-      ThirExprKind::Block(_) => todo!("lower block expressions into CFG"),
-      ThirExprKind::If { .. } => todo!("lower if into CFG terminators"),
-      ThirExprKind::Match { .. } => todo!("lower match into CFG"),
-      ThirExprKind::Loop { .. } => todo!("lower loops into CFG"),
-      ThirExprKind::Break { .. } => todo!("lower break into CFG"),
-      ThirExprKind::Continue => todo!("lower continue into CFG"),
-      ThirExprKind::Return { .. } => todo!("lower return into CFG terminator"),
-      ThirExprKind::Err => IrExprKind::Err,
-    };
-
-    IrExpr {
-      hir_id: expr.hir_id,
-      ty: Self::lower_semantic_ty(&expr.ty, type_args),
-      kind,
-      span: expr.span,
-    }
-  }
-
-  fn lower_field_init(
-    &self,
-    field: &ThirFieldInit,
-    type_args: &SubstitutionMap,
-  ) -> IrFieldInit {
-    let ty = Self::lower_semantic_ty(&field.ty, type_args);
-
-    IrFieldInit {
-      hir_id: field.hir_id,
-      name: field.name.text(),
-      ty,
-      value: self.lower_expr(&field.value, type_args),
-      span: field.span,
     }
   }
 

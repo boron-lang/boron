@@ -100,6 +100,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
 
         Ok(loaded)
       }
+      IrExprKind::Skip => Err(anyhow::anyhow!("skip expression has no value")),
       _ => todo!("{:#?}", expr),
     }
   }

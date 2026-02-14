@@ -1,4 +1,4 @@
-mod lowerer;
+pub(crate) mod lowerer;
 
 use crate::IrExpr;
 use boron_hir::HirId;

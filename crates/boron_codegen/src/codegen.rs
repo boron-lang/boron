@@ -10,6 +10,8 @@ use inkwell::passes::PassBuilderOptions;
 use inkwell::types::StructType;
 use inkwell::values::{FunctionValue, PointerValue};
 use std::fmt::Display;
+use inkwell::basic_block::BasicBlock;
+use boron_hir::HirId;
 
 pub struct LLVMCodegen<'ctx> {
   pub sess: &'ctx Session,
@@ -20,6 +22,7 @@ pub struct LLVMCodegen<'ctx> {
   pub funcs: DashMap<IrId, FunctionValue<'ctx>>,
   pub locals: DashMap<DefId, PointerValue<'ctx>>,
   pub struct_init_allocs: DashMap<IrId, PointerValue<'ctx>>,
+  pub blocks: DashMap<HirId, BasicBlock<'ctx>>,
   pub ir: &'ctx Ir,
 }
 

@@ -43,7 +43,7 @@ pub enum IrExprKind {
   Tuple(Vec<IrExpr>),
   Array(Vec<IrExpr>),
 
-  Err,
+  Skip,
 }
 
 #[derive(Debug, Clone)]
