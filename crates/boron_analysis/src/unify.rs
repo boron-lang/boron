@@ -24,10 +24,7 @@ impl TyChecker<'_> {
           }
           (TyVarKind::Integer, TyVarKind::Float)
           | (TyVarKind::Float, TyVarKind::Integer) => {
-            return UnifyResult::Err(UnifyError::IncompatibleKinds {
-              kind1: k1,
-              kind2: k2,
-            });
+            return UnifyResult::Err(UnifyError::Mismatch { expected: a, found: b });
           }
           _ => {
             self.infcx.unify_var(*v1, b.clone());
@@ -204,9 +201,6 @@ pub enum UnifyError {
 
   /// Array length mismatch.
   ArrayLenMismatch { expected: usize, found: usize },
-
-  /// Incompatible type variable kinds (e.g., Integer vs Float).
-  IncompatibleKinds { kind1: TyVarKind, kind2: TyVarKind },
 }
 
 #[derive(Debug, Clone)]

@@ -211,16 +211,6 @@ pub struct MutabilityMismatch {
 }
 
 #[derive(Diagnostic)]
-#[error("incompatible type variable kinds: `{kind1}` vs `{kind2}`")]
-#[code(TYPE_CHECKER_INCOMPATIBLE_KINDS)]
-pub struct IncompatibleKinds {
-  #[error("cannot unify these type variables")]
-  pub span: Span,
-  pub kind1: String,
-  pub kind2: String,
-}
-
-#[derive(Diagnostic)]
 #[error("tuple length mismatch: expected `{expected}` elements, found `{found}`")]
 #[code(TYPE_CHECKER_TUPLE_ARITY_MISMATCH)]
 pub struct TupleArityMismatch {

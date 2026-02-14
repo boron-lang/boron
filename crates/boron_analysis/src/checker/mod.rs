@@ -132,13 +132,6 @@ impl<'a> TyChecker<'a> {
       UnifyError::ArrayLenMismatch { expected, found } => {
         self.dcx().emit(ArrayLenMismatch { span, expected, found });
       }
-      UnifyError::IncompatibleKinds { kind1, kind2 } => {
-        self.dcx().emit(IncompatibleKinds {
-          span,
-          kind1: format!("{kind1:?}"),
-          kind2: format!("{kind2:?}"),
-        });
-      }
     }
   }
 
