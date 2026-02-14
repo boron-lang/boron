@@ -3,24 +3,6 @@ import * from vec;
 
 extern "C" func puts(text: *const u8);
 
-func max(a: i32, b: i32) -> i32 {
-    if (a > b) {
-        a
-    } else {
-        b
-    }
-}
-
 func main() {
-    var value = if max(10, 20) == 20 {
-        puts("equals 20");
 
-        20
-    } else {
-        10
-    };
-
-    if value == 10 {
-        puts("max failed!");
-    }
 }

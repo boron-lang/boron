@@ -14,6 +14,8 @@ use boron_session::prelude::Session;
 use dashmap::DashMap;
 use inkwell::context::Context as LLVMContext;
 
+use std::cell::RefCell;
+
 pub fn run_codegen(sess: &Session, ir: &Ir, main_function: Option<DefId>) -> Result<()> {
   let llvm_ctx = LLVMContext::create();
   let module = llvm_ctx.create_module("program");
@@ -31,7 +33,8 @@ pub fn run_codegen(sess: &Session, ir: &Ir, main_function: Option<DefId>) -> Res
     funcs: DashMap::new(),
     locals: DashMap::new(),
     struct_init_allocs: DashMap::new(),
-    blocks: DashMap::new(),
+    loop_exit_blocks: RefCell::new(Vec::new()),
+    loop_header_blocks: RefCell::new(Vec::new()),
     ir,
   };
 

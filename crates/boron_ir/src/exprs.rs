@@ -5,8 +5,6 @@ use boron_resolver::DefId;
 use boron_session::prelude::Span;
 use boron_source::ident_table::Identifier;
 
-use crate::cfg::IrTerminator;
-
 #[derive(Debug, Clone)]
 pub struct IrExpr {
   pub hir_id: HirId,
@@ -43,6 +41,16 @@ pub enum IrExprKind {
   Tuple(Vec<IrExpr>),
   Array(Vec<IrExpr>),
 
+  Block(IrBlock),
+
+  If { condition: Box<IrExpr>, then_block: IrBlock, else_branch: Option<Box<IrExpr>> },
+
+  Loop { body: IrBlock },
+
+  Break,
+  Continue,
+  Return { value: Option<Box<IrExpr>> },
+
   Skip,
 }
 
@@ -59,7 +67,7 @@ pub struct IrFieldInit {
 pub struct IrBlock {
   pub hir_id: HirId,
   pub stmts: Vec<IrStmt>,
-  pub terminator: IrTerminator,
+  pub expr: Option<Box<IrExpr>>,
   pub span: Span,
 }
 

@@ -1,6 +1,6 @@
 use crate::{
-  Ir, IrExpr, IrExprKind, IrFieldInit, IrFunction, IrId, IrParam, IrStruct, Projection,
-  SymbolMangler, cfg::lowerer::CfgLoweringContext,
+  Ir, IrBlock, IrBody, IrExpr, IrExprKind, IrFieldInit, IrFunction, IrId, IrLocal,
+  IrParam, IrStmt, IrStmtKind, IrStruct, Projection, SymbolMangler,
 };
 use boron_analysis::ty::SubstitutionMap;
 use boron_analysis::{InferTy, TypeScheme, TypeTable};
@@ -8,10 +8,17 @@ use boron_hir::pat::PatKind;
 use boron_hir::{Hir, ParamKind, Pat, SemanticTy};
 use boron_session::prelude::debug;
 use boron_thir::{
-  Expr as ThirExpr, ExprKind as ThirExprKind, FieldInit as ThirFieldInit,
-  Function as ThirFunction, Struct as ThirStruct, Thir,
+  Block as ThirBlock, Expr as ThirExpr, ExprKind as ThirExprKind,
+  FieldInit as ThirFieldInit, Function as ThirFunction, Struct as ThirStruct, Thir,
 };
 use itertools::Itertools as _;
+
+#[derive(Debug)]
+struct LoweringContext {
+  #[expect(dead_code)]
+  owner: boron_resolver::DefId,
+  type_args: SubstitutionMap,
+}
 
 #[derive(Debug)]
 pub struct IrLowerer<'a> {
@@ -21,7 +28,7 @@ pub struct IrLowerer<'a> {
   pub ir: Ir,
   mangler: SymbolMangler<'a>,
   pub current_function: IrId,
-  cfg_context: Option<CfgLoweringContext>,
+  lowering_context: Option<LoweringContext>,
 }
 
 impl<'a> IrLowerer<'a> {
@@ -33,7 +40,7 @@ impl<'a> IrLowerer<'a> {
       ir: Ir::default(),
       mangler: SymbolMangler::new(hir),
       current_function: IrId::dummy(),
-      cfg_context: None,
+      lowering_context: None,
     }
   }
 
@@ -41,20 +48,8 @@ impl<'a> IrLowerer<'a> {
     &self.mangler
   }
 
-  pub(crate) fn set_cfg_context(&mut self, ctx: CfgLoweringContext) {
-    self.cfg_context = Some(ctx);
-  }
-
-  pub(crate) fn clear_cfg_context(&mut self) {
-    self.cfg_context = None;
-  }
-
-  pub(crate) fn cfg_context(&self) -> &CfgLoweringContext {
-    self.cfg_context.as_ref().expect("cfg lowering context is missing")
-  }
-
-  pub(crate) fn cfg_context_mut(&mut self) -> &mut CfgLoweringContext {
-    self.cfg_context.as_mut().expect("cfg lowering context is missing")
+  fn context(&self) -> &LoweringContext {
+    self.lowering_context.as_ref().expect("lowering context is missing")
   }
 
   pub fn lower(&mut self) -> Ir {
@@ -144,6 +139,172 @@ impl<'a> IrLowerer<'a> {
       })
       .collect()
   }
+
+  // ── Body / block / expr lowering ──────────────────────────────────
+
+  pub(crate) fn lower_body(
+    &mut self,
+    block: &ThirBlock,
+    type_args: &SubstitutionMap,
+    owner: boron_resolver::DefId,
+  ) -> IrBody {
+    self.lowering_context = Some(LoweringContext { owner, type_args: type_args.clone() });
+
+    let ir_block = self.lower_block(block);
+
+    self.lowering_context = None;
+
+    IrBody { block: ir_block }
+  }
+
+  fn lower_block(&mut self, block: &ThirBlock) -> IrBlock {
+    let mut stmts = Vec::new();
+
+    for stmt in &block.stmts {
+      match &stmt.kind {
+        boron_thir::StmtKind::Local(local) => {
+          let type_args = &self.context().type_args;
+          let ty = Self::lower_semantic_ty(&local.ty, type_args);
+          let mut projections = vec![];
+          let hir_id = local.hir_id;
+
+          self.lower_local_pattern(&ty, &local.pat, &mut projections);
+
+          let init = local.init.clone().unwrap();
+          let local = IrLocal {
+            hir_id: local.hir_id,
+            ty,
+            init: self.lower_expr(&init),
+            span: local.span,
+            projections,
+          };
+          self.ir.add_local(self.current_function, local);
+
+          stmts.push(IrStmt {
+            hir_id: stmt.hir_id,
+            kind: IrStmtKind::Local(hir_id),
+            span: stmt.span,
+          });
+        }
+        boron_thir::StmtKind::Expr(expr) => {
+          let lowered = self.lower_expr(expr);
+          stmts.push(IrStmt {
+            hir_id: stmt.hir_id,
+            kind: IrStmtKind::Expr(lowered),
+            span: stmt.span,
+          });
+        }
+      }
+    }
+
+    let expr = block.expr.as_ref().map(|e| Box::new(self.lower_expr(e)));
+
+    IrBlock { hir_id: block.hir_id, stmts, expr, span: block.span }
+  }
+
+  fn lower_expr(&mut self, expr: &ThirExpr) -> IrExpr {
+    let type_args = &self.context().type_args;
+    let ty = Self::lower_semantic_ty(&expr.ty, type_args);
+
+    let kind = match &expr.kind {
+      ThirExprKind::Literal(lit) => IrExprKind::Literal(lit.clone()),
+      ThirExprKind::LocalRef(def_id) => IrExprKind::LocalRef(*def_id),
+      ThirExprKind::Path(def_id) => IrExprKind::GlobalRef(*def_id),
+
+      ThirExprKind::Binary { op, lhs, rhs } => {
+        let lhs = self.lower_expr(lhs);
+        let rhs = self.lower_expr(rhs);
+        IrExprKind::Binary { op: *op, lhs: Box::new(lhs), rhs: Box::new(rhs) }
+      }
+      ThirExprKind::Unary { op, operand } => {
+        let operand = self.lower_expr(operand);
+        IrExprKind::Unary { op: *op, operand: Box::new(operand) }
+      }
+      ThirExprKind::Assign { target, value } => {
+        let target = self.lower_expr(target);
+        let value = self.lower_expr(value);
+        IrExprKind::Assign { target: Box::new(target), value: Box::new(value) }
+      }
+      ThirExprKind::Cast { expr: inner, ty } => {
+        let inner = self.lower_expr(inner);
+        let cast_ty = Self::lower_semantic_ty(ty, &self.context().type_args);
+        IrExprKind::Cast { expr: Box::new(inner), ty: cast_ty }
+      }
+      ThirExprKind::Call { callee, type_args: call_type_args, args } => {
+        let args = args.iter().map(|arg| self.lower_expr(arg)).collect();
+        let type_args = call_type_args
+          .iter()
+          .map(|ty| Self::lower_semantic_ty(ty, &self.context().type_args))
+          .collect();
+        IrExprKind::Call { callee: *callee, type_args, args }
+      }
+      ThirExprKind::Field { object, field } => {
+        let object = self.lower_expr(object);
+        IrExprKind::Field { object: Box::new(object), field: *field }
+      }
+      ThirExprKind::Index { object, index } => {
+        let object = self.lower_expr(object);
+        let index = self.lower_expr(index);
+        IrExprKind::Index { object: Box::new(object), index: Box::new(index) }
+      }
+      ThirExprKind::AddrOf { operand } => {
+        let operand = self.lower_expr(operand);
+        IrExprKind::AddrOf { operand: Box::new(operand) }
+      }
+      ThirExprKind::Struct { def_id, type_args: struct_type_args, fields } => {
+        let fields = fields.iter().map(|f| self.lower_field_init(f)).collect();
+        let type_args = struct_type_args
+          .iter()
+          .map(|ty| Self::lower_semantic_ty(ty, &self.context().type_args))
+          .collect();
+        IrExprKind::Struct { def_id: *def_id, type_args, fields }
+      }
+      ThirExprKind::Tuple(exprs) => {
+        IrExprKind::Tuple(exprs.iter().map(|e| self.lower_expr(e)).collect())
+      }
+      ThirExprKind::Array(exprs) => {
+        IrExprKind::Array(exprs.iter().map(|e| self.lower_expr(e)).collect())
+      }
+
+      ThirExprKind::Block(block) => IrExprKind::Block(self.lower_block(block)),
+      ThirExprKind::If { condition, then_block, else_branch } => {
+        let condition = self.lower_expr(condition);
+        let then_block = self.lower_block(then_block);
+        let else_branch = else_branch.as_ref().map(|e| Box::new(self.lower_expr(e)));
+        IrExprKind::If { condition: Box::new(condition), then_block, else_branch }
+      }
+      ThirExprKind::Loop { body } => IrExprKind::Loop { body: self.lower_block(body) },
+      ThirExprKind::Break { value: _ } => IrExprKind::Break,
+      ThirExprKind::Continue => IrExprKind::Continue,
+      ThirExprKind::Return { value } => {
+        let value = value.as_ref().map(|e| Box::new(self.lower_expr(e)));
+        IrExprKind::Return { value }
+      }
+      ThirExprKind::Match { .. } => {
+        todo!("lower match into IR");
+      }
+      ThirExprKind::Err => {
+        panic!("err expr shouldn't exist at this point: {:#?}", expr)
+      }
+    };
+
+    IrExpr { hir_id: expr.hir_id, ty, kind, span: expr.span }
+  }
+
+  fn lower_field_init(&mut self, field: &ThirFieldInit) -> IrFieldInit {
+    let type_args = &self.context().type_args;
+    let ty = Self::lower_semantic_ty(&field.ty, type_args);
+
+    IrFieldInit {
+      hir_id: field.hir_id,
+      name: field.name.text(),
+      ty,
+      value: self.lower_expr(&field.value),
+      span: field.span,
+    }
+  }
+
+  // ── Struct lowering ───────────────────────────────────────────────
 
   pub fn lower_struct(&mut self, strukt: &ThirStruct) {
     let scheme = self.type_table.def_type(strukt.def_id).unwrap();
@@ -249,6 +410,8 @@ impl<'a> IrLowerer<'a> {
       _ => todo!("lower complex pattern bindings in IR"),
     }
   }
+
+  // ── Type lowering ─────────────────────────────────────────────────
 
   pub fn lower_semantic_ty(ty: &InferTy, type_args: &SubstitutionMap) -> SemanticTy {
     let substituted = Self::apply_subst_by_def_id(ty, type_args);

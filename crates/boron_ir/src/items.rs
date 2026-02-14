@@ -1,5 +1,6 @@
-use crate::{IrBlock, IrId};
-use boron_hir::{HirId, SemanticTy};
+use crate::IrBlock;
+use crate::IrId;
+use boron_hir::SemanticTy;
 use boron_resolver::DefId;
 
 #[derive(Debug, Clone)]
@@ -23,8 +24,7 @@ pub struct IrParam {
 
 #[derive(Debug, Clone)]
 pub struct IrBody {
-  pub entry: HirId,
-  pub blocks: Vec<IrBlock>,
+  pub block: IrBlock,
 }
 
 #[derive(Debug, Clone)]

@@ -3,15 +3,15 @@ use boron_ir::{Ir, IrId};
 use boron_resolver::DefId;
 use boron_session::prelude::{Mode, Session};
 use dashmap::DashMap;
+use inkwell::basic_block::BasicBlock;
 use inkwell::builder::Builder;
 use inkwell::context::Context as LLVMContext;
 use inkwell::module::Module;
 use inkwell::passes::PassBuilderOptions;
 use inkwell::types::StructType;
 use inkwell::values::{FunctionValue, PointerValue};
+use std::cell::RefCell;
 use std::fmt::Display;
-use inkwell::basic_block::BasicBlock;
-use boron_hir::HirId;
 
 pub struct LLVMCodegen<'ctx> {
   pub sess: &'ctx Session,
@@ -22,7 +22,8 @@ pub struct LLVMCodegen<'ctx> {
   pub funcs: DashMap<IrId, FunctionValue<'ctx>>,
   pub locals: DashMap<DefId, PointerValue<'ctx>>,
   pub struct_init_allocs: DashMap<IrId, PointerValue<'ctx>>,
-  pub blocks: DashMap<HirId, BasicBlock<'ctx>>,
+  pub loop_exit_blocks: RefCell<Vec<BasicBlock<'ctx>>>,
+  pub loop_header_blocks: RefCell<Vec<BasicBlock<'ctx>>>,
   pub ir: &'ctx Ir,
 }
 

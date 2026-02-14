@@ -1,5 +1,3 @@
-use crate::blocks::BlockGeneratorContext;
-use crate::blocks::generator::BlockContext;
 use crate::codegen::LLVMCodegen;
 use anyhow::Result;
 use boron_ir::{IrFunction, IrId, Projection, SemanticTy};
@@ -51,28 +49,41 @@ impl<'ctx> LLVMCodegen<'ctx> {
     self.locals.clear();
 
     if let Some(body) = &func.body {
-      // Pass 1: Create all LLVM basic blocks up front so that forward
-      // references (branches/gotos to later blocks) can be resolved.
-      for block in &body.blocks {
-        let name = if block.hir_id == body.entry {
-          "start".to_owned()
-        } else {
-          format!("bb.{}", block.hir_id)
-        };
-        let bb = self.context.append_basic_block(function, &name);
-        self.blocks.insert(block.hir_id, bb);
+      let entry = self.context.append_basic_block(function, "start");
+      self.builder.position_at_end(entry);
+
+      for (idx, param) in func.params.iter().enumerate() {
+        let param_val = self
+          .require_some(function.get_nth_param(idx as u32), "param index should exist")?;
+        let alloca = self
+          .builder
+          .build_alloca(self.ty(&param.ty)?, &format!("param.alloc.{}", param.name));
+        let alloca = self.require_llvm(alloca, "param alloca")?;
+
+        let _ = self
+          .require_llvm(self.builder.build_store(alloca, param_val), "param store")?;
+
+        self.locals.insert(param.def_id, alloca);
       }
 
-      // Pass 2: Generate the contents of each block.
-      for block in &body.blocks {
-        let context = if block.hir_id == body.entry {
-          BlockContext::FunctionStart
-        } else {
-          BlockContext::Normal
-        };
+      self.generate_var_allocas(func.id)?;
+      self.generate_block(&body.block)?;
 
-        self
-          .generate_block(&BlockGeneratorContext::new(block, func, function, context))?;
+      if let Some(tail_expr) = &body.block.expr {
+        match &func.return_type {
+          SemanticTy::Unit => {
+            let _ = self.builder.build_return(None);
+          }
+          _ => {
+            let val = self.generate_expr(tail_expr)?;
+            self.require_llvm(
+              self.builder.build_return(Some(&val)),
+              "couldn't build return with value",
+            )?;
+          }
+        }
+      } else {
+        let _ = self.builder.build_return(None);
       }
     }
 
