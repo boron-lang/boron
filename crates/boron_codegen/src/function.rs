@@ -1,11 +1,13 @@
 use crate::codegen::LLVMCodegen;
 use anyhow::Result;
 use boron_ir::{IrFunction, IrId, Projection, SemanticTy};
+use boron_resolver::DefId;
 use inkwell::module::Linkage;
 use inkwell::types::{
   BasicMetadataTypeEnum, BasicType as _, BasicTypeEnum, FunctionType,
 };
-use inkwell::values::FunctionValue;
+use inkwell::values::{FunctionValue, PointerValue};
+use boron_hir::HirId;
 
 impl<'ctx> LLVMCodegen<'ctx> {
   fn params_to_metadata(
@@ -90,6 +92,29 @@ impl<'ctx> LLVMCodegen<'ctx> {
     Ok(())
   }
 
+  pub fn generate_field(
+    &self,
+    struct_id: &DefId,
+    args: &Vec<SemanticTy>,
+    field_idx: u32,
+    local_hir_id: HirId
+  ) -> Result<PointerValue<'ctx>> {
+    let strukt = self.ir.find_struct(struct_id, args);
+    let struct_ty = self.struct_ty_by_id(&strukt.id)?;
+
+    let struct_ptr = self
+      .require_some(self.struct_init_allocs.get(&strukt.id), "struct init missing")?;
+    self.require_llvm(
+      self.builder.build_struct_gep(
+        struct_ty,
+        *struct_ptr,
+        field_idx,
+        &format!("field.ptr.{}.{}", local_hir_id, field_idx),
+      ),
+      "struct field gep",
+    )
+  }
+
   pub fn generate_var_allocas(&self, function: IrId) -> Result<()> {
     let locals = self.ir.locals.get(&function);
     let Some(locals) = locals else {
@@ -114,27 +139,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
               unreachable!()
             };
 
-            let strukt = self.ir.find_struct(struct_def_id, args);
-            let struct_ty = self.struct_ty_by_id(&strukt.id)?;
-            let _field_ty = self.require_some(
-              struct_ty.get_field_type_at_index(*field_idx),
-              "struct field type missing",
-            )?;
-
-            let struct_ptr = self.require_some(
-              self.struct_init_allocs.get(&strukt.id),
-              "struct init missing",
-            )?;
-            let field_ptr = self.require_llvm(
-              self.builder.build_struct_gep(
-                struct_ty,
-                *struct_ptr,
-                *field_idx,
-                &format!("local.field.ptr.{}.{}", local.hir_id, field_idx),
-              ),
-              "struct field gep",
-            )?;
-
+            let field_ptr = self.generate_field(struct_def_id, args, *field_idx, local.hir_id)?;
             if let Some(def_id) = projection_def_id {
               self.locals.insert(*def_id, field_ptr);
             }

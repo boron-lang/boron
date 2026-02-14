@@ -22,7 +22,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
     let mut largs = vec![];
 
     for arg in args {
-      largs.push(self.generate_expr(arg)?);
+      largs.push(self.value_to_basic(self.ty(&arg.ty)?, self.generate_expr(arg)?)?);
     }
 
     let call_site = self.require_llvm(

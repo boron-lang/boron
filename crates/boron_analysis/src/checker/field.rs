@@ -1,5 +1,5 @@
 use crate::checker::TyChecker;
-use crate::ty::InferTy;
+use crate::ty::{InferTy, SubstitutionMap};
 use boron_session::prelude::Span;
 use boron_source::ident_table::Identifier;
 
@@ -13,9 +13,23 @@ impl TyChecker<'_> {
     let resolved = self.infcx.resolve(obj_ty);
 
     match resolved {
-      InferTy::Adt { def_id, span, .. } => {
+      InferTy::Adt { def_id, span, args } => {
         if let Some(field_ty) = self.table.field_type(def_id, &field.text()) {
-          field_ty
+          let substituted = if let Some(scheme) = self.table.def_type(def_id) {
+            if !scheme.vars.is_empty() && scheme.vars.len() == args.len() {
+              let mut subst = SubstitutionMap::new();
+              for (var, arg) in scheme.vars.iter().zip(args.iter()) {
+                subst.add(*var, arg.clone());
+              }
+              Self::apply_subst(&field_ty, &subst)
+            } else {
+              field_ty
+            }
+          } else {
+            field_ty
+          };
+
+          self.infcx.resolve(&substituted)
         } else {
           // TODO: Report unknown field error
           InferTy::Err(span)

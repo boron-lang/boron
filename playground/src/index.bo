@@ -1,8 +1,20 @@
-mod vec;
-import * from vec;
-
 extern "C" func puts(text: *const u8);
 
-func main() {
+pub struct Vec2<T> {
+    x: T,
+    y: T,
 
+    func new(x: T, y: T) -> Vec2<T> {
+        Vec2 { .x, .y }
+    }
+}
+
+struct Value {
+    val: Vec2<*const u8>
+}
+
+func main() {
+    var val = Value { .val = Vec2 { .x = "hello", .y = "universe" } };
+
+    puts(val.val.x);
 }

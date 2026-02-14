@@ -1,4 +1,3 @@
-mod blocks;
 mod codegen;
 mod expressions;
 mod function;

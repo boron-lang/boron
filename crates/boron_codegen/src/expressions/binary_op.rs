@@ -2,9 +2,9 @@ use crate::codegen::LLVMCodegen;
 use anyhow::Result;
 use boron_ir::{IrExpr, SemanticTy};
 use boron_parser::BinaryOp;
+use inkwell::values::BasicValueEnum;
 use inkwell::FloatPredicate;
 use inkwell::IntPredicate;
-use inkwell::values::BasicValueEnum;
 
 impl<'ctx> LLVMCodegen<'ctx> {
   pub fn generate_binary_op(
@@ -16,8 +16,12 @@ impl<'ctx> LLVMCodegen<'ctx> {
     match (&lhs.ty, &rhs.ty) {
       (SemanticTy::Primitive(lhs_ty), SemanticTy::Primitive(rhs_ty)) => {
         if lhs_ty.is_integer() && rhs_ty.is_integer() {
-          let lhs_val = self.generate_expr(lhs)?.into_int_value();
-          let rhs_val = self.generate_expr(rhs)?.into_int_value();
+          let lhs_val = self
+            .value_to_basic(self.primitive_ty(lhs_ty), self.generate_expr(lhs)?)?
+            .into_int_value();
+          let rhs_val = self
+            .value_to_basic(self.primitive_ty(rhs_ty), self.generate_expr(rhs)?)?
+            .into_int_value();
 
           macro_rules! int_op {
             ($method:ident, $name:expr) => {
@@ -74,8 +78,12 @@ impl<'ctx> LLVMCodegen<'ctx> {
             }
           }
         } else if lhs_ty.is_float() && rhs_ty.is_float() {
-          let lhs_val = self.generate_expr(lhs)?.into_float_value();
-          let rhs_val = self.generate_expr(rhs)?.into_float_value();
+          let lhs_val = self
+            .value_to_basic(self.primitive_ty(lhs_ty), self.generate_expr(lhs)?)?
+            .into_float_value();
+          let rhs_val = self
+            .value_to_basic(self.primitive_ty(rhs_ty), self.generate_expr(rhs)?)?
+            .into_float_value();
 
           macro_rules! float_op {
             ($method:ident, $name:expr) => {
