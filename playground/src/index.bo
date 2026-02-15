@@ -12,5 +12,5 @@ pub struct Vec2<T> {
 func main() {
     var val = Vec2::new(15.0, 10.0);
 
-    puts(val.val.x);
+    var x = &val;
 }

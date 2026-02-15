@@ -9,7 +9,7 @@ use crate::parser::errors::{
 };
 use crate::parser::Parser;
 use crate::{IntBase, NodeId, Path, PathParsingContext, PathSegment, TokenType};
-use boron_session::prelude::Identifier;
+use boron_session::prelude::{warn, Identifier};
 use boron_source::prelude::Span;
 use indexmap::IndexMap;
 
@@ -104,8 +104,36 @@ impl Parser<'_> {
   pub(crate) fn parse_unary_expr(&mut self) -> Expr {
     let start = self.current_span();
 
-    if let Some(op) = self.peek_unary_op() {
+    let unary_op = match self.peek().kind {
+      TokenType::Not => Some(UnaryOp::Not),
+      TokenType::Tilde => Some(UnaryOp::BitNot),
+      TokenType::Minus => Some(UnaryOp::Neg),
+      TokenType::Plus => Some(UnaryOp::Plus),
+      TokenType::Star => Some(UnaryOp::Deref),
+      TokenType::Amp => {
+        let mutability = if let Some(ahead) = self.peek_ahead(1) {
+          match ahead.kind {
+            TokenType::Mut => Mutability::Mut,
+            TokenType::Const => {
+              warn!("message about useless const modifier");
+              Mutability::Const
+            }
+            _ => Mutability::Const,
+          }
+        } else {
+          Mutability::Const
+        };
+
+        Some(UnaryOp::AddrOf { mutability })
+      }
+      _ => None,
+    };
+
+    if let Some(op) = unary_op {
       self.advance();
+      if let Some(UnaryOp::AddrOf { mutability: Mutability::Mut }) = unary_op {
+        self.advance();
+      }
 
       let op = if op == UnaryOp::Deref && self.peek().kind == TokenType::Amp {
         UnaryOp::Deref
@@ -116,21 +144,6 @@ impl Parser<'_> {
       let operand = self.parse_unary_expr();
       return Expr::new(
         ExprKind::Unary { op, operand: Box::new(operand) },
-        self.span_from(start),
-      );
-    }
-
-    if self.eat(TokenType::Amp) {
-      let mutability = if self.eat(TokenType::Mut) {
-        Mutability::Mut
-      } else if self.eat(TokenType::Const) {
-        Mutability::Const
-      } else {
-        Mutability::Const
-      };
-      let operand = self.parse_unary_expr();
-      return Expr::new(
-        ExprKind::AddrOf { mutability, operand: Box::new(operand) },
         self.span_from(start),
       );
     }
@@ -916,17 +929,6 @@ impl Parser<'_> {
       TokenType::Caret => Some(BinaryOp::BitXor),
       TokenType::Shl => Some(BinaryOp::Shl),
       TokenType::Shr => Some(BinaryOp::Shr),
-      _ => None,
-    }
-  }
-
-  fn peek_unary_op(&self) -> Option<UnaryOp> {
-    match self.peek().kind {
-      TokenType::Not => Some(UnaryOp::Not),
-      TokenType::Tilde => Some(UnaryOp::BitNot),
-      TokenType::Minus => Some(UnaryOp::Neg),
-      TokenType::Plus => Some(UnaryOp::Plus),
-      TokenType::Star => Some(UnaryOp::Deref),
       _ => None,
     }
   }

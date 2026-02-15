@@ -2,8 +2,7 @@ use crate::ids::HirId;
 use crate::pat::Pat;
 use crate::ty::Ty;
 use boron_parser::ast::expressions::{BinaryOp, UnaryOp};
-use boron_parser::ast::types::Mutability;
-use boron_parser::{FloatSuffix, IntBase, IntSuffix, NodeId};
+use boron_parser::{FloatSuffix, IntBase, IntSuffix};
 use boron_resolver::DefId;
 use boron_session::prelude::Span;
 use boron_source::ident_table::Identifier;
@@ -77,12 +76,6 @@ pub enum ExprKind {
   Index {
     object: Box<Expr>,
     index: Box<Expr>,
-  },
-
-  /// Address-of: `&x`, `&mut x`
-  AddrOf {
-    mutability: Mutability,
-    operand: Box<Expr>,
   },
 
   Struct {

@@ -674,7 +674,7 @@ impl<'a> ResolveVisitor<'a> {
         self.resolve_expr(index);
       }
 
-      ExprKind::AddrOf { operand, .. } | ExprKind::Unary { operand, .. } => {
+      ExprKind::Unary { operand, .. } => {
         self.resolve_expr(operand);
       }
 

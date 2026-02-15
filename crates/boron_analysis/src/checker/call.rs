@@ -1,9 +1,9 @@
-use crate::TypeScheme;
 use crate::checker::TyChecker;
 use crate::errors::{ArityMismatch, FuncArgMismatch, NoValuePassedForParameter};
 use crate::table::TypeEnv;
 use crate::ty::{InferTy, SubstitutionMap, TyParam};
 use crate::unify::{Expectation, UnifyError, UnifyResult};
+use crate::TypeScheme;
 use boron_hir::expr::Argument;
 use boron_hir::{Expr, ExprKind, HirId};
 use boron_resolver::DefId;

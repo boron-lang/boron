@@ -3,9 +3,9 @@ use crate::results::BuiltInResults;
 use crate::{InferTy, TypeTable};
 use boron_diagnostics::DiagnosticCtx;
 use boron_hir::{Block, Expr, ExprKind, Function, Hir, ParamKind, StmtKind};
-use boron_resolver::Resolver;
 use boron_resolver::prelude::BuiltInKind;
-use boron_session::prelude::{Session, debug};
+use boron_resolver::Resolver;
+use boron_session::prelude::{debug, Session};
 
 pub struct BuiltInExpander<'a> {
   pub sess: &'a Session,
@@ -50,7 +50,7 @@ impl<'a> BuiltInExpander<'a> {
         self.walk_expr(rhs);
       }
 
-      ExprKind::Unary { operand, .. } | ExprKind::AddrOf { operand, .. } => {
+      ExprKind::Unary { operand, .. } => {
         self.walk_expr(operand);
       }
 

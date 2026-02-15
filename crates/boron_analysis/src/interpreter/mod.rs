@@ -193,6 +193,7 @@ impl<'a> Interpreter<'a> {
         self.dcx.emit(UnsupportedConstExpr { span: expr.span });
         ConstValue::Poison
       }
+      UnaryOp::AddrOf { .. } => unreachable!(),
     }
   }
 
@@ -424,7 +425,10 @@ impl<'a> Interpreter<'a> {
           ConstValue::Float(value)
         }
       },
-      ExprKind::Unary { op, operand } => self.eval_unary(expr, op, operand),
+      // we don't support & in interpreter so it'll go to the wildcard arm
+      ExprKind::Unary { op, operand } if !matches!(op, UnaryOp::AddrOf { .. }) => {
+        self.eval_unary(expr, op, operand)
+      }
       ExprKind::Binary { op, lhs, rhs } => self.eval_binary(expr, op, lhs, rhs),
       ExprKind::Path(p) => {
         if let Some(cnst) = self.hir.get_const(p.def_id) {

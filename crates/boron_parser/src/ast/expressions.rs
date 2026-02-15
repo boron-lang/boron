@@ -1,8 +1,8 @@
 use crate::ast::import::Path;
 use crate::ast::program::NodeId;
 use crate::ast::statements::Block;
-use crate::ast::types::{Mutability, Type};
-use crate::{IntBase, PrimitiveKind};
+use crate::ast::types::Type;
+use crate::{IntBase, Mutability, PrimitiveKind};
 use boron_session::prelude::Span;
 use boron_source::ident_table::Identifier;
 use strum::Display;
@@ -46,9 +46,6 @@ pub enum ExprKind {
   Field { object: Box<Expr>, field: Identifier },
 
   Index { object: Box<Expr>, index: Box<Expr> },
-
-  AddrOf { mutability: Mutability, operand: Box<Expr> },
-
   Struct { path: Path, fields: Vec<StructFieldInit> },
 
   // Control flow
@@ -286,15 +283,17 @@ impl AssignOp {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Display)]
 pub enum UnaryOp {
   #[strum(serialize = "!")]
-  Not, // !
+  Not,
   #[strum(serialize = "~")]
-  BitNot, // ~
+  BitNot,
   #[strum(serialize = "-")]
-  Neg, // -
+  Neg,
   #[strum(serialize = "+")]
-  Plus, // +
+  Plus,
   #[strum(serialize = "*")]
-  Deref, // *
+  Deref,
+  #[strum(serialize = "&")]
+  AddrOf { mutability: Mutability },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

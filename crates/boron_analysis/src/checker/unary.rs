@@ -12,8 +12,8 @@ impl TyChecker<'_> {
     op: &UnaryOp,
     operand: &Expr,
   ) -> InferTy {
-    let operand_ty = self.check_expr(operand, env, &Expectation::none());
-    let resolved = self.infcx.resolve(&operand_ty);
+    let checked_ty = self.check_expr(operand, env, &Expectation::none());
+    let resolved = self.infcx.resolve(&checked_ty);
 
     let invalid = || {
       self.dcx().emit(InvalidUnaryOp {
@@ -33,7 +33,7 @@ impl TyChecker<'_> {
         }
 
         let expected = InferTy::Primitive(PrimitiveKind::Bool, expr.span);
-        match self.unify(&operand_ty, &expected) {
+        match self.unify(&resolved, &expected) {
           UnifyResult::Err(UnifyError::Mismatch { .. }) => invalid(),
           result => {
             self.handle_unify_result(result, expr.span);
@@ -48,7 +48,7 @@ impl TyChecker<'_> {
           return invalid();
         }
 
-        match self.unify(&operand_ty, &expected) {
+        match self.unify(&resolved, &expected) {
           UnifyResult::Err(UnifyError::Mismatch { .. }) => invalid(),
           result => {
             self.handle_unify_result(result, expr.span);
@@ -61,7 +61,7 @@ impl TyChecker<'_> {
         if !self.is_numeric(&resolved) {
           invalid()
         } else {
-          operand_ty
+          resolved
         }
       }
 
@@ -71,11 +71,15 @@ impl TyChecker<'_> {
         } else {
           self.dcx().emit(TyCantBeDereferenced {
             span: expr.span,
-            ty: self.format_type(&operand_ty),
+            ty: self.format_type(&resolved),
           });
 
           InferTy::Err(expr.span)
         }
+      }
+
+      UnaryOp::AddrOf { mutability } => {
+        InferTy::Ptr { mutability: *mutability, ty: Box::new(resolved), span: expr.span }
       }
     }
   }

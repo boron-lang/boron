@@ -34,8 +34,6 @@ pub enum IrExprKind {
 
   Index { object: Box<IrExpr>, index: Box<IrExpr> },
 
-  AddrOf { operand: Box<IrExpr> },
-
   Struct { def_id: DefId, type_args: Vec<SemanticTy>, fields: Vec<IrFieldInit> },
 
   Tuple(Vec<IrExpr>),

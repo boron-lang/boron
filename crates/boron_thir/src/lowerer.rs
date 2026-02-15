@@ -17,7 +17,7 @@ use boron_hir::{
   Hir, HirId, Literal, Local as HirLocal, MatchArm as HirMatchArm, Stmt as HirStmt,
   StmtKind as HirStmtKind, Struct as HirStruct,
 };
-use boron_parser::{BinaryOp, Mutability, UnaryOp};
+use boron_parser::{BinaryOp, UnaryOp};
 use boron_resolver::{DefId, DefKind, Resolver};
 use boron_source::ident_table::Identifier;
 use boron_source::span::Span;
@@ -195,9 +195,6 @@ impl<'a> ThirLowerer<'a> {
       }
       HirExprKind::Field { object, field } => self.lower_field(object, field),
       HirExprKind::Index { object, index } => self.lower_index(object, index),
-      HirExprKind::AddrOf { mutability, operand } => {
-        self.lower_addr_of(*mutability, operand)
-      }
       HirExprKind::Struct { def_id, fields } => {
         self.lower_struct_expr(*def_id, fields, expr.hir_id)
       }
@@ -386,10 +383,6 @@ impl<'a> ThirLowerer<'a> {
       object: Box::new(self.lower_expr(object)),
       index: Box::new(self.lower_expr(index)),
     }
-  }
-
-  fn lower_addr_of(&mut self, _mutability: Mutability, operand: &HirExpr) -> ExprKind {
-    ExprKind::AddrOf { operand: Box::new(self.lower_expr(operand)) }
   }
 
   fn lower_struct_expr(

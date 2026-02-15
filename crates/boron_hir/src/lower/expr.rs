@@ -135,11 +135,6 @@ impl LoweringContext<'_> {
         index: Box::new(self.lower_expr(index)),
       },
 
-      AstExprKind::AddrOf { mutability, operand } => ExprKind::AddrOf {
-        mutability: *mutability,
-        operand: Box::new(self.lower_expr(operand)),
-      },
-
       AstExprKind::Struct { path, fields } => {
         let def_id = self.get_def_id(path.id);
 

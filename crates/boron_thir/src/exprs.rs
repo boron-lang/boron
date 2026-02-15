@@ -1,5 +1,5 @@
-use boron_analysis::InferTy;
 use boron_analysis::literal_table::FullLiteral;
+use boron_analysis::InferTy;
 use boron_hir::{HirId, Pat};
 use boron_parser::{BinaryOp, UnaryOp};
 use boron_resolver::DefId;
@@ -34,8 +34,6 @@ pub enum ExprKind {
   Field { object: Box<Expr>, field: Identifier },
 
   Index { object: Box<Expr>, index: Box<Expr> },
-
-  AddrOf { operand: Box<Expr> },
 
   Struct { def_id: DefId, type_args: Vec<InferTy>, fields: Vec<FieldInit> },
 

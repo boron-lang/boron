@@ -245,10 +245,6 @@ impl<'a> IrLowerer<'a> {
         let index = self.lower_expr(index);
         IrExprKind::Index { object: Box::new(object), index: Box::new(index) }
       }
-      ThirExprKind::AddrOf { operand } => {
-        let operand = self.lower_expr(operand);
-        IrExprKind::AddrOf { operand: Box::new(operand) }
-      }
       ThirExprKind::Struct { def_id, type_args: struct_type_args, fields } => {
         let fields = fields.iter().map(|f| self.lower_field_init(f)).collect();
         let type_args = struct_type_args
@@ -450,7 +446,7 @@ impl<'a> IrLowerer<'a> {
       InferTy::Never(_) => SemanticTy::Never,
 
       InferTy::Var(_, _) | InferTy::Param(_) => SemanticTy::Error,
-      InferTy::Err(_) => panic!("error shouldn't appear this late {:#?}", ty)
+      InferTy::Err(_) => panic!("error shouldn't appear this late {:#?}", ty),
     }
   }
 
