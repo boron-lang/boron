@@ -1,0 +1,8 @@
+pub struct Vec2<T> {
+    x: T,
+    y: T
+}
+
+func main() {
+    var val = Vec2::new(15.0, 10.0).val;
+}

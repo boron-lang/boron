@@ -235,7 +235,7 @@ impl TyChecker<'_> {
 
       ExprKind::Field { object, field } => {
         let obj_ty = self.check_expr(object, env, &Expectation::none());
-        self.check_field_access(&obj_ty, field, object.span)
+        self.check_field_access(&obj_ty, field)
       }
 
       ExprKind::Assign { target, value, .. } => {

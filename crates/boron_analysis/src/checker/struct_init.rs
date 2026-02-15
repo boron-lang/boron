@@ -1,10 +1,10 @@
 use crate::checker::TyChecker;
-use crate::errors::{FieldInitMismatch, InvalidStructInit, NoFieldOnType};
+use crate::errors::{FieldInitMismatch, InvalidStructInit, NoFieldForStructInit};
 use crate::table::TypeEnv;
 use crate::ty::{InferTy, SubstitutionMap};
 use crate::unify::{Expectation, UnifyError, UnifyResult};
-use boron_hir::Expr;
 use boron_hir::expr::FieldInit;
+use boron_hir::Expr;
 use boron_resolver::{DefId, DefKind};
 
 impl TyChecker<'_> {
@@ -30,7 +30,7 @@ impl TyChecker<'_> {
 
       for field in fields {
         if !strukt.has_field(field.name) {
-          self.dcx().emit(NoFieldOnType {
+          self.dcx().emit(NoFieldForStructInit {
             span: field.span,
             field: field.name,
             ty: self.format_type(&def_ty),

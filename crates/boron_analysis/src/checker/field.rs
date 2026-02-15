@@ -1,6 +1,6 @@
 use crate::checker::TyChecker;
+use crate::errors::NoFieldForTy;
 use crate::ty::{InferTy, SubstitutionMap};
-use boron_session::prelude::Span;
 use boron_source::ident_table::Identifier;
 
 impl TyChecker<'_> {
@@ -8,12 +8,11 @@ impl TyChecker<'_> {
     &self,
     obj_ty: &InferTy,
     field: &Identifier,
-    _span: Span,
   ) -> InferTy {
     let resolved = self.infcx.resolve(obj_ty);
-
-    match resolved {
-      InferTy::Adt { def_id, span, args } => {
+    let span = *field.span();
+    match resolved.clone() {
+      InferTy::Adt { def_id, args, .. } => {
         if let Some(field_ty) = self.table.field_type(def_id, &field.text()) {
           let substituted = if let Some(scheme) = self.table.def_type(def_id) {
             if !scheme.vars.is_empty() && scheme.vars.len() == args.len() {
@@ -31,7 +30,11 @@ impl TyChecker<'_> {
 
           self.infcx.resolve(&substituted)
         } else {
-          // TODO: Report unknown field error
+          self.dcx().emit(NoFieldForTy {
+            span,
+            field: *field,
+            ty: self.format_type(&resolved),
+          });
           InferTy::Err(span)
         }
       }
@@ -46,8 +49,15 @@ impl TyChecker<'_> {
         InferTy::Err(span)
       }
       _ => {
-        // TODO: Report error - no fields on this type
-        InferTy::Err(_span)
+        if !matches!(resolved, InferTy::Err(_)) {
+          self.dcx().emit(NoFieldForTy {
+            span,
+            field: *field,
+            ty: self.format_type(&resolved),
+          });
+        }
+
+        InferTy::Err(span)
       }
     }
   }

@@ -140,8 +140,6 @@ impl<'a> IrLowerer<'a> {
       .collect()
   }
 
-  // ── Body / block / expr lowering ──────────────────────────────────
-
   pub(crate) fn lower_body(
     &mut self,
     block: &ThirBlock,
@@ -304,8 +302,6 @@ impl<'a> IrLowerer<'a> {
     }
   }
 
-  // ── Struct lowering ───────────────────────────────────────────────
-
   pub fn lower_struct(&mut self, strukt: &ThirStruct) {
     let scheme = self.type_table.def_type(strukt.def_id).unwrap();
     let Some(monomorphizations) = self.type_table.monomorphizations.get(&strukt.def_id)
@@ -411,8 +407,6 @@ impl<'a> IrLowerer<'a> {
     }
   }
 
-  // ── Type lowering ─────────────────────────────────────────────────
-
   pub fn lower_semantic_ty(ty: &InferTy, type_args: &SubstitutionMap) -> SemanticTy {
     let substituted = Self::apply_subst_by_def_id(ty, type_args);
     Self::lower_type(&substituted)
@@ -455,7 +449,8 @@ impl<'a> IrLowerer<'a> {
       InferTy::Unit(_) => SemanticTy::Unit,
       InferTy::Never(_) => SemanticTy::Never,
 
-      InferTy::Var(_, _) | InferTy::Param(_) | InferTy::Err(_) => SemanticTy::Error,
+      InferTy::Var(_, _) | InferTy::Param(_) => SemanticTy::Error,
+      InferTy::Err(_) => panic!("error shouldn't appear this late {:#?}", ty)
     }
   }
 

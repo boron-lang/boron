@@ -124,7 +124,7 @@ pub struct InvalidStructInit {
 #[derive(Diagnostic)]
 #[error("no field to initialize named `{field}` on type `{ty}`")]
 #[code(TYPE_CHECKER_NO_FIELD)]
-pub struct NoFieldOnType {
+pub struct NoFieldForStructInit {
   #[error("in this field init")]
   pub span: Span,
   pub field: Identifier,
@@ -312,4 +312,14 @@ pub struct NoValuePassedForParameter {
   #[help_label("for this parameter")]
   pub param_span: Span,
   pub param: Identifier,
+}
+
+#[derive(Diagnostic)]
+#[error("no field named `{field}` on type `{ty}`")]
+#[code(TYPE_CHECKER_NO_FILED_ON_TY)]
+pub struct NoFieldForTy {
+  #[error("in this field")]
+  pub span: Span,
+  pub field: Identifier,
+  pub ty: String,
 }
