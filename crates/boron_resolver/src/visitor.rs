@@ -1,6 +1,9 @@
 use crate::builtin_kind::BuiltInKind;
 use crate::def::{DefKind, Definition};
-use crate::errors::{DuplicateDefinition, InvalidPathRoot, NoMethodFound, PrivateItem, UndefinedName, UndefinedNameInModule};
+use crate::errors::{
+  DuplicateDefinition, InvalidPathRoot, NoMethodFound, PrivateItem, UndefinedName,
+  UndefinedNameInModule,
+};
 use crate::module_resolver::ModuleResolver;
 use crate::resolver::Resolver;
 use crate::scope::ScopeKind;
@@ -204,7 +207,7 @@ impl<'a> ResolveVisitor<'a> {
             _ => continue,
           };
           if let Some(def_id) = self.resolver().symbols.get_resolution(node_id) {
-            self.resolver().add_struct_member(struct_def_id, name, def_id);
+            self.resolver().add_adt_member(struct_def_id, name, def_id);
           }
         }
       }
@@ -601,30 +604,15 @@ impl<'a> ResolveVisitor<'a> {
             return;
           }
         }
-        DefKind::Struct => {
-          if let Some(def_id) =
-            self.resolver().lookup_struct_member(current_def, &seg_name)
-          {
-            current_def = def_id;
-          } else {
-            self.sess.dcx().emit(NoMethodFound {
-              method: seg_name, 
-              name: module_name,
-              kind: "struct".to_owned(),
-              span: *segment.identifier.span(),
-            });
-            return;
-          }
-        }
-        DefKind::Enum => {
-          if let Some(def_id) = self.resolver().lookup_enum_member(current_def, &seg_name)
+        DefKind::Struct | DefKind::Enum => {
+          if let Some(def_id) = self.resolver().lookup_adt_member(current_def, &seg_name)
           {
             current_def = def_id;
           } else {
             self.sess.dcx().emit(NoMethodFound {
               method: seg_name,
               name: module_name,
-              kind: "enum".to_owned(),
+              kind: def.kind.to_string(),
               span: *segment.identifier.span(),
             });
             return;

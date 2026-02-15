@@ -1,9 +1,9 @@
+use crate::TypeScheme;
 use crate::checker::TyChecker;
 use crate::errors::{ArityMismatch, FuncArgMismatch, NoValuePassedForParameter};
 use crate::table::TypeEnv;
 use crate::ty::{InferTy, SubstitutionMap, TyParam};
 use crate::unify::{Expectation, UnifyError, UnifyResult};
-use crate::TypeScheme;
 use boron_hir::expr::Argument;
 use boron_hir::{Expr, ExprKind, HirId};
 use boron_resolver::DefId;
@@ -176,6 +176,20 @@ impl TyChecker<'_> {
       }
 
       self.table.record_monomorphization(def_id, subst.clone());
+
+      if let Some(parent_struct_id) = self.resolver.find_parent(def_id) {
+        if let Some(struct_scheme) = self.table.def_type(parent_struct_id) {
+          if !struct_scheme.vars.is_empty() {
+            let mut struct_subst = SubstitutionMap::new();
+            for param in &struct_scheme.vars {
+              if let Some(ty) = subst.get(param.def_id) {
+                struct_subst.add(*param, ty.clone());
+              }
+            }
+            self.table.record_monomorphization(parent_struct_id, struct_subst);
+          }
+        }
+      }
     }
 
     self.table.record_expr_monomorphization(call_hir_id, def_id, subst);

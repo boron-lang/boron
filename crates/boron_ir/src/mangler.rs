@@ -57,10 +57,24 @@ impl<'a> SymbolMangler<'a> {
 
     let func = self.hir.get_function(def_id).unwrap();
 
-    let base_name = func.name.text();
+    if func.modifiers.external.is_some() {
+      let mangled = func.name.text();
+      self.cache.insert(key, mangled.clone());
+      return mangled;
+    }
 
-    let mangled =
-      self.mangle_name(&base_name, type_args, func.modifiers.external.is_some());
+    let mangled = if let Some(parent_struct) = self.hir.is_struct_child(&def_id) {
+      let struct_generic_count = parent_struct.generics.params.len();
+      let (struct_type_args, fn_type_args) = type_args.split_at(struct_generic_count);
+
+      let struct_part =
+        self.mangle_name_with_type_args(&parent_struct.name.text(), struct_type_args);
+      let fn_part = self.mangle_name_with_type_args(&func.name.text(), fn_type_args);
+
+      format!("boron${}${}", struct_part, fn_part)
+    } else {
+      self.mangle_name(&func.name.text(), type_args, false)
+    };
 
     self.cache.insert(key, mangled.clone());
     mangled
