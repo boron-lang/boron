@@ -1,6 +1,7 @@
 use crate::codegen::LLVMCodegen;
 use anyhow::Result;
 use boron_ir::{IrExpr, IrExprKind, SemanticTy};
+use boron_parser::UnaryOp;
 use inkwell::llvm_sys::prelude::LLVMValueRef;
 use inkwell::types::BasicTypeEnum;
 use inkwell::values::{AnyValue, AsValueRef, BasicValue, BasicValueEnum, PointerValue};
@@ -49,7 +50,13 @@ impl<'ctx> LLVMCodegen<'ctx> {
     value: ValueKind<'ctx>,
   ) -> Result<BasicValueEnum<'ctx>> {
     match value {
-      ValueKind::RValue(val) => Ok(val),
+      ValueKind::RValue(val) => {
+        if val.is_pointer_value() {
+          Ok(self.builder.build_load(ty, val.into_pointer_value(), "rval.inner.ptr.load.tmp")?)
+        } else {
+          Ok(val)
+        }
+      },
       ValueKind::LValue(ptr) => Ok(self.builder.build_load(ty, ptr, "lval.load.tmp")?),
     }
   }
@@ -104,7 +111,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
             )?
           };
 
-          let value = self.value_to_basic(self.ty(&elem_expr.ty)?, elem_value)?; 
+          let value = self.value_to_basic(self.ty(&elem_expr.ty)?, elem_value)?;
           let _ = self.require_llvm(
             self.builder.build_store(elem_ptr, value),
             "array element store",
@@ -161,7 +168,8 @@ impl<'ctx> LLVMCodegen<'ctx> {
       }
       IrExprKind::If { condition, then_block, else_branch } => {
         let function = self.builder.get_insert_block().unwrap().get_parent().unwrap();
-        let cond_val = self.value_to_basic(self.ty(&condition.ty)?, self.generate_expr(condition)?);
+        let cond_val =
+          self.value_to_basic(self.ty(&condition.ty)?, self.generate_expr(condition)?);
 
         let then_bb = self
           .context
@@ -301,6 +309,48 @@ impl<'ctx> LLVMCodegen<'ctx> {
           self.generate_field(def_id, args, field_idx as u32, expr.hir_id)?;
         Ok(field_ptr.into())
       }
+      IrExprKind::Unary { op, operand } => {
+        let value = self.generate_expr(operand)?;
+        let ty = self.ty(&operand.ty)?;
+
+        match op {
+          UnaryOp::AddrOf { .. } => match value {
+            ValueKind::LValue(val) => Ok(val.into()),
+            ValueKind::RValue(val) => {
+              let slot = self.builder.build_alloca(val.get_type(), "tmp")?;
+              self.builder.build_store(slot, val)?;
+              Ok(ValueKind::LValue(slot))
+            }
+          },
+          UnaryOp::Not => {
+            let load = self.value_to_basic(ty, value)?.into_int_value();
+
+            let bool_ty = self.context.bool_type();
+            let res =
+              self.builder.build_xor(load, bool_ty.const_int(1, false).into(), "not")?;
+
+            Ok(ValueKind::RValue(res.into()))
+          }
+          UnaryOp::BitNot => {
+            let val = self.value_to_basic(ty, value)?.into_int_value();
+
+            let ty_int = ty.into_int_type().const_all_ones();
+            let value = self.builder.build_xor(val, ty_int, "bit_not")?;
+            Ok(ValueKind::RValue(value.into()))
+          }
+          UnaryOp::Neg => {
+            let val = self.value_to_basic(ty, value)?.into_int_value();
+
+            let zero = ty.into_int_type().const_zero();
+            let res = self.builder.build_int_sub(zero, val, "neg")?;
+            Ok(ValueKind::RValue(res.into()))
+          }
+          UnaryOp::Deref => Ok(self.value_to_basic(ty, value)?.into()),
+          UnaryOp::Plus => Ok(value),
+          _ => unreachable!(),
+        }
+      }
+
       IrExprKind::Skip => Err(anyhow::anyhow!("skip expression has no value")),
       _ => todo!("{:#?}", expr),
     }

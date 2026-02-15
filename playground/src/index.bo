@@ -1,4 +1,5 @@
 extern "C" func puts(text: *const u8);
+extern "C" func hello(text: Vec2<f64>);
 
 pub struct Vec2<T> {
     x: T,
@@ -10,7 +11,9 @@ pub struct Vec2<T> {
 }
 
 func main() {
-    var val = Vec2::new(15.0, 10.0);
+    var val = &Vec2::new(15.0, 10.0);
 
-    var x = &val;
+    var x = *val;
+
+    hello(x)
 }
