@@ -52,11 +52,15 @@ impl<'ctx> LLVMCodegen<'ctx> {
     match value {
       ValueKind::RValue(val) => {
         if val.is_pointer_value() {
-          Ok(self.builder.build_load(ty, val.into_pointer_value(), "rval.inner.ptr.load.tmp")?)
+          Ok(self.builder.build_load(
+            ty,
+            val.into_pointer_value(),
+            "rval.inner.ptr.load.tmp",
+          )?)
         } else {
           Ok(val)
         }
-      },
+      }
       ValueKind::LValue(ptr) => Ok(self.builder.build_load(ty, ptr, "lval.load.tmp")?),
     }
   }
@@ -149,16 +153,6 @@ impl<'ctx> LLVMCodegen<'ctx> {
             "struct field store",
           )?;
         }
-
-        self.struct_init_allocs.insert(ir_struct.id, alloca);
-        // let loaded = self.require_llvm(
-        //   self.builder.build_load(
-        //     struct_ty,
-        //     alloca,
-        //     &format!("struct.load.{}", expr.hir_id),
-        //   ),
-        //   "load struct",
-        // )?;
 
         Ok(alloca.into())
       }
@@ -298,6 +292,8 @@ impl<'ctx> LLVMCodegen<'ctx> {
       }
       IrExprKind::Field { object, field } => {
         let SemanticTy::Struct { def_id, args } = &object.ty else { unreachable!() };
+
+        let value = self.generate_expr(object)?;
         let strukt = self.ir.find_struct(def_id, args);
         let field_idx = strukt
           .fields
@@ -306,7 +302,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
           .expect("couldn't find field index");
 
         let field_ptr =
-          self.generate_field(def_id, args, field_idx as u32, expr.hir_id)?;
+          self.generate_field(def_id, args, field_idx as u32, object.hir_id, value)?;
         Ok(field_ptr.into())
       }
       IrExprKind::Unary { op, operand } => {

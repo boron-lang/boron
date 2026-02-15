@@ -1,14 +1,14 @@
 use crate::builtin_kind::BuiltInKind;
 use crate::def::{DefKind, Definition};
 use crate::errors::{
-  DuplicateDefinition, InvalidPathRoot, NoMethodFound, PrivateItem, UndefinedName,
-  UndefinedNameInModule,
+  DuplicateDefinition, InvalidPathRoot, NoMethodFound, PrivateItem, SelfOutsideMethod,
+  UndefinedName, UndefinedNameInModule,
 };
 use crate::module_resolver::ModuleResolver;
 use crate::resolver::Resolver;
 use crate::scope::ScopeKind;
 use crate::symbol::{Symbol, SymbolKind};
-use crate::DefId;
+use crate::{DefId, ScopeId};
 use boron_parser::ast::expressions::{Expr, ExprKind};
 use boron_parser::ast::items::{
   ConstItem, EnumItem, FunctionItem, Item, ItemKind, ModItem, StructItem, Visibility,
@@ -171,19 +171,6 @@ impl<'a> ResolveVisitor<'a> {
       vis,
       Namespace::Value,
     );
-
-    for param in &func.params {
-      let (name, id, span) = match param {
-        Param::Regular(reg) => (reg.name, reg.id, reg.span),
-        Param::Variadic(var) => (var.name, var.id, var.span),
-        Param::SelfParam(s) => (get_or_intern("self", Some(s.span)), s.id, s.span),
-      };
-
-      let def = Definition::new(name, id, self.current_file(), DefKind::Param, span, vis);
-      let def_id = self.resolver().add_definition(def);
-      self.module_resolver.define_value(name, def_id);
-      self.module_resolver.resolver.symbols.record_resolution(id, def_id);
-    }
   }
 
   fn define_struct(&mut self, s: &StructItem, vis: Visibility) {
@@ -195,6 +182,8 @@ impl<'a> ResolveVisitor<'a> {
       vis,
       Namespace::Type,
     );
+
+    self.module_resolver.enter_scope(ScopeKind::Struct, struct_def_id);
 
     for member in &s.members {
       if let StructMember::Item(i) = member {
@@ -212,6 +201,8 @@ impl<'a> ResolveVisitor<'a> {
         }
       }
     }
+
+    self.module_resolver.leave_scope();
   }
 
   fn define_enum(&mut self, e: &EnumItem, vis: Visibility) {
@@ -323,10 +314,11 @@ impl<'a> ResolveVisitor<'a> {
 
   fn resolve_function(&mut self, func: &FunctionItem, item: &Item) {
     let func_def = self.module_resolver.lookup_value(&func.name);
-    self.module_resolver.enter_scope(ScopeKind::Function, func_def);
+    let function_scope = self.module_resolver.enter_scope(ScopeKind::Function, func_def);
     self.resolve_generics(item, &func.generics);
 
     for param in &func.params {
+      self.define_param(param, item.visibility, function_scope);
       self.resolve_param(param);
     }
 
@@ -337,6 +329,28 @@ impl<'a> ResolveVisitor<'a> {
     }
 
     self.module_resolver.leave_scope();
+  }
+
+  fn define_param(&mut self, param: &Param, vis: Visibility, function_scope: ScopeId) {
+    let (name, id, span) = match param {
+      Param::Regular(reg) => (reg.name, reg.id, reg.span),
+      Param::Variadic(var) => (var.name, var.id, var.span),
+      Param::SelfParam(s) => (get_or_intern("self", Some(s.span)), s.id, s.span),
+    };
+
+    let def = Definition::new(name, id, self.current_file(), DefKind::Param, span, vis);
+    let def_id = self.resolver().add_definition(def);
+    self.module_resolver.define_value(name, def_id);
+    self.resolver().symbols.record_resolution(id, def_id);
+
+    if let Param::SelfParam(..) = param {
+      let parent = self
+        .resolver()
+        .parent_scope(function_scope)
+        .expect("a method should always be inside a struct");
+      let scope = self.resolver().scopes.get(parent).expect("parent should exist");
+      self.resolver().add_self_mapping(def_id, scope.owner.unwrap())
+    }
   }
 
   fn resolve_param(&mut self, param: &Param) {
@@ -797,8 +811,17 @@ impl<'a> ResolveVisitor<'a> {
           }
         }
       }
+      ExprKind::SelfValue => {
+        if let Some(def_id) =
+          self.module_resolver.lookup_value(&get_or_intern("self", None))
+        {
+          self.resolver().symbols.record_resolution(expr.id, def_id);
+        } else {
+          self.sess.dcx().emit(SelfOutsideMethod { span: expr.span });
+        }
+      }
 
-      ExprKind::Literal(_) | ExprKind::SelfValue | ExprKind::Continue(_) => {}
+      ExprKind::Literal(_) | ExprKind::Continue(_) => {}
     }
   }
 

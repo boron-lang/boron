@@ -21,6 +21,11 @@ impl TyChecker<'_> {
     if let Some(ty) = env.lookup(id) {
       return ty.clone();
     }
+    let id = if let Some(self_id) = self.resolver.get_self_mapping(id) {
+      *self_id
+    } else {
+      id
+    };
 
     if let Some(scheme) = self.table.def_type(id) {
       if let Some(args) = explicit_args {

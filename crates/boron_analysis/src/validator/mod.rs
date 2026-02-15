@@ -42,7 +42,8 @@ impl ComptimeValidator<'_> {
 
       ExprKind::Unary { op: _, operand } => self.validate_expr(operand),
 
-      ExprKind::Call { callee, args } => {
+      ExprKind::Call { callee, args }
+      | ExprKind::MethodCall { receiver: callee, args, .. } => {
         self.validate_expr(callee);
 
         for arg in args {

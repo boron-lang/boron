@@ -73,8 +73,7 @@ impl LoweringContext<'_> {
             }],
           })
         } else {
-          debug!("failed to lower self {expr:?}");
-          ExprKind::Err
+          panic!("failed to lower self {expr:?}");
         }
       }
 
@@ -113,9 +112,8 @@ impl LoweringContext<'_> {
         ty: self.lower_type(target_type),
       },
 
-      AstExprKind::Call { callee, args } => ExprKind::Call {
-        callee: Box::new(self.lower_expr(callee)),
-        args: args
+      AstExprKind::Call { callee, args } => {
+        let args = args
           .iter()
           .map(|a| Argument {
             id: self.next_hir_id(),
@@ -123,8 +121,17 @@ impl LoweringContext<'_> {
             name: a.name,
             span: a.span,
           })
-          .collect(),
-      },
+          .collect();
+        if let AstExprKind::Field { object, field } = &callee.kind {
+          ExprKind::MethodCall {
+            receiver: Box::new(self.lower_expr(object)),
+            method: *field,
+            args,
+          }
+        } else {
+          ExprKind::Call { callee: Box::new(self.lower_expr(callee)), args }
+        }
+      }
 
       AstExprKind::Field { object, field } => {
         ExprKind::Field { object: Box::new(self.lower_expr(object)), field: *field }

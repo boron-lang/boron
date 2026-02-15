@@ -1,5 +1,7 @@
 use crate::codegen::LLVMCodegen;
+use crate::expressions::ValueKind;
 use anyhow::Result;
+use boron_hir::HirId;
 use boron_ir::{IrFunction, IrId, Projection, SemanticTy};
 use boron_resolver::DefId;
 use inkwell::module::Linkage;
@@ -7,7 +9,6 @@ use inkwell::types::{
   BasicMetadataTypeEnum, BasicType as _, BasicTypeEnum, FunctionType,
 };
 use inkwell::values::{FunctionValue, PointerValue};
-use boron_hir::HirId;
 
 impl<'ctx> LLVMCodegen<'ctx> {
   fn params_to_metadata(
@@ -97,17 +98,28 @@ impl<'ctx> LLVMCodegen<'ctx> {
     struct_id: &DefId,
     args: &Vec<SemanticTy>,
     field_idx: u32,
-    local_hir_id: HirId
+    local_hir_id: HirId,
+    struct_value: ValueKind<'ctx>,
   ) -> Result<PointerValue<'ctx>> {
     let strukt = self.ir.find_struct(struct_id, args);
     let struct_ty = self.struct_ty_by_id(&strukt.id)?;
+    let ptr = match struct_value {
+      ValueKind::LValue(l) => l,
+      ValueKind::RValue(r) => {
+        if r.is_pointer_value() {
+          r.into_pointer_value()
+        } else {
+          let slot = self.builder.build_alloca(r.get_type(), "struct.tmp")?;
+          self.builder.build_store(slot, r)?;
+          slot
+        }
+      }
+    };
 
-    let struct_ptr = self
-      .require_some(self.struct_init_allocs.get(&strukt.id), "struct init missing")?;
     self.require_llvm(
       self.builder.build_struct_gep(
         struct_ty,
-        *struct_ptr,
+        ptr,
         field_idx,
         &format!("field.ptr.{}.{}", local_hir_id, field_idx),
       ),
@@ -139,7 +151,13 @@ impl<'ctx> LLVMCodegen<'ctx> {
               unreachable!()
             };
 
-            let field_ptr = self.generate_field(struct_def_id, args, *field_idx, local.hir_id)?;
+            let field_ptr = self.generate_field(
+              struct_def_id,
+              args,
+              *field_idx,
+              local.hir_id,
+              p_val.into(),
+            )?;
             if let Some(def_id) = projection_def_id {
               self.locals.insert(*def_id, field_ptr);
             }

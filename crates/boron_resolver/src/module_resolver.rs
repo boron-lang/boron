@@ -27,7 +27,6 @@ impl<'a> ModuleResolver<'a> {
   pub fn enter_scope(&mut self, kind: ScopeKind, owner: Option<DefId>) -> ScopeId {
     let parent = self.current_scope;
 
-    // Use special module scope creation for Module kind
     let scope_id = if kind == ScopeKind::Module && parent.is_none() {
       self.resolver.create_module_scope(self.current_file)
     } else {

@@ -12,6 +12,7 @@ use inkwell::types::StructType;
 use inkwell::values::{FunctionValue, PointerValue};
 use std::cell::RefCell;
 use std::fmt::Display;
+use boron_hir::HirId;
 
 pub struct LLVMCodegen<'ctx> {
   pub sess: &'ctx Session,
@@ -21,7 +22,6 @@ pub struct LLVMCodegen<'ctx> {
   pub structs: DashMap<IrId, StructType<'ctx>>,
   pub funcs: DashMap<IrId, FunctionValue<'ctx>>,
   pub locals: DashMap<DefId, PointerValue<'ctx>>,
-  pub struct_init_allocs: DashMap<IrId, PointerValue<'ctx>>,
   pub loop_exit_blocks: RefCell<Vec<BasicBlock<'ctx>>>,
   pub loop_header_blocks: RefCell<Vec<BasicBlock<'ctx>>>,
   pub ir: &'ctx Ir,

@@ -63,7 +63,8 @@ impl<'a> BuiltInExpander<'a> {
         self.walk_expr(expr);
       }
 
-      ExprKind::Call { callee, args } => {
+      ExprKind::Call { callee, args }
+      | ExprKind::MethodCall { receiver: callee, args, .. } => {
         self.walk_expr(callee);
         for arg in args {
           self.walk_expr(&arg.value);
@@ -95,13 +96,6 @@ impl<'a> BuiltInExpander<'a> {
           };
 
           self.results.insert(expr.hir_id, result);
-        }
-      }
-
-      ExprKind::MethodCall { receiver, args, .. } => {
-        self.walk_expr(receiver);
-        for arg in args {
-          self.walk_expr(arg);
         }
       }
 

@@ -1,5 +1,7 @@
 use crate::checker::TyChecker;
-use crate::errors::{ArityMismatch, FuncArgMismatch, NoValuePassedForParameter};
+use crate::errors::{
+  ArityMismatch, CannotCall, FuncArgMismatch, NoMethodForTy, NoValuePassedForParameter,
+};
 use crate::table::TypeEnv;
 use crate::ty::{InferTy, SubstitutionMap, TyParam};
 use crate::unify::{Expectation, UnifyError, UnifyResult};
@@ -7,7 +9,8 @@ use crate::TypeScheme;
 use boron_hir::expr::Argument;
 use boron_hir::{Expr, ExprKind, HirId};
 use boron_resolver::DefId;
-use boron_session::prelude::Span;
+use boron_session::prelude::{debug, Span};
+use boron_source::ident_table::Identifier;
 use itertools::Itertools;
 use std::collections::HashSet;
 
@@ -20,7 +23,7 @@ impl TyChecker<'_> {
     span: Span,
     call_hir_id: HirId,
   ) -> InferTy {
-    let (callee_def_id, explicit_type_args) = self.resolve_callee_metadata(callee);
+    let (callee_def_id, explicit_type_args) = self.resolve_callee_metadata(callee, env);
     let Some(def_id) = callee_def_id else { panic!() };
 
     let callee_ty = self.check_expr(callee, env, &Expectation::none());
@@ -42,11 +45,20 @@ impl TyChecker<'_> {
 
       InferTy::Var(_, _) => self.infer_call_from_var(callee_ty, args, env, span),
 
-      _ => InferTy::Err(span),
+      _ => {
+        self
+          .dcx()
+          .emit(CannotCall { span: callee.span, callee: self.format_type(&resolved) });
+        InferTy::Err(span)
+      }
     }
   }
 
-  fn resolve_callee_metadata(&mut self, callee: &Expr) -> (Option<DefId>, Vec<InferTy>) {
+  fn resolve_callee_metadata(
+    &mut self,
+    callee: &Expr,
+    env: &mut TypeEnv,
+  ) -> (Option<DefId>, Vec<InferTy>) {
     match &callee.kind {
       ExprKind::Path(path) => {
         let args = path
@@ -58,7 +70,15 @@ impl TyChecker<'_> {
 
         (Some(path.def_id), args)
       }
-      _ => (None, vec![]),
+      // ExprKind::Field { object, field } => {
+      //   let obj_ty = self.check_expr(object, env, &Expectation::none());
+      //
+      //   self.check_field_access(&obj_ty, field);
+      // }
+      _ => {
+        debug!("calling on {:#?}", callee);
+        (None, vec![])
+      }
     }
   }
 
@@ -274,6 +294,91 @@ impl TyChecker<'_> {
         }
       }
       _ => {}
+    }
+  }
+
+  pub fn check_method_call(
+    &mut self,
+    receiver: &Expr,
+    method: &Identifier,
+    args: &[Argument],
+    env: &mut TypeEnv,
+    span: Span,
+    call_hir_id: HirId,
+  ) -> InferTy {
+    let receiver_ty = self.check_expr(receiver, env, &Expectation::none());
+    let resolved_receiver = self.infcx.resolve(&receiver_ty);
+
+    let struct_def_id = match &resolved_receiver {
+      InferTy::Adt { def_id, .. } => *def_id,
+      _ => {
+        self.dcx().emit(CannotCall {
+          span,
+          callee: format!(
+            "method `{}` on {}",
+            method.text(),
+            self.format_type(&resolved_receiver)
+          ),
+        });
+        return InferTy::Err(span);
+      }
+    };
+
+    let Some(method_def_id) = self.resolver.lookup_adt_member(struct_def_id, method)
+    else {
+      self.dcx().emit(NoMethodForTy {
+        span: *method.span(),
+        ty: self.format_type(&resolved_receiver),
+        method: *method,
+      });
+      return InferTy::Err(span);
+    };
+
+    let method_ty = self.check_path(method_def_id, env, None);
+    let resolved_method = self.infcx.resolve(&method_ty);
+
+    match resolved_method {
+      InferTy::Fn { params, ret, .. } => {
+        self.check_fn_call_args(args, &params, env, method_def_id, span);
+        self.handle_monomorphization(Some(method_def_id), &method_ty, &[], call_hir_id);
+        *ret
+      }
+      _ => {
+        self
+          .dcx()
+          .emit(CannotCall { span, callee: format!("method `{}`", method.text()) });
+        InferTy::Err(span)
+      }
+    }
+  }
+
+  fn check_fn_call_args(
+    &mut self,
+    args: &[Argument],
+    param_tys: &[InferTy],
+    env: &mut TypeEnv,
+    def: DefId,
+    span: Span,
+  ) {
+    let def_info = self.resolver.get_definition(def).expect("couldn't find def");
+
+    if args.len() != param_tys.len() {
+      self.dcx().emit(ArityMismatch {
+        callee: format!("method {}", def_info.name),
+        span,
+        expected: param_tys.len(),
+        found: args.len(),
+      });
+    }
+
+    for (arg_idx, arg) in args.iter().enumerate() {
+      if arg_idx >= param_tys.len() {
+        break;
+      }
+      let expected_ty = &param_tys[arg_idx];
+      let arg_ty =
+        self.check_expr(&arg.value, env, &Expectation::has_type(expected_ty.clone()));
+      self.check_arg_unification(&arg.value, expected_ty, &arg_ty);
     }
   }
 }

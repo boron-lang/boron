@@ -207,7 +207,7 @@ impl<'a> IrLowerer<'a> {
     let kind = match &expr.kind {
       ThirExprKind::Literal(lit) => IrExprKind::Literal(lit.clone()),
       ThirExprKind::LocalRef(def_id) => IrExprKind::LocalRef(*def_id),
-      ThirExprKind::Path(def_id) => IrExprKind::GlobalRef(*def_id),
+      ThirExprKind::Path(def_id) => IrExprKind::Path(*def_id),
 
       ThirExprKind::Binary { op, lhs, rhs } => {
         let lhs = self.lower_expr(lhs);

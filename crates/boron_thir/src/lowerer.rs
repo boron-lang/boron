@@ -191,7 +191,7 @@ impl<'a> ThirLowerer<'a> {
       HirExprKind::Call { callee, args } => self.lower_call(callee, args, expr.hir_id),
       HirExprKind::Comptime { .. } => self.lower_comptime(expr),
       HirExprKind::MethodCall { receiver, method, args } => {
-        self.lower_method_call(receiver, method, args)
+        self.lower_method_call(receiver, method, args, expr.hir_id)
       }
       HirExprKind::Field { object, field } => self.lower_field(object, field),
       HirExprKind::Index { object, index } => self.lower_index(object, index),
@@ -369,9 +369,29 @@ impl<'a> ThirLowerer<'a> {
     &mut self,
     receiver: &HirExpr,
     method: &Identifier,
-    args: &[HirExpr],
+    args: &Vec<Argument>,
+    call_hir_id: HirId,
   ) -> ExprKind {
-    todo!()
+    let receiver_ty =
+      self.type_table.node_type(receiver.hir_id).expect("receiver should have a type");
+
+    let struct_def_id = match &receiver_ty {
+      InferTy::Adt { def_id, .. } => *def_id,
+      _ => panic!("method call on non-ADT type: {receiver_ty:?}"),
+    };
+
+    let method_def_id = self
+      .resolver
+      .lookup_adt_member(struct_def_id, method)
+      .expect("method should exist on struct");
+
+    let lowered_receiver = self.lower_expr(receiver);
+    let mut lowered_args = vec![lowered_receiver];
+    lowered_args.extend(args.iter().map(|a| self.lower_expr(&a.value)));
+
+    let type_args = self.lower_call_type_args(call_hir_id, method_def_id);
+
+    ExprKind::Call { callee: method_def_id, type_args, args: lowered_args }
   }
 
   fn lower_field(&mut self, object: &HirExpr, field: &Identifier) -> ExprKind {

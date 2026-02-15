@@ -323,3 +323,22 @@ pub struct NoFieldForTy {
   pub field: Identifier,
   pub ty: String,
 }
+
+#[derive(Diagnostic)]
+#[error("cannot call {callee}")]
+#[code(TYPE_CHECKER_CANNOT_CALL)]
+pub struct CannotCall {
+  #[error("here")]
+  pub span: Span,
+  pub callee: String,
+}
+
+#[derive(Diagnostic)]
+#[error("no method `{method}` found on type `{ty}`")]
+#[code(TYPE_CHECKER_NO_METHOD_FOR_TY)]
+pub struct NoMethodForTy {
+  #[error("in this method call")]
+  pub span: Span,
+  pub method: Identifier,
+  pub ty: String,
+}

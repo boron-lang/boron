@@ -275,6 +275,10 @@ impl TyChecker<'_> {
 
       ExprKind::Continue => InferTy::Never(expr.span),
 
+      ExprKind::MethodCall { receiver, method, args } => {
+        self.check_method_call(receiver, method, args, env, expr.span, expr.hir_id)
+      }
+
       ExprKind::Struct { def_id, fields } => {
         self.check_struct_init(def_id, fields, env, expr)
       }

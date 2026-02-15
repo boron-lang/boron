@@ -63,7 +63,7 @@ pub enum ExprKind {
   MethodCall {
     receiver: Box<Expr>,
     method: Identifier,
-    args: Vec<Expr>,
+    args: Vec<Argument>,
   },
 
   /// Field access: `obj.field`

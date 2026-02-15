@@ -11,6 +11,7 @@ impl TyChecker<'_> {
   ) -> InferTy {
     let resolved = self.infcx.resolve(obj_ty);
     let span = *field.span();
+
     match resolved.clone() {
       InferTy::Adt { def_id, args, .. } => {
         if let Some(field_ty) = self.table.field_type(def_id, &field.text()) {

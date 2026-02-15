@@ -9,6 +9,7 @@ use boron_parser::{NodeId, Path};
 use boron_source::ident_table::Identifier;
 use boron_source::prelude::SourceFileId;
 use dashmap::DashMap;
+use dashmap::mapref::one::Ref;
 use parking_lot::RwLock;
 
 /// The main resolver structure.
@@ -36,6 +37,7 @@ pub struct Resolver {
   pub adt_members: DashMap<DefId, DashMap<Identifier, DefId>>,
   module_ribs: DashMap<SourceFileId, RwLock<(ScopeId, Rib)>>,
   pub comptime_using_builtins: DashMap<NodeId, BuiltInKind>,
+  pub self_to_struct: DashMap<DefId, DefId>
 }
 
 impl Resolver {
@@ -53,6 +55,7 @@ impl Resolver {
       path_to_files: DashMap::new(),
       module_ribs: DashMap::new(),
       comptime_using_builtins: DashMap::new(),
+      self_to_struct: DashMap::new()
     }
   }
 
@@ -209,6 +212,14 @@ impl Resolver {
 
   pub fn add_path_mapping(&self, path: &Path, source_file_id: SourceFileId) {
     self.path_to_files.insert(path.id, source_file_id);
+  }
+  
+  pub fn add_self_mapping(&self, self_id: DefId, struct_id: DefId) {
+    self.self_to_struct.insert(self_id, struct_id);
+  }
+  
+  pub fn get_self_mapping(&'_ self, self_id: DefId) -> Option<Ref<'_, DefId, DefId>> {
+    self.self_to_struct.get(&self_id)
   }
 }
 

@@ -18,7 +18,7 @@ pub enum IrExprKind {
   Literal(FullLiteral),
 
   LocalRef(DefId),
-  GlobalRef(DefId),
+  Path(DefId),
 
   Binary { op: BinaryOp, lhs: Box<IrExpr>, rhs: Box<IrExpr> },
 

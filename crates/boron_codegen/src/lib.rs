@@ -31,7 +31,6 @@ pub fn run_codegen(sess: &Session, ir: &Ir, main_function: Option<DefId>) -> Res
     structs: DashMap::new(),
     funcs: DashMap::new(),
     locals: DashMap::new(),
-    struct_init_allocs: DashMap::new(),
     loop_exit_blocks: RefCell::new(Vec::new()),
     loop_header_blocks: RefCell::new(Vec::new()),
     ir,

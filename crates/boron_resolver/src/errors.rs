@@ -99,3 +99,11 @@ pub struct NoMethodFound {
   #[error("in this method call")]
   pub span: Span,
 }
+
+#[derive(Diagnostic)]
+#[error("used `self` outside a method")]
+#[code(RESOLVE_SELF_OUTSIDE_METHOD)]
+pub struct SelfOutsideMethod {
+  #[error("invalid use here")]
+  pub span: Span,
+}
