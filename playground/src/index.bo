@@ -1,3 +1,5 @@
+extern "C" func puts(text: *const u8);
+
 pub struct Vec2 {
     x: f32,
     y: f32,
@@ -15,4 +17,8 @@ func main() {
     var val = Vec2::new(15.0, 10.0);
 
     var sum = val.sum();
+
+    if comptime os!() == "windows" {
+
+    }
 }

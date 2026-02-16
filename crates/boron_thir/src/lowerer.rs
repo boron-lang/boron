@@ -3,9 +3,7 @@ use crate::items::{Field, Function, Struct};
 use crate::Param;
 use boron_analysis::float::construct_float;
 use boron_analysis::int::construct_i128;
-use boron_analysis::interpreter::{
-  Interpreter, InterpreterCache, InterpreterContext, InterpreterMode,
-};
+use boron_analysis::interpreter::{Interpreter, InterpreterCache, InterpreterContext};
 use boron_analysis::literal_table::FullLiteral;
 use boron_analysis::results::BuiltInResults;
 use boron_analysis::ty::SubstitutionMap;
@@ -17,7 +15,7 @@ use boron_hir::{
   Hir, HirId, Literal, Local as HirLocal, MatchArm as HirMatchArm, Stmt as HirStmt,
   StmtKind as HirStmtKind, Struct as HirStruct,
 };
-use boron_parser::{BinaryOp, UnaryOp};
+use boron_parser::{BinaryOp, InterpreterMode, UnaryOp};
 use boron_resolver::{DefId, DefKind, Resolver};
 use boron_source::ident_table::Identifier;
 use boron_source::span::Span;

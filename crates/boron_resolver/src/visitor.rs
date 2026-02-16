@@ -468,9 +468,6 @@ impl<'a> ResolveVisitor<'a> {
       Statement::Expr(expr_stmt) => {
         self.resolve_expr(&expr_stmt.expr);
       }
-      Statement::Block(block) => {
-        self.resolve_block(block);
-      }
     }
   }
 

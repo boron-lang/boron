@@ -1,10 +1,11 @@
 use crate::errors::ArrayLenNotANumber;
 use crate::interpreter::values::ConstValue;
-use crate::interpreter::{InterpreterContext, InterpreterMode};
+use crate::interpreter::InterpreterContext;
 use crate::ty::{ArrayLength, TyParam};
 use crate::{InferTy, TyChecker, TypeEnv};
 use boron_hir::ty::ArrayLen;
 use boron_hir::{Expr, GenericParamKind, Generics, Ty, TyKind};
+use boron_parser::InterpreterMode;
 use boron_resolver::DefKind;
 
 impl TyChecker<'_> {

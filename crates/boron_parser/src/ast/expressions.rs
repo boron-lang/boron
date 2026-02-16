@@ -12,43 +12,34 @@ pub struct Expr {
   pub id: NodeId,
   pub kind: ExprKind,
   pub span: Span,
-  pub is_const: bool,
+  pub interpreter_mode: InterpreterMode,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub enum InterpreterMode {
+  Const,
+  Runtime,
+  NoEval
 }
 
 #[derive(Debug, Clone)]
 pub enum ExprKind {
-  // Literals
   Literal(Literal),
 
-  // Identifiers and paths
   Path(Path),
   SelfValue,
 
-  // Binary operations
   Binary { op: BinaryOp, left: Box<Expr>, right: Box<Expr> },
-
-  // Unary operations
   Unary { op: UnaryOp, operand: Box<Expr> },
-
-  // Assignment
   Assign { op: AssignOp, target: Box<Expr>, value: Box<Expr> },
-
-  // Ternary conditional
   Ternary { condition: Box<Expr>, then_expr: Box<Expr>, else_expr: Box<Expr> },
-
-  // Type cast
   Cast { expr: Box<Expr>, target_type: Box<Type> },
-
-  // Function call
   Call { callee: Box<Expr>, args: Vec<Argument> },
-
-  // Field access
   Field { object: Box<Expr>, field: Identifier },
 
   Index { object: Box<Expr>, index: Box<Expr> },
   Struct { path: Path, fields: Vec<StructFieldInit> },
 
-  // Control flow
   If(IfExpr),
   Match(MatchExpr),
   Block(Block),
@@ -62,18 +53,17 @@ pub enum ExprKind {
   Range(RangeExpr),
   Comptime { callee: Box<Expr>, args: Vec<ComptimeArg> },
 
-  // Composite literals
   Tuple(Vec<Expr>),
   Array { values: Vec<Expr>, repeat: Option<Box<Expr>> },
 }
 
 impl Expr {
   pub fn new(kind: ExprKind, span: Span) -> Self {
-    Self { id: NodeId::new(), kind, span, is_const: false }
+    Self { id: NodeId::new(), kind, span, interpreter_mode: InterpreterMode::NoEval  }
   }
 
   pub fn new_const(kind: ExprKind, span: Span) -> Self {
-    Self { id: NodeId::new(), kind, span, is_const: true }
+    Self { id: NodeId::new(), kind, span, interpreter_mode: InterpreterMode::Const }
   }
 
   pub fn dummy() -> Self {
@@ -84,7 +74,7 @@ impl Expr {
         span: Span::default(),
       })),
       span: Span::default(),
-      is_const: false,
+      interpreter_mode: InterpreterMode::Const,
     }
   }
 }

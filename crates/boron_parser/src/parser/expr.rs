@@ -20,12 +20,13 @@ impl Parser<'_> {
 
   pub fn parse_const_expr(&mut self) -> Expr {
     let mut expr = self.parse_expr();
-    expr.is_const = true;
+    expr.interpreter_mode = InterpreterMode::Const;
     expr
   }
 
   fn parse_expr_with_precedence(&mut self, min_precedence: u8) -> Expr {
     let start = self.current_span();
+    let comptime = self.eat(TokenType::Comptime);
 
     // Parse range prefix (..x or ..=x)
     if self.check(TokenType::DotDot) || self.check(TokenType::DotDotEq) {
@@ -45,7 +46,6 @@ impl Parser<'_> {
           self.advance();
           let value = self.parse_expr_with_precedence(op.precedence());
 
-          // Validate assignment target
           if !Self::is_valid_assign_target(&left) {
             self.emit(InvalidAssignTarget { span: left.span });
           }
@@ -81,6 +81,7 @@ impl Parser<'_> {
       break;
     }
 
+    left.interpreter_mode = if comptime { InterpreterMode::Runtime } else { InterpreterMode::NoEval };
     left
   }
 
@@ -247,7 +248,6 @@ impl Parser<'_> {
     let token = self.peek().clone();
 
     match &token.kind {
-      // Literals
       TokenType::IntegerLiteral(..) => self.parse_int_literal(),
       TokenType::FloatLiteral(_) => self.parse_float_literal(),
       TokenType::StringLiteral(_) => self.parse_string_literal(),
@@ -262,7 +262,7 @@ impl Parser<'_> {
 
       TokenType::LeftParen => self.parse_paren_or_tuple(),
       TokenType::LeftBracket => self.parse_array_expr(),
-      TokenType::LeftBrace => {
+      TokenType::LeftBrace | TokenType::Comptime => {
         let block = self.parse_block();
         Expr::new(ExprKind::Block(block), self.span_from(start))
       }
@@ -481,7 +481,7 @@ impl Parser<'_> {
 
     if self.eat(TokenType::Semicolon) {
       let mut repeat_count = self.parse_const_expr();
-      repeat_count.is_const = true;
+      repeat_count.interpreter_mode = InterpreterMode::Const;
 
       if self.eat(TokenType::Comma) || self.check(TokenType::Semicolon) {
         let error_start = self.peek().span;

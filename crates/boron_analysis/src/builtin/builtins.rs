@@ -1,5 +1,5 @@
 use crate::InferTy;
-use boron_parser::PrimitiveKind;
+use boron_parser::{Mutability, PrimitiveKind};
 use boron_resolver::prelude::BuiltInKind;
 use boron_session::prelude::Span;
 use std::collections::HashMap;
@@ -19,7 +19,7 @@ pub enum BuiltInParam {
 
 pub static BUILTINS: std::sync::LazyLock<HashMap<BuiltInKind, BuiltInFunction>> =
   std::sync::LazyLock::new(|| {
-    use BuiltInKind::{AlignOf, SizeOf};
+    use BuiltInKind::{AlignOf, Os, SizeOf};
 
     let mut m = HashMap::new();
 
@@ -38,6 +38,19 @@ pub static BUILTINS: std::sync::LazyLock<HashMap<BuiltInKind, BuiltInFunction>> 
         kind: AlignOf,
         return_type: InferTy::Primitive(PrimitiveKind::USize, Span::default()),
         params: vec![BuiltInParam::Type],
+      },
+    );
+
+    m.insert(
+      Os,
+      BuiltInFunction {
+        kind: Os,
+        return_type: InferTy::Ptr {
+          mutability: Mutability::Const,
+          ty: Box::new(InferTy::Primitive(PrimitiveKind::U8, Span::default())),
+          span: Span::default(),
+        },
+        params: vec![],
       },
     );
 

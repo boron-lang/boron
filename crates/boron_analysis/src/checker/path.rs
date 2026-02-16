@@ -1,6 +1,6 @@
+use boron_parser::InterpreterMode;
 use crate::checker::TyChecker;
 use crate::interpreter::InterpreterContext;
-use crate::interpreter::InterpreterMode;
 use crate::table::TypeEnv;
 use crate::ty::{InferTy, SubstitutionMap, TypeScheme};
 use boron_resolver::DefId;

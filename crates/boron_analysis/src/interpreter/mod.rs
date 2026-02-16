@@ -12,16 +12,10 @@ use crate::interpreter::values::ConstValue;
 use crate::literals::int::construct_i128;
 use boron_diagnostics::DiagnosticCtx;
 use boron_hir::{Const, Expr, ExprKind, Hir, HirId, Literal};
-use boron_parser::{BinaryOp, UnaryOp};
+use boron_parser::{BinaryOp, InterpreterMode, UnaryOp};
 use boron_resolver::Resolver;
 use dashmap::DashMap;
 use std::cmp::PartialEq;
-
-#[derive(Debug, PartialEq, Eq, Hash)]
-pub enum InterpreterMode {
-  Const,
-  Runtime,
-}
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum InterpreterContext {
@@ -115,22 +109,6 @@ impl<'a> Interpreter<'a> {
     self.cache.map().insert(cnst.hir_id, value.clone());
 
     value
-  }
-
-  fn const_value_type_name(val: &ConstValue) -> &'static str {
-    match val {
-      ConstValue::Int(_) => "int",
-      ConstValue::Bool(_) => "bool",
-      ConstValue::Float(_) => "float",
-      ConstValue::Char(_) => "char",
-      ConstValue::String(_) => "string",
-      ConstValue::Array(_) => "array",
-      ConstValue::Struct(_) => "struct",
-      ConstValue::Enum { .. } => "enum",
-      ConstValue::Type(_) => "type",
-      ConstValue::Unit => "unit",
-      ConstValue::Poison => "poison",
-    }
   }
 
   fn values_equal(lval: &ConstValue, rval: &ConstValue) -> bool {

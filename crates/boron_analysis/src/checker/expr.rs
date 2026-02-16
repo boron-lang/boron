@@ -5,13 +5,14 @@ use crate::errors::{
   TypeMismatch,
 };
 use crate::functions::FinalComptimeArg;
+use crate::interpreter::InterpreterContext;
 use crate::table::TypeEnv;
 use crate::ty::{ArrayLength, InferTy};
 use crate::unify::{Expectation, UnifyError, UnifyResult};
 use boron_hir::expr::ComptimeArg;
 use boron_hir::{Expr, ExprKind, Literal};
 use boron_parser::ast::types::PrimitiveKind;
-use boron_parser::{BinaryOp, Mutability};
+use boron_parser::{BinaryOp, InterpreterMode, Mutability};
 use boron_session::prelude::{warn, Span};
 
 impl TyChecker<'_> {
@@ -21,6 +22,12 @@ impl TyChecker<'_> {
     env: &mut TypeEnv,
     expect: &Expectation,
   ) -> InferTy {
+    if expr.interpreter_mode == InterpreterMode::Runtime {
+      let interpreter =
+        self.new_interpreter(InterpreterMode::Runtime, InterpreterContext::Other);
+      interpreter.evaluate_expr(expr);
+    };
+
     let ty = match &expr.kind {
       ExprKind::Literal(lit) => self.check_literal_with_span(lit, expr.span),
 

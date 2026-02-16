@@ -2,6 +2,7 @@
 pub enum BuiltInKind {
   SizeOf,
   AlignOf,
+  Os,
   TypeOf,
   CompileError,
   Unreachable,
@@ -15,6 +16,7 @@ impl BuiltInKind {
       "typeOf" => Some(Self::TypeOf),
       "compileError" => Some(Self::CompileError),
       "unreachable" => Some(Self::Unreachable),
+      "os" => Some(Self::Os),
       _ => None,
     }
   }
@@ -26,6 +28,7 @@ impl BuiltInKind {
       Self::TypeOf => "typeOf",
       Self::CompileError => "compileError",
       Self::Unreachable => "unreachable",
+      Self::Os => "os"
     }
   }
 }

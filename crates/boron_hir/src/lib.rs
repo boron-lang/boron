@@ -8,7 +8,9 @@ pub mod pat;
 pub mod semantic_type;
 pub mod ty;
 
-pub use expr::{Block, Expr, ExprKind, Literal, Local, MatchArm, Stmt, StmtKind};
+pub use expr::{
+    Block, ComptimeCallee, Expr, ExprKind, Literal, Local, MatchArm, Stmt, StmtKind,
+};
 pub use generics::{GenericParam, GenericParamKind, Generics, TypeBound};
 pub use hir::{Hir, HirMap};
 pub use ids::{HirId, LocalId};

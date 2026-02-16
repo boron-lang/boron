@@ -2,8 +2,9 @@ use crate::ids::HirId;
 use crate::pat::Pat;
 use crate::ty::Ty;
 use boron_parser::ast::expressions::{BinaryOp, UnaryOp};
-use boron_parser::{FloatSuffix, IntBase, IntSuffix};
+use boron_parser::{FloatSuffix, IntBase, IntSuffix, InterpreterMode, Path};
 use boron_resolver::DefId;
+use boron_resolver::prelude::BuiltInKind;
 use boron_session::prelude::Span;
 use boron_source::ident_table::Identifier;
 
@@ -12,6 +13,7 @@ pub struct Expr {
   pub hir_id: HirId,
   pub kind: ExprKind,
   pub span: Span,
+  pub interpreter_mode: InterpreterMode
 }
 
 #[derive(Debug, Clone)]
@@ -20,6 +22,12 @@ pub struct Argument {
   pub name: Option<Identifier>,
   pub value: Expr,
   pub span: Span,
+}
+
+#[derive(Debug, Clone)]
+pub enum ComptimeCallee {
+  BuiltIn(BuiltInKind),
+  Path(PathExpr)
 }
 
 #[derive(Debug, Clone)]
@@ -56,7 +64,7 @@ pub enum ExprKind {
   },
 
   Comptime {
-    callee: Box<Expr>,
+    callee: ComptimeCallee,
     args: Vec<ComptimeArg>,
   },
 

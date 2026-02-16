@@ -1,13 +1,13 @@
 use crate::expr::{
-  Argument, Block, ComptimeArg, Expr, ExprKind, FieldInit, Literal, Local, MatchArm,
-  PathExpr, PathSegment, Stmt, StmtKind,
+  Argument, Block, ComptimeArg, ComptimeCallee, Expr, ExprKind, FieldInit, Literal,
+  Local, MatchArm, PathExpr, PathSegment, Stmt, StmtKind,
 };
 use crate::lower::context::LoweringContext;
 use boron_parser::ast::expressions::{
   self, ComptimeArg as AstComptimeArg, ExprKind as AstExprKind,
 };
 use boron_parser::ast::statements;
-use boron_parser::{AssignOp, IntBase, IntSuffix};
+use boron_parser::{ast, AssignOp, IntBase, IntSuffix, InterpreterMode};
 use boron_session::prelude::{debug, Identifier};
 use boron_source::prelude::Span;
 use expressions::Literal as AstLiteral;
@@ -33,6 +33,7 @@ impl LoweringContext<'_> {
               hir_id: self.next_hir_id(),
               kind: ExprKind::Literal(byte_literal(*v)),
               span: expr.span,
+              interpreter_mode: InterpreterMode::Const,
             })
             .collect_vec();
 
@@ -58,8 +59,7 @@ impl LoweringContext<'_> {
               .collect(),
           })
         } else {
-          debug!("failed to lower a path {path:#?}");
-          ExprKind::Err
+          panic!("failed to lower a path {path:#?}");
         }
       }
 
@@ -101,6 +101,7 @@ impl LoweringContext<'_> {
               rhs: Box::new(lowered_value),
             },
             span: value.span,
+            interpreter_mode: InterpreterMode::NoEval,
           }
         };
 
@@ -213,6 +214,14 @@ impl LoweringContext<'_> {
       },
 
       AstExprKind::Comptime { callee, args } => {
+        let callee =
+          if let Some(builtin) = self.resolver.get_recorded_comptime_builtin(expr.id) {
+            ComptimeCallee::BuiltIn(builtin)
+          } else {
+            let lowered = self.lower_expr(callee);
+            let ExprKind::Path(path) = lowered.kind else { todo!("handle") };
+            ComptimeCallee::Path(path)
+          };
         let args = args
           .iter()
           .map(|a| match a {
@@ -223,13 +232,13 @@ impl LoweringContext<'_> {
           })
           .collect_vec();
 
-        ExprKind::Comptime { callee: Box::new(self.lower_expr(callee)), args }
+        ExprKind::Comptime { callee, args }
       }
     };
 
     let id = self.next_hir_id();
     self.hir.node_to_hir.insert(expr.id, id);
-    Expr { hir_id: id, kind, span: expr.span }
+    Expr { hir_id: id, kind, span: expr.span, interpreter_mode: expr.interpreter_mode }
   }
 
   fn lower_if_expr(&mut self, if_expr: &expressions::IfExpr) -> ExprKind {
@@ -239,10 +248,16 @@ impl LoweringContext<'_> {
         hir_id: self.next_hir_id(),
         kind: ExprKind::Block(self.lower_block(block)),
         span: block.span,
+        interpreter_mode: InterpreterMode::NoEval,
       })),
       Some(expressions::ElseBranch::If(nested_if)) => {
         let kind = self.lower_if_expr(nested_if);
-        Some(Box::new(Expr { hir_id: self.next_hir_id(), kind, span: nested_if.span }))
+        Some(Box::new(Expr {
+          hir_id: self.next_hir_id(),
+          kind,
+          span: nested_if.span,
+          interpreter_mode: InterpreterMode::NoEval,
+        }))
       }
     };
 
@@ -300,6 +315,7 @@ impl LoweringContext<'_> {
 
       statements::Statement::Expr(expr_stmt) => {
         let expr = self.lower_expr(&expr_stmt.expr);
+        let mode = expr.interpreter_mode;
         if expr_stmt.has_semicolon {
           (StmtKind::Expr(expr), expr_stmt.span)
         } else {
@@ -308,22 +324,11 @@ impl LoweringContext<'_> {
               hir_id: self.next_hir_id(),
               span: expr.span,
               kind: ExprKind::Return { value: Some(Box::new(expr)) },
+              interpreter_mode: mode,
             }),
             expr_stmt.span,
           )
         }
-      }
-
-      statements::Statement::Block(block) => {
-        let hir_block = self.lower_block(block);
-        (
-          StmtKind::Expr(Expr {
-            hir_id: self.next_hir_id(),
-            kind: ExprKind::Block(hir_block),
-            span: block.span,
-          }),
-          block.span,
-        )
       }
     };
 
