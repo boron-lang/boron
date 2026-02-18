@@ -12,13 +12,13 @@ impl<'ctx> LLVMCodegen<'ctx> {
     expr: &IrExpr,
     lit: &FullLiteral,
   ) -> Result<BasicValueEnum<'ctx>> {
-    let ty = self.ty(&expr.ty)?;
-
     match lit {
+      FullLiteral::Unit => Ok(self.context.i8_type().const_zero().into()),
       FullLiteral::Bool(val) => {
         Ok(self.context.bool_type().const_int(u64::from(*val), false).into())
       }
       FullLiteral::Int(number) => {
+        let ty = self.ty(&expr.ty)?;
         let BasicTypeEnum::IntType(i) = ty else { unreachable!() };
 
         Ok(

@@ -1,4 +1,5 @@
 mod call;
+mod comptime;
 mod debug;
 mod expr;
 mod field;
@@ -11,6 +12,7 @@ mod unary;
 use crate::errors::{ConstInitMismatch, ReturnTypeMismatch};
 use crate::interpreter::Interpreter;
 use crate::interpreter::{InterpreterCache, InterpreterContext};
+use crate::results::BuiltInResults;
 use crate::table::{InferCtx, TypeEnv, TypeTable};
 use crate::ty::InferTy;
 use crate::unify::Expectation;
@@ -50,6 +52,7 @@ pub struct TyChecker<'a> {
   pub table: TypeTable,
   pub infcx: InferCtx,
   pub interpreter_cache: InterpreterCache,
+  pub built_in_results: BuiltInResults,
 }
 
 impl<'a> TyChecker<'a> {
@@ -61,6 +64,7 @@ impl<'a> TyChecker<'a> {
       table: TypeTable::new(),
       infcx: InferCtx::new(),
       interpreter_cache: InterpreterCache::new(),
+      built_in_results: BuiltInResults::new(),
     }
   }
 
@@ -82,6 +86,7 @@ impl<'a> TyChecker<'a> {
       &self.interpreter_cache,
       self.resolver,
       self.hir,
+      &self.built_in_results,
       mode,
       ctx,
     )

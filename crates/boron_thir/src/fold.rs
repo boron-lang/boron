@@ -2,7 +2,7 @@ use crate::ThirLowerer;
 use boron_analysis::interpreter::values::ConstValue;
 use boron_analysis::literal_table::FullLiteral;
 use boron_hir::{expr::Expr as HirExpr, expr::ExprKind as HirExprKind};
-use boron_parser::UnaryOp;
+use boron_parser::{InterpreterMode, UnaryOp};
 
 impl<'a> ThirLowerer<'a> {
   pub fn can_const_fold(&self, expr: &HirExpr) -> bool {
@@ -29,7 +29,7 @@ impl<'a> ThirLowerer<'a> {
       return None;
     }
 
-    let interpreter = self.new_interpreter();
+    let interpreter = self.new_interpreter(InterpreterMode::Const);
     let value = interpreter.evaluate_expr(expr);
 
     Self::const_value_to_literal(value)

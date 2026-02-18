@@ -71,6 +71,9 @@ impl<'ctx> LLVMCodegen<'ctx> {
 
       self.generate_var_allocas(func.id)?;
       self.generate_block(&body.block)?;
+      if let Some(tail) = &body.block.expr {
+        self.generate_expr(tail)?;
+      }
 
       if let Some(tail_expr) = &body.block.expr {
         match &func.return_type {

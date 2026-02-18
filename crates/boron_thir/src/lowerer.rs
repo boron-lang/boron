@@ -3,13 +3,16 @@ use crate::items::{Field, Function, Struct};
 use crate::Param;
 use boron_analysis::float::construct_float;
 use boron_analysis::int::construct_i128;
+use boron_analysis::interpreter::values::ConstValue;
 use boron_analysis::interpreter::{Interpreter, InterpreterCache, InterpreterContext};
 use boron_analysis::literal_table::FullLiteral;
 use boron_analysis::results::BuiltInResults;
 use boron_analysis::ty::SubstitutionMap;
 use boron_analysis::{InferTy, TypeTable};
 use boron_diagnostics::DiagnosticCtx;
-use boron_hir::expr::{Argument, FieldInit as HirFieldInit, PathExpr as HirPathExpr};
+use boron_hir::expr::{
+  Argument, ElseBranch, FieldInit as HirFieldInit, IfExpr, PathExpr as HirPathExpr,
+};
 use boron_hir::{
   Block as HirBlock, Expr as HirExpr, ExprKind as HirExprKind, Function as HirFunction,
   Hir, HirId, Literal, Local as HirLocal, MatchArm as HirMatchArm, Stmt as HirStmt,
@@ -77,13 +80,14 @@ impl<'a> ThirLowerer<'a> {
     self.thir
   }
 
-  pub fn new_interpreter(&'a self) -> Interpreter<'a> {
+  pub fn new_interpreter(&'a self, mode: InterpreterMode) -> Interpreter<'a> {
     Interpreter::new(
       self.dcx,
       &self.interpreter_cache,
       self.resolver,
       self.hir,
-      InterpreterMode::Const,
+      self.built_in_results,
+      mode,
       InterpreterContext::Other,
     )
   }
@@ -179,35 +183,46 @@ impl<'a> ThirLowerer<'a> {
   }
 
   pub fn lower_expr(&mut self, expr: &HirExpr) -> Expr {
-    let kind = match &expr.kind {
-      HirExprKind::Literal(lit) => self.lower_literal(lit, expr.span),
-      HirExprKind::Path(path) => self.lower_path(path, expr),
-      HirExprKind::Binary { op, lhs, rhs } => self.lower_binary(*op, lhs, rhs, expr),
-      HirExprKind::Unary { op, operand } => self.lower_unary(*op, operand, expr),
-      HirExprKind::Assign { target, value } => self.lower_assign(target, value),
-      HirExprKind::Cast { expr: inner, ty: _ } => self.lower_cast(inner, expr.hir_id),
-      HirExprKind::Call { callee, args } => self.lower_call(callee, args, expr.hir_id),
-      HirExprKind::Comptime { .. } => self.lower_comptime(expr),
-      HirExprKind::MethodCall { receiver, method, args } => {
-        self.lower_method_call(receiver, method, args, expr.hir_id)
+    let const_val = if let Some(val) = self.interpreter_cache.get(expr.hir_id) {
+      Self::const_value_to_literal(val)
+    } else if expr.interpreter_mode == InterpreterMode::Runtime {
+      let interpreter = self.new_interpreter(InterpreterMode::Runtime);
+      Self::const_value_to_literal(interpreter.evaluate_expr(expr))
+    } else {
+      None
+    };
+
+    let kind = if let Some(const_val) = const_val {
+      ExprKind::Literal(const_val)
+    } else {
+      match &expr.kind {
+        HirExprKind::Literal(lit) => self.lower_literal(lit, expr.span),
+        HirExprKind::Path(path) => self.lower_path(path, expr),
+        HirExprKind::Binary { op, lhs, rhs } => self.lower_binary(*op, lhs, rhs, expr),
+        HirExprKind::Unary { op, operand } => self.lower_unary(*op, operand, expr),
+        HirExprKind::Assign { target, value } => self.lower_assign(target, value),
+        HirExprKind::Cast { expr: inner, ty: _ } => self.lower_cast(inner, expr.hir_id),
+        HirExprKind::Call { callee, args } => self.lower_call(callee, args, expr.hir_id),
+        HirExprKind::Comptime { .. } => self.lower_comptime(expr),
+        HirExprKind::MethodCall { receiver, method, args } => {
+          self.lower_method_call(receiver, method, args, expr.hir_id)
+        }
+        HirExprKind::Field { object, field } => self.lower_field(object, field),
+        HirExprKind::Index { object, index } => self.lower_index(object, index),
+        HirExprKind::Struct { def_id, fields } => {
+          self.lower_struct_expr(*def_id, fields, expr.hir_id)
+        }
+        HirExprKind::Tuple(exprs) => self.lower_tuple(exprs),
+        HirExprKind::Array(exprs, len) => self.lower_array(exprs, len.as_deref()),
+        HirExprKind::Block(block) => self.lower_block_expr(block),
+        HirExprKind::If(if_expr) => self.lower_full_if(if_expr, None),
+        HirExprKind::Match { scrutinee, arms } => self.lower_match(scrutinee, arms),
+        HirExprKind::Loop { body } => self.lower_loop(body),
+        HirExprKind::Break { value } => self.lower_break(value.as_deref()),
+        HirExprKind::Continue => self.lower_continue(),
+        HirExprKind::Return { value } => self.lower_return(value.as_deref()),
+        HirExprKind::Err => ExprKind::Err,
       }
-      HirExprKind::Field { object, field } => self.lower_field(object, field),
-      HirExprKind::Index { object, index } => self.lower_index(object, index),
-      HirExprKind::Struct { def_id, fields } => {
-        self.lower_struct_expr(*def_id, fields, expr.hir_id)
-      }
-      HirExprKind::Tuple(exprs) => self.lower_tuple(exprs),
-      HirExprKind::Array(exprs, len) => self.lower_array(exprs, len.as_deref()),
-      HirExprKind::Block(block) => self.lower_block_expr(block),
-      HirExprKind::If { condition, then_block, else_branch } => {
-        self.lower_if(condition, then_block, else_branch.as_deref())
-      }
-      HirExprKind::Match { scrutinee, arms } => self.lower_match(scrutinee, arms),
-      HirExprKind::Loop { body } => self.lower_loop(body),
-      HirExprKind::Break { value } => self.lower_break(value.as_deref()),
-      HirExprKind::Continue => self.lower_continue(),
-      HirExprKind::Return { value } => self.lower_return(value.as_deref()),
-      HirExprKind::Err => ExprKind::Err,
     };
 
     Expr {
@@ -218,6 +233,33 @@ impl<'a> ThirLowerer<'a> {
         .expect(&format!("couldn't find node ty for expr {:#?}", expr)),
       kind,
       span: expr.span,
+    }
+  }
+
+  fn lower_full_if(&mut self, if_expr: &IfExpr, parent_if: Option<&IfExpr>) -> ExprKind {
+    let IfExpr { condition, then_block, else_branch, .. } = if_expr;
+    let is_parent_comptime =
+      parent_if.is_some_and(|parent| parent.condition.eval_at_comptime());
+
+    if condition.eval_at_comptime() || is_parent_comptime {
+      let interpreter = self.new_interpreter(InterpreterMode::Runtime);
+      let val = interpreter.evaluate_expr(condition);
+      let ConstValue::Bool(cond) = val else { panic!() };
+
+      if cond {
+        self.lower_block_expr(then_block)
+      } else if let Some(branch) = else_branch {
+        match branch {
+          ElseBranch::Block(block) => self.lower_block_expr(block),
+          ElseBranch::If(branch) => {
+            return self.lower_full_if(branch, Some(if_expr));
+          }
+        }
+      } else {
+        ExprKind::Literal(FullLiteral::Unit)
+      }
+    } else {
+      self.lower_if(condition, then_block, else_branch)
     }
   }
 
@@ -238,20 +280,17 @@ impl<'a> ThirLowerer<'a> {
   }
 
   fn lower_path(&self, path: &HirPathExpr, expr: &HirExpr) -> ExprKind {
-    if let Some(cnst) = self.hir.get_const(path.def_id) {
-      let interpreter = Interpreter::new(
-        self.dcx,
-        &self.interpreter_cache,
-        self.resolver,
-        self.hir,
-        InterpreterMode::Const,
-        InterpreterContext::Const,
+    if let Some(_) = self.hir.get_const(path.def_id) {
+      return ExprKind::Literal(
+        Self::const_value_to_literal(
+          self
+            .interpreter_cache
+            .get(expr.hir_id)
+            .expect("const exprs must be interpreted in type checker"),
+        )
+        .unwrap(),
       );
-      let value = interpreter.evaluate_expr(&cnst.value);
-      if let Some(lit) = Self::const_value_to_literal(value) {
-        return ExprKind::Literal(lit);
-      }
-    }
+    };
 
     if let Some(def) = self.resolver.get_definition(path.def_id) {
       match def.kind {
@@ -472,12 +511,31 @@ impl<'a> ThirLowerer<'a> {
     &mut self,
     condition: &HirExpr,
     then_block: &HirBlock,
-    else_branch: Option<&HirExpr>,
+    else_branch: &Option<ElseBranch>,
   ) -> ExprKind {
     ExprKind::If {
       condition: Box::new(self.lower_expr(condition)),
       then_block: self.lower_block(then_block),
-      else_branch: else_branch.map(|e| Box::new(self.lower_expr(e))),
+      else_branch: else_branch.as_ref().map(|e| {
+        Box::new(match e {
+          ElseBranch::If(if_expr) => Expr {
+            kind: self.lower_if(
+              &if_expr.condition,
+              &if_expr.then_block,
+              &if_expr.else_branch,
+            ),
+            hir_id: if_expr.id,
+            ty: self.type_table.node_type(if_expr.id).unwrap(),
+            span: Span::default(),
+          },
+          ElseBranch::Block(block) => Expr {
+            kind: ExprKind::Block(self.lower_block(&block)),
+            hir_id: block.hir_id,
+            ty: self.type_table.node_type(block.hir_id).unwrap(),
+            span: Span::default(),
+          },
+        })
+      }),
     }
   }
 

@@ -130,8 +130,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
           unreachable!("Mixed integer/float operations not yet implemented")
         }
       }
-
-      _ => unreachable!(),
+      _ => unreachable!("{:?} {} {:?}", lhs, op, rhs),
     }
   }
 }

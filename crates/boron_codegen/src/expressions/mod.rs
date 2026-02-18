@@ -51,7 +51,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
   ) -> Result<BasicValueEnum<'ctx>> {
     match value {
       ValueKind::RValue(val) => {
-        if val.is_pointer_value() {
+        if val.is_pointer_value() && !ty.is_pointer_type() {
           Ok(self.builder.build_load(
             ty,
             val.into_pointer_value(),
@@ -158,7 +158,11 @@ impl<'ctx> LLVMCodegen<'ctx> {
       }
       IrExprKind::Block(block) => {
         self.generate_block(block)?;
-        if let Some(tail) = &block.expr { self.generate_expr(tail) } else { panic!() }
+        if let Some(tail) = &block.expr {
+          self.generate_expr(tail)
+        } else {
+          Ok(self.context.bool_type().const_int(0, false).as_basic_value_enum().into())
+        }
       }
       IrExprKind::If { condition, then_block, else_branch } => {
         let function = self.builder.get_insert_block().unwrap().get_parent().unwrap();

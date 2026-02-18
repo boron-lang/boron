@@ -2,6 +2,7 @@ use crate::interpreter::values::ConstValue;
 use crate::results::BuiltInResults;
 use crate::{InferTy, TypeTable};
 use boron_diagnostics::DiagnosticCtx;
+use boron_hir::expr::{ElseBranch, IfExpr};
 use boron_hir::{
   Block, ComptimeCallee, Expr, ExprKind, Function, Hir, ParamKind, StmtKind,
 };
@@ -122,13 +123,7 @@ impl<'a> BuiltInExpander<'a> {
 
       ExprKind::Block(block) => self.walk_block(block),
 
-      ExprKind::If { condition, then_block, else_branch } => {
-        self.walk_expr(condition);
-        self.walk_block(then_block);
-        if let Some(e) = else_branch {
-          self.walk_expr(e);
-        }
-      }
+      ExprKind::If(if_expr) => self.walk_if(if_expr),
 
       ExprKind::Match { scrutinee, arms } => {
         self.walk_expr(scrutinee);
@@ -148,6 +143,17 @@ impl<'a> BuiltInExpander<'a> {
       }
 
       ExprKind::Literal(_) | ExprKind::Path(_) | ExprKind::Continue | ExprKind::Err => {}
+    }
+  }
+
+  fn walk_if(&self, if_expr: &IfExpr) {
+    self.walk_expr(&if_expr.condition);
+    self.walk_block(&if_expr.then_block);
+    if let Some(e) = &if_expr.else_branch {
+      match e {
+        ElseBranch::Block(block) => self.walk_block(block),
+        ElseBranch::If(if_expr) => self.walk_if(if_expr),
+      }
     }
   }
 

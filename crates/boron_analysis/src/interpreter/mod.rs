@@ -10,8 +10,9 @@ use crate::interpreter::stack::Stack;
 use crate::interpreter::utils::InterpreterLimits;
 use crate::interpreter::values::ConstValue;
 use crate::literals::int::construct_i128;
+use crate::results::BuiltInResults;
 use boron_diagnostics::DiagnosticCtx;
-use boron_hir::{Const, Expr, ExprKind, Hir, HirId, Literal};
+use boron_hir::{ComptimeCallee, Const, Expr, ExprKind, Hir, HirId, Literal};
 use boron_parser::{BinaryOp, InterpreterMode, UnaryOp};
 use boron_resolver::Resolver;
 use dashmap::DashMap;
@@ -59,6 +60,8 @@ pub struct Interpreter<'a> {
   cache: &'a InterpreterCache,
   resolver: &'a Resolver,
   hir: &'a Hir,
+  /// This is only used by the comptime interpreter, in THIR lowering.
+  built_in_results: &'a BuiltInResults,
 
   mode: InterpreterMode,
   limits: InterpreterLimits,
@@ -73,12 +76,14 @@ impl<'a> Interpreter<'a> {
     cache: &'a InterpreterCache,
     resolver: &'a Resolver,
     hir: &'a Hir,
+    built_in_results: &'a BuiltInResults,
     mode: InterpreterMode,
     context: InterpreterContext,
   ) -> Self {
     Self {
       resolver,
       dcx,
+      built_in_results,
       hir,
       stack: Stack::new(),
       limits: Default::default(),
@@ -415,6 +420,16 @@ impl<'a> Interpreter<'a> {
           self.dcx.emit(PathNotConst { span: expr.span });
           ConstValue::Poison
         }
+      }
+      ExprKind::Comptime { callee, .. } => {
+        let const_val = if let ComptimeCallee::BuiltIn(_) = callee {
+          self.built_in_results.get(expr.hir_id)
+        } else {
+          self.cache.get(expr.hir_id)
+        }
+        .expect("comptime functions should be resolved by now");
+
+        const_val
       }
       _ => {
         self.dcx.emit(UnsupportedConstExpr { span: expr.span });

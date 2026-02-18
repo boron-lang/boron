@@ -15,10 +15,9 @@ pub struct Vec2 {
 
 func main() {
     var val = Vec2::new(15.0, 10.0);
-
     var sum = val.sum();
 
-    if comptime os!() == "windows" {
-
+    if comptime os!() == "hello" {
+        puts("hello");
     }
 }

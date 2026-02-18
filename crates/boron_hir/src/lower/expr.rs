@@ -1,13 +1,16 @@
 use crate::expr::{
-  Argument, Block, ComptimeArg, ComptimeCallee, Expr, ExprKind, FieldInit, Literal,
-  Local, MatchArm, PathExpr, PathSegment, Stmt, StmtKind,
+  Argument, Block, ComptimeArg, ComptimeCallee, ElseBranch, Expr, ExprKind, FieldInit,
+  IfExpr, Literal, Local, MatchArm, PathExpr, PathSegment, Stmt, StmtKind,
 };
 use crate::lower::context::LoweringContext;
 use boron_parser::ast::expressions::{
   self, ComptimeArg as AstComptimeArg, ExprKind as AstExprKind,
 };
 use boron_parser::ast::statements;
-use boron_parser::{ast, AssignOp, IntBase, IntSuffix, InterpreterMode};
+use boron_parser::{
+  ast, AssignOp, ElseBranch as AstElseBranch, IfExpr as AstIfExpr, IntBase,
+  IntSuffix, InterpreterMode,
+};
 use boron_session::prelude::{debug, Identifier};
 use boron_source::prelude::Span;
 use expressions::Literal as AstLiteral;
@@ -177,7 +180,7 @@ impl LoweringContext<'_> {
 
       AstExprKind::Block(block) => ExprKind::Block(self.lower_block(block)),
 
-      AstExprKind::If(if_expr) => self.lower_if_expr(if_expr),
+      AstExprKind::If(if_expr) => ExprKind::If(self.lower_if_expr(if_expr)),
 
       AstExprKind::Match(match_expr) => ExprKind::Match {
         scrutinee: Box::new(self.lower_expr(&match_expr.scrutinee)),
@@ -202,7 +205,8 @@ impl LoweringContext<'_> {
         value: ret_expr.value.as_ref().map(|v| Box::new(self.lower_expr(v))),
       },
 
-      AstExprKind::Ternary { condition, then_expr, else_expr } => ExprKind::If {
+      AstExprKind::Ternary { condition, then_expr, else_expr } => ExprKind::If(IfExpr {
+        id: self.next_hir_id(),
         condition: Box::new(self.lower_expr(condition)),
         then_block: Block {
           hir_id: self.next_hir_id(),
@@ -210,8 +214,13 @@ impl LoweringContext<'_> {
           expr: Some(Box::new(self.lower_expr(then_expr))),
           span: then_expr.span,
         },
-        else_branch: Some(Box::new(self.lower_expr(else_expr))),
-      },
+        else_branch: Some(ElseBranch::Block(Block {
+          hir_id: self.next_hir_id(),
+          span: Span::default(),
+          expr: Some(Box::new(self.lower_expr(else_expr))),
+          stmts: vec![],
+        })),
+      }),
 
       AstExprKind::Comptime { callee, args } => {
         let callee =
@@ -241,27 +250,28 @@ impl LoweringContext<'_> {
     Expr { hir_id: id, kind, span: expr.span, interpreter_mode: expr.interpreter_mode }
   }
 
-  fn lower_if_expr(&mut self, if_expr: &expressions::IfExpr) -> ExprKind {
-    let else_branch = match &if_expr.else_branch {
+  fn lower_else_branch(
+    &mut self,
+    else_branch: &Option<AstElseBranch>,
+  ) -> Option<ElseBranch> {
+    match &else_branch {
       None => None,
-      Some(expressions::ElseBranch::Block(block)) => Some(Box::new(Expr {
-        hir_id: self.next_hir_id(),
-        kind: ExprKind::Block(self.lower_block(block)),
-        span: block.span,
-        interpreter_mode: InterpreterMode::NoEval,
-      })),
-      Some(expressions::ElseBranch::If(nested_if)) => {
-        let kind = self.lower_if_expr(nested_if);
-        Some(Box::new(Expr {
-          hir_id: self.next_hir_id(),
-          kind,
-          span: nested_if.span,
-          interpreter_mode: InterpreterMode::NoEval,
-        }))
+      Some(AstElseBranch::Block(block)) => {
+        Some(ElseBranch::Block(self.lower_block(block)))
       }
-    };
+      Some(AstElseBranch::If(nested_if)) => {
+        let kind = self.lower_if_expr(nested_if);
 
-    ExprKind::If {
+        Some(ElseBranch::If(Box::new(kind)))
+      }
+    }
+  }
+
+  fn lower_if_expr(&mut self, if_expr: &AstIfExpr) -> IfExpr {
+    let else_branch = self.lower_else_branch(&if_expr.else_branch);
+
+    IfExpr {
+      id: self.next_hir_id(),
       condition: Box::new(self.lower_expr(&if_expr.condition)),
       then_block: self.lower_block(&if_expr.then_block),
       else_branch,
@@ -294,7 +304,7 @@ impl LoweringContext<'_> {
         }
       }
     }
-
+    
     Block { hir_id: self.next_hir_id(), stmts, expr: trailing_expr, span: block.span }
   }
 

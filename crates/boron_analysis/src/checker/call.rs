@@ -70,11 +70,6 @@ impl TyChecker<'_> {
 
         (Some(path.def_id), args)
       }
-      // ExprKind::Field { object, field } => {
-      //   let obj_ty = self.check_expr(object, env, &Expectation::none());
-      //
-      //   self.check_field_access(&obj_ty, field);
-      // }
       _ => {
         debug!("calling on {:#?}", callee);
         (None, vec![])

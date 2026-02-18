@@ -2,9 +2,9 @@ use crate::ids::HirId;
 use crate::pat::Pat;
 use crate::ty::Ty;
 use boron_parser::ast::expressions::{BinaryOp, UnaryOp};
-use boron_parser::{FloatSuffix, IntBase, IntSuffix, InterpreterMode, Path};
-use boron_resolver::DefId;
+use boron_parser::{FloatSuffix, IntBase, IntSuffix, InterpreterMode};
 use boron_resolver::prelude::BuiltInKind;
+use boron_resolver::DefId;
 use boron_session::prelude::Span;
 use boron_source::ident_table::Identifier;
 
@@ -13,7 +13,13 @@ pub struct Expr {
   pub hir_id: HirId,
   pub kind: ExprKind,
   pub span: Span,
-  pub interpreter_mode: InterpreterMode
+  pub interpreter_mode: InterpreterMode,
+}
+
+impl Expr {
+  pub fn eval_at_comptime(&self) -> bool {
+    self.interpreter_mode == InterpreterMode::Runtime
+  }
 }
 
 #[derive(Debug, Clone)]
@@ -27,7 +33,7 @@ pub struct Argument {
 #[derive(Debug, Clone)]
 pub enum ComptimeCallee {
   BuiltIn(BuiltInKind),
-  Path(PathExpr)
+  Path(PathExpr),
 }
 
 #[derive(Debug, Clone)]
@@ -99,11 +105,7 @@ pub enum ExprKind {
 
   Block(Block),
 
-  If {
-    condition: Box<Expr>,
-    then_block: Block,
-    else_branch: Option<Box<Expr>>,
-  },
+  If(IfExpr),
 
   Match {
     scrutinee: Box<Expr>,
@@ -125,6 +127,20 @@ pub enum ExprKind {
   },
 
   Err,
+}
+
+#[derive(Debug, Clone)]
+pub struct IfExpr {
+  pub id: HirId,
+  pub condition: Box<Expr>,
+  pub then_block: Block,
+  pub else_branch: Option<ElseBranch>,
+}
+
+#[derive(Debug, Clone)]
+pub enum ElseBranch {
+  Block(Block),
+  If(Box<IfExpr>),
 }
 
 #[derive(Debug, Clone)]

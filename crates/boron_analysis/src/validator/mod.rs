@@ -2,6 +2,7 @@ mod errors;
 mod types;
 
 use crate::validator::errors::ComptimeNoGenerics;
+use boron_hir::expr::{ElseBranch, IfExpr};
 use boron_hir::{Block, Expr, ExprKind, Function, Hir, Stmt, StmtKind};
 use boron_resolver::{DefId, Resolver};
 use boron_session::prelude::{debug, DiagnosticCtx};
@@ -33,6 +34,25 @@ impl ComptimeValidator<'_> {
     }
   }
 
+  fn validate_if(
+    &self,
+    condition: &Expr,
+    then_block: &Block,
+    else_branch: &Option<ElseBranch>,
+  ) {
+    self.validate_expr(condition);
+    self.validate_block(then_block);
+
+    if let Some(branch) = else_branch {
+      match branch {
+        ElseBranch::Block(block) => self.validate_block(block),
+        ElseBranch::If(if_expr) => {
+          self.validate_if(&if_expr.condition, &if_expr.then_block, &if_expr.else_branch)
+        }
+      }
+    }
+  }
+
   fn validate_expr(&self, expr: &Expr) {
     match &expr.kind {
       ExprKind::Binary { op: _, lhs, rhs } => {
@@ -51,14 +71,8 @@ impl ComptimeValidator<'_> {
         }
       }
 
-      ExprKind::If { condition, then_block, else_branch } => {
-        self.validate_expr(condition);
-
-        self.validate_block(then_block);
-
-        if let Some(else_expr) = else_branch {
-          self.validate_expr(else_expr);
-        }
+      ExprKind::If(IfExpr { condition, then_block, else_branch, .. }) => {
+        self.validate_if(condition, then_block, else_branch)
       }
 
       ExprKind::Block(block) => self.validate_block(block),

@@ -5,12 +5,11 @@ use crate::errors::{
   TypeMismatch,
 };
 use crate::functions::FinalComptimeArg;
-use crate::interpreter::InterpreterContext;
 use crate::table::TypeEnv;
 use crate::ty::{ArrayLength, InferTy};
 use crate::unify::{Expectation, UnifyError, UnifyResult};
-use boron_hir::expr::ComptimeArg;
-use boron_hir::{Expr, ExprKind, Literal};
+use boron_hir::expr::{ComptimeArg, ElseBranch, IfExpr};
+use boron_hir::{Block, ComptimeCallee, Expr, ExprKind, Literal};
 use boron_parser::ast::types::PrimitiveKind;
 use boron_parser::{BinaryOp, InterpreterMode, Mutability};
 use boron_session::prelude::{warn, Span};
@@ -22,12 +21,6 @@ impl TyChecker<'_> {
     env: &mut TypeEnv,
     expect: &Expectation,
   ) -> InferTy {
-    if expr.interpreter_mode == InterpreterMode::Runtime {
-      let interpreter =
-        self.new_interpreter(InterpreterMode::Runtime, InterpreterContext::Other);
-      interpreter.evaluate_expr(expr);
-    };
-
     let ty = match &expr.kind {
       ExprKind::Literal(lit) => self.check_literal_with_span(lit, expr.span),
 
@@ -140,39 +133,8 @@ impl TyChecker<'_> {
         self.check_call(callee, args, env, expr.span, expr.hir_id)
       }
 
-      ExprKind::If { condition, then_block, else_branch } => {
-        let cond_ty = self.check_expr(
-          condition,
-          env,
-          &Expectation::has_type(InferTy::Primitive(PrimitiveKind::Bool, condition.span)),
-        );
-
-        let cond_result =
-          self.unify(&cond_ty, &InferTy::Primitive(PrimitiveKind::Bool, condition.span));
-        self.handle_unify_result(cond_result, condition.span);
-
-        let (then_ty, then_span) = self.check_block(then_block, env, expect);
-
-        if let Some(else_expr) = else_branch {
-          let else_ty = self.check_expr(else_expr, env, expect);
-          let result = self.unify(&then_ty, &else_ty);
-          if let UnifyResult::Err(err) = &result {
-            match err {
-              UnifyError::Mismatch { .. } => {
-                self.dcx().emit(TypeMismatch {
-                  expected_span: then_span,
-                  expected: self.format_type(&then_ty),
-                  found_span: else_expr.span,
-                  found: self.format_type(&else_ty),
-                });
-              }
-              _ => self.handle_unify_result(result, else_expr.span),
-            }
-          }
-          then_ty
-        } else {
-          InferTy::Unit(expr.span)
-        }
+      ExprKind::If(IfExpr { condition, then_block, else_branch, .. }) => {
+        self.check_if(condition, then_block, else_branch, env, expect)
       }
 
       ExprKind::Block(block) => self.check_block(block, env, expect).0,
@@ -290,73 +252,7 @@ impl TyChecker<'_> {
         self.check_struct_init(def_id, fields, env, expr)
       }
 
-      ExprKind::Comptime { args, .. } => {
-        let builtin = self
-          .resolver
-          .get_recorded_comptime_builtin(self.hir.hir_to_node(&expr.hir_id).unwrap());
-
-        if let Some(builtin) = builtin {
-          let func = get_builtin(&builtin);
-
-          if func.params.len() != args.len() {
-            self.dcx().emit(ArityMismatch {
-              span: expr.span,
-              callee: format!("builtin function `{}!`", builtin.name()),
-              expected: func.params.len(),
-              found: args.len(),
-            });
-
-            return InferTy::Err(expr.span);
-          }
-
-          let mut final_args = vec![];
-          for (param, arg) in func.params.iter().zip(args) {
-            match param {
-              BuiltInParam::Type => {
-                if let ComptimeArg::Expr(expr) = arg {
-                  self.dcx().emit(FuncArgMismatch {
-                    span: expr.span,
-                    expected: "a comptime type".to_owned(),
-                    found: "an expression".to_owned(),
-                  });
-                } else if let ComptimeArg::Type(ty) = arg {
-                  final_args.push(FinalComptimeArg::Ty(self.lower_hir_ty(ty)));
-                }
-              }
-              BuiltInParam::Expr(ty) => {
-                if let ComptimeArg::Type(ty) = arg {
-                  final_args.push(FinalComptimeArg::Ty(self.lower_hir_ty(ty)));
-                } else if let ComptimeArg::Expr(expr) = arg {
-                  let expr_ty =
-                    self.check_expr(expr, env, &Expectation::ExpectHasType(ty.clone()));
-                  let result = self.unify(&expr_ty, ty);
-
-                  match &result {
-                    UnifyResult::Err(err) => {
-                      if let UnifyError::Mismatch { .. } = err {
-                        self.dcx().emit(FuncArgMismatch {
-                          span: expr.span,
-                          expected: self.format_type(ty),
-                          found: self.format_type(&expr_ty),
-                        });
-                      } else {
-                        self.handle_unify_result(result, expr.span);
-                      }
-                    }
-                    UnifyResult::Ok => {
-                      final_args.push(FinalComptimeArg::Expr(*expr.clone()));
-                    }
-                  }
-                }
-              }
-            }
-          }
-
-          self.table.comptime_args.insert(expr.hir_id, final_args);
-        }
-
-        InferTy::Err(expr.span)
-      }
+      ExprKind::Comptime { args, callee } => self.check_comptime(expr, env, callee, args),
 
       _ => {
         warn!("not handled in type checker {expr:#?}");
@@ -367,6 +263,65 @@ impl TyChecker<'_> {
 
     self.table.record_node_type(expr.hir_id, ty.clone());
     ty
+  }
+
+  pub fn check_if(
+    &mut self,
+    condition: &Expr,
+    then_block: &Block,
+    else_branch: &Option<ElseBranch>,
+    env: &mut TypeEnv,
+    expect: &Expectation,
+  ) -> InferTy {
+    let cond_ty = self.check_expr(
+      condition,
+      env,
+      &Expectation::has_type(InferTy::Primitive(PrimitiveKind::Bool, condition.span)),
+    );
+
+    let cond_result =
+      self.unify(&cond_ty, &InferTy::Primitive(PrimitiveKind::Bool, condition.span));
+    self.handle_unify_result(cond_result, condition.span);
+
+    let (then_ty, then_span) = self.check_block(then_block, env, expect);
+
+    if let Some(else_expr) = else_branch {
+      match else_expr {
+        ElseBranch::Block(block) => {
+          let (else_ty, found_span) = self.check_block(block, env, expect);
+          let result = self.unify(&then_ty, &else_ty);
+          if let UnifyResult::Err(err) = &result {
+            match err {
+              UnifyError::Mismatch { .. } => {
+                self.dcx().emit(TypeMismatch {
+                  expected_span: then_span,
+                  expected: self.format_type(&then_ty),
+                  found_span,
+                  found: self.format_type(&else_ty),
+                });
+              }
+              _ => self.handle_unify_result(result, found_span),
+            }
+          }
+
+          self.table.record_node_type(block.hir_id, then_ty.clone());
+          then_ty
+        }
+        ElseBranch::If(expr) => {
+          let ty = self.check_if(
+            &expr.condition,
+            &expr.then_block,
+            &expr.else_branch,
+            env,
+            expect,
+          );
+          self.table.record_node_type(expr.id, ty.clone());
+          ty
+        }
+      }
+    } else {
+      InferTy::Unit(condition.span)
+    }
   }
 
   pub(crate) fn check_literal_with_span(&self, lit: &Literal, span: Span) -> InferTy {
