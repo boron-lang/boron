@@ -1,5 +1,5 @@
+use crate::parser::items::ADT_ITEM_TOKENS;
 use crate::parser::Parser;
-use crate::parser::items::STRUCT_ITEM_TOKENS;
 use crate::{NodeId, StructField, StructItem, StructMember, TokenType, Visibility};
 use boron_source::span::Span;
 
@@ -17,12 +17,12 @@ impl Parser<'_> {
 
         if self.check(TokenType::Pub)
           && let Some(ident) = self.peek_ahead(1)
-          && let TokenType::Identifier(_) = &ident.kind
+          && let TokenType::Dot = &ident.kind
         {
           self.eat(TokenType::Pub);
           members.push(self.parse_field(span, Visibility::Public(span)));
           self.eat_commas();
-        } else if let TokenType::Identifier(_) = &self.peek().kind {
+        } else if let TokenType::Dot = &self.peek().kind {
           members.push(self.parse_field(span, Visibility::Private));
           self.eat_commas();
         } else if self.check(TokenType::RightBrace) {
@@ -32,9 +32,9 @@ impl Parser<'_> {
           self.check_possible_comment();
 
           let is_item_start = if self.check(TokenType::Pub) {
-            self.check_next_any(STRUCT_ITEM_TOKENS)
+            self.check_next_any(ADT_ITEM_TOKENS)
           } else {
-            self.check_any(STRUCT_ITEM_TOKENS)
+            self.check_any(ADT_ITEM_TOKENS)
           };
 
           let item = if is_item_start {
@@ -43,7 +43,7 @@ impl Parser<'_> {
             break;
           } else {
             self.advance_until_one_of(
-              &[STRUCT_ITEM_TOKENS, &[TokenType::RightBrace]].concat(),
+              &[ADT_ITEM_TOKENS, &[TokenType::RightBrace]].concat(),
             );
             None
           };
@@ -52,7 +52,7 @@ impl Parser<'_> {
             members.push(StructMember::Item(item));
           } else {
             self.advance_until_one_of(
-              &[STRUCT_ITEM_TOKENS, &[TokenType::RightBrace]].concat(),
+              &[ADT_ITEM_TOKENS, &[TokenType::RightBrace]].concat(),
             );
           }
         }
@@ -71,9 +71,10 @@ impl Parser<'_> {
   }
 
   pub fn parse_field(&mut self, span: Span, visibility: Visibility) -> StructMember {
+    self.eat(TokenType::Dot);
     let name = self.parse_identifier();
 
-    self.expect(TokenType::Colon, "to specify the field type");
+    self.expect(TokenType::Assign, "to specify the field type");
     let ty = self.parse_type();
 
     StructMember::Field(StructField {

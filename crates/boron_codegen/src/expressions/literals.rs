@@ -37,15 +37,13 @@ impl<'ctx> LLVMCodegen<'ctx> {
         };
 
         let float_str = fl.to_string();
-        match prim {
-          PrimitiveKind::F32 => unsafe {
-            Ok(self.context.f32_type().const_float_from_string(&float_str).into())
-          },
-          PrimitiveKind::F64 => unsafe {
-            Ok(self.context.f64_type().const_float_from_string(&float_str).into())
-          },
+        let ty = match prim {
+          PrimitiveKind::F32 => self.context.f32_type(),
+          PrimitiveKind::F64 => self.context.f64_type(),
           _ => unreachable!("Float literal should be f32 or f64"),
-        }
+        };
+
+        unsafe { Ok(ty.const_float_from_string(&float_str).into()) }
       }
       FullLiteral::String(string) => match &expr.ty {
         SemanticTy::Ptr { .. } => {

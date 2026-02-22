@@ -1,6 +1,6 @@
 use crate::exprs::{Block, Expr, ExprKind, FieldInit, Local, MatchArm, Stmt, StmtKind};
 use crate::items::{Field, Function, Struct};
-use crate::Param;
+use crate::{Enum, Param};
 use boron_analysis::float::construct_float;
 use boron_analysis::int::construct_i128;
 use boron_analysis::interpreter::values::ConstValue;
@@ -14,9 +14,9 @@ use boron_hir::expr::{
   Argument, ElseBranch, FieldInit as HirFieldInit, IfExpr, PathExpr as HirPathExpr,
 };
 use boron_hir::{
-  Block as HirBlock, Expr as HirExpr, ExprKind as HirExprKind, Function as HirFunction,
-  Hir, HirId, Literal, Local as HirLocal, MatchArm as HirMatchArm, Stmt as HirStmt,
-  StmtKind as HirStmtKind, Struct as HirStruct,
+  Block as HirBlock, Enum as HirEnum, Expr as HirExpr, ExprKind as HirExprKind,
+  Function as HirFunction, Hir, HirId, Literal, Local as HirLocal,
+  MatchArm as HirMatchArm, Stmt as HirStmt, StmtKind as HirStmtKind, Struct as HirStruct,
 };
 use boron_parser::{BinaryOp, InterpreterMode, UnaryOp};
 use boron_resolver::{DefId, DefKind, Resolver};
@@ -28,6 +28,7 @@ use dashmap::DashMap;
 pub struct Thir {
   pub functions: DashMap<DefId, Function>,
   pub structs: DashMap<DefId, Struct>,
+  pub enums: DashMap<DefId, Enum>,
 }
 
 impl Thir {
@@ -77,6 +78,11 @@ impl<'a> ThirLowerer<'a> {
       self.thir.structs.insert(*strukt.key(), lowered);
     }
 
+    for enum_ in &self.hir.enums {
+      let lowered = self.lower_enum(enum_.value());
+      self.thir.enums.insert(*enum_.key(), lowered);
+    }
+
     self.thir
   }
 
@@ -90,6 +96,20 @@ impl<'a> ThirLowerer<'a> {
       mode,
       InterpreterContext::Other,
     )
+  }
+
+  pub fn lower_enum(&mut self, enum_: &HirEnum) -> Enum {
+    // let variants = enum_.variants.iter().map(|variant| )
+
+    Enum {
+      hir_id: enum_.hir_id,
+      def_id: enum_.def_id,
+      name: enum_.name,
+      generics: enum_.generics.clone(),
+      span: enum_.span,
+      items: enum_.items.clone(),
+      variants: vec![],
+    }
   }
 
   pub fn lower_function(&mut self, func: &HirFunction) -> Function {

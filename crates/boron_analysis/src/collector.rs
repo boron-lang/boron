@@ -1,4 +1,5 @@
 use crate::{InferTy, TyChecker, TypeScheme};
+use boron_hir::item::VariantKind;
 use boron_hir::{Function, Generics, Param, ParamKind};
 use boron_source::span::Span;
 
@@ -62,7 +63,35 @@ impl TyChecker<'_> {
     }
 
     for entry in &self.hir.enums {
-      todo!()
+      let def_id = *entry.key();
+      let _enum = entry.value();
+
+      let generics = self.register_generics(&_enum.generics);
+      for variant in &_enum.variants {
+        match &variant.kind {
+          VariantKind::Unit | VariantKind::Discriminant(..) => {}
+          VariantKind::Struct(fields) => {
+            for field in fields {
+              let field_ty = self.lower_hir_ty(&field.ty);
+              self.table.record_field_type(variant.def_id, field.name.text(), field_ty);
+            }
+          }
+          VariantKind::Tuple(types) => {
+            for (field, ty) in types.iter().enumerate() {
+              let field_ty = self.lower_hir_ty(&ty);
+              self.table.record_field_type(variant.def_id, field.to_string(), field_ty);
+            }
+          }
+        }
+      }
+
+      let struct_ty = InferTy::Adt {
+        def_id,
+        args: generics.iter().map(|&g| InferTy::Param(g)).collect(),
+        span: _enum.span,
+      };
+
+      self.table.record_def_type(def_id, TypeScheme { vars: generics, ty: struct_ty });
     }
 
     for entry in &self.hir.consts {

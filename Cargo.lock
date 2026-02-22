@@ -153,6 +153,7 @@ dependencies = [
  "boron_source",
  "dashmap 7.0.0-rc2",
  "itertools",
+ "log",
  "rustc_apfloat",
 ]
 

@@ -1,9 +1,9 @@
-use boron_parser::InterpreterMode;
 use crate::checker::TyChecker;
 use crate::interpreter::InterpreterContext;
 use crate::table::TypeEnv;
 use crate::ty::{InferTy, SubstitutionMap, TypeScheme};
-use boron_resolver::DefId;
+use boron_parser::InterpreterMode;
+use boron_resolver::{DefId, DefKind};
 
 impl TyChecker<'_> {
   pub(crate) fn check_path(
@@ -23,6 +23,11 @@ impl TyChecker<'_> {
     }
     let id = if let Some(self_id) = self.resolver.get_self_mapping(id) {
       *self_id
+    } else if let Some(parent) = self.resolver.lookup_adt_parent(id)
+      && let Some(def) = self.resolver.get_definition(id)
+      && matches!(def.kind, DefKind::Variant)
+    {
+      parent
     } else {
       id
     };

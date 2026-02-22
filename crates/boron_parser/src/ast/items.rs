@@ -6,6 +6,7 @@ use crate::ast::statements::Block;
 use crate::ast::types::Type;
 use boron_session::prelude::{Identifier, Span};
 use boron_target::abi::Abi;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct Item {
@@ -121,8 +122,14 @@ pub struct EnumItem {
   pub id: NodeId,
   pub name: Identifier,
   pub generics: Option<GenericParams>,
-  pub variants: Vec<Variant>,
+  pub members: Vec<EnumMember>,
   pub span: Span,
+}
+
+#[derive(Debug, Clone)]
+pub enum EnumMember {
+  Variant(Variant),
+  Item(Item),
 }
 
 #[derive(Debug, Clone)]
@@ -130,20 +137,24 @@ pub struct Variant {
   pub id: NodeId,
   pub attributes: Vec<Attribute>,
   pub name: Identifier,
-  pub payload: Option<VariantPayload>,
+  pub payload: VariantPayload,
   pub span: Span,
 }
 
 #[derive(Debug, Clone)]
 pub enum VariantPayload {
-  Tuple(Vec<VariantField>),
+  Unit,
+  Tuple(Vec<Type>),
+  Struct(Vec<EnumVariantStructField>),
   Discriminant(Expr),
 }
 
 #[derive(Debug, Clone)]
-pub enum VariantField {
-  Named { name: Identifier, ty: Type },
-  Unnamed(Type),
+pub struct EnumVariantStructField {
+  pub id: NodeId,
+  pub name: Identifier,
+  pub ty: Type,
+  pub span: Span,
 }
 
 #[derive(Debug, Clone)]

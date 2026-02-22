@@ -342,3 +342,13 @@ pub struct NoMethodForTy {
   pub method: Identifier,
   pub ty: String,
 }
+
+#[derive(Diagnostic)]
+#[error("cannot construct enum variant `{name}` using a call")]
+#[help("you can only construct tuple variants using a call")]
+#[code(TYPE_CHECKER_CANNOT_CONSTRUCT_ENUM_VARIANT_USING_CALL)]
+pub struct CannotConstructEnumVariantUsingCall {
+  #[error("here")]
+  pub span: Span,
+  pub name: Identifier,
+}

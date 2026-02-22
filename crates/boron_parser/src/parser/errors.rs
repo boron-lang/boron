@@ -503,3 +503,12 @@ pub struct PositionalArgAfterNamed {
   #[error("first named argument found here")]
   pub named: Span,
 }
+
+#[derive(Diagnostic)]
+#[error("expected identifier, tuple variant or struct variant, found `{found}`")]
+#[code(PARSE_INVALID_VARIANT)]
+pub struct InvalidVariantStart {
+  #[error("here")]
+  pub span: Span,
+  pub found: TokenType,
+}

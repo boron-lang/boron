@@ -36,3 +36,19 @@ pub struct IrStruct {
   pub name: String,
   pub fields: Vec<(String, SemanticTy)>,
 }
+
+#[derive(Debug, Clone)]
+pub struct IrEnumVariant {
+  pub name: String,
+  pub discriminant: u64,
+  pub payload: Option<SemanticTy>,
+}
+
+#[derive(Debug, Clone)]
+pub struct IrEnum {
+  pub id: IrId,
+  pub def_id: DefId,
+  pub type_args: Vec<SemanticTy>,
+  pub name: String,
+  pub variants: Vec<IrEnumVariant>,
+}

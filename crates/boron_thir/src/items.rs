@@ -1,7 +1,7 @@
 use crate::exprs::Block;
 use boron_analysis::InferTy;
 use boron_hir::item::ItemId;
-use boron_hir::{Generics, HirId};
+use boron_hir::{Expr, Generics, HirId};
 use boron_resolver::DefId;
 use boron_session::prelude::{Identifier, Span};
 
@@ -50,5 +50,41 @@ pub struct Module {
   pub def_id: DefId,
   pub name: Identifier,
   pub items: Vec<ItemId>,
+  pub span: Span,
+}
+
+#[derive(Debug, Clone)]
+pub struct Enum {
+  pub hir_id: HirId,
+  pub def_id: DefId,
+  pub name: Identifier,
+  pub generics: Generics,
+  pub variants: Vec<Variant>,
+  pub items: Vec<DefId>,
+  pub span: Span,
+}
+
+#[derive(Debug, Clone)]
+pub struct Variant {
+  pub hir_id: HirId,
+  pub def_id: DefId,
+  pub name: Identifier,
+  pub kind: VariantKind,
+  pub span: Span,
+}
+
+#[derive(Debug, Clone)]
+pub enum VariantKind {
+  Unit,
+  Tuple(Vec<InferTy>),
+  Struct(Vec<EnumVariantStructField>),
+  Discriminant(Expr),
+}
+
+#[derive(Debug, Clone)]
+pub struct EnumVariantStructField {
+  pub id: HirId,
+  pub name: Identifier,
+  pub ty: InferTy,
   pub span: Span,
 }

@@ -19,8 +19,8 @@ use boron_parser::ast::types::Type;
 use boron_parser::ast::ProgramNode;
 use boron_parser::module::Modules;
 use boron_parser::{
-  ComptimeArg, ElseBranch, GenericParams, IfExpr, NodeId, Path, Pattern, PatternKind,
-  StructMember, VariantField, VariantPayload,
+  ComptimeArg, ElseBranch, EnumMember, GenericParams, IfExpr, NodeId, Path, Pattern,
+  PatternKind, StructMember, VariantPayload,
 };
 use boron_session::prelude::{get_or_intern, Identifier, Session};
 use boron_source::prelude::{SourceFileId, Span};
@@ -206,7 +206,42 @@ impl<'a> ResolveVisitor<'a> {
   }
 
   fn define_enum(&mut self, e: &EnumItem, vis: Visibility) {
-    self.define_item(e.name, e.id, DefKind::Enum, *e.name.span(), vis, Namespace::Type);
+    let enum_id =
+      self.define_item(e.name, e.id, DefKind::Enum, *e.name.span(), vis, Namespace::Type);
+
+    self.module_resolver.enter_scope(ScopeKind::Enum, enum_id);
+
+    for member in &e.members {
+      if let Some(enum_def_id) = enum_id {
+        if let EnumMember::Item(i) = member {
+          self.collect_item(i);
+
+          let (name, node_id) = match &i.kind {
+            ItemKind::Function(f) => (f.name, f.id),
+            ItemKind::Const(c) => (c.name, c.id),
+            _ => continue,
+          };
+          if let Some(def_id) = self.resolver().symbols.get_resolution(node_id) {
+            self.resolver().add_adt_member(enum_def_id, name, def_id);
+          }
+        } else if let EnumMember::Variant(variant) = member {
+          let def = self.define_item(
+            variant.name,
+            variant.id,
+            DefKind::Variant,
+            *variant.name.span(),
+            Visibility::Public(Span::default()),
+            Namespace::Type,
+          );
+
+          if let Some(def_id) = def {
+            self.resolver().add_adt_member(enum_def_id, variant.name, def_id);
+          }
+        }
+      }
+    }
+
+    self.module_resolver.leave_scope();
   }
 
   fn define_const(&mut self, c: &ConstItem, vis: Visibility) {
@@ -406,22 +441,25 @@ impl<'a> ResolveVisitor<'a> {
     self.module_resolver.enter_scope(ScopeKind::Enum, enum_def);
     self.resolve_generics(item, &e.generics);
 
-    for variant in &e.variants {
-      if let Some(payload) = &variant.payload {
-        match payload {
-          VariantPayload::Tuple(fields) => {
+    for member in &e.members {
+      match member {
+        EnumMember::Item(item) => self.resolve_item(item),
+        EnumMember::Variant(variant) => match &variant.payload {
+          VariantPayload::Tuple(types) => {
+            for ty in types {
+              self.resolve_type(ty);
+            }
+          }
+          VariantPayload::Struct(fields) => {
             for field in fields {
-              match field {
-                VariantField::Named { ty, .. } | VariantField::Unnamed(ty) => {
-                  self.resolve_type(ty);
-                }
-              }
+              self.resolve_type(&field.ty);
             }
           }
           VariantPayload::Discriminant(expr) => {
             self.resolve_expr(expr);
           }
-        }
+          VariantPayload::Unit => {}
+        },
       }
     }
 

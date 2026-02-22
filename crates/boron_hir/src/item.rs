@@ -1,9 +1,9 @@
-use crate::Expr;
+use crate::{Expr, Hir};
 use crate::expr::Block;
 use crate::generics::Generics;
 use crate::ids::HirId;
 use crate::ty::Ty;
-use boron_parser::FunctionModifiers;
+use boron_parser::{FunctionModifiers, NodeId, Type};
 use boron_parser::ast::items::Visibility;
 use boron_resolver::DefId;
 use boron_session::prelude::{Identifier, Span};
@@ -84,6 +84,7 @@ pub struct Enum {
   pub visibility: Visibility,
   pub generics: Generics,
   pub variants: Vec<Variant>,
+  pub items: Vec<DefId>,
   pub span: Span,
 }
 
@@ -98,20 +99,16 @@ pub struct Variant {
 
 #[derive(Debug, Clone)]
 pub enum VariantKind {
-  /// Unit variant: `None`
   Unit,
-  /// Tuple variant: `Some(T)` or `Point(i32, i32)`
-  Tuple(Vec<VariantField>),
-  /// Struct variants: `Some { .value = 10 }`,
-  Struct(HashMap<Identifier, VariantField>),
-  /// Discriminant: `Value = 42`
+  Tuple(Vec<Ty>),
+  Struct(Vec<EnumVariantStructField>),
   Discriminant(Expr),
 }
 
 #[derive(Debug, Clone)]
-pub struct VariantField {
-  pub hir_id: HirId,
-  pub name: Option<Identifier>,
+pub struct EnumVariantStructField {
+  pub id: HirId,
+  pub name: Identifier,
   pub ty: Ty,
   pub span: Span,
 }

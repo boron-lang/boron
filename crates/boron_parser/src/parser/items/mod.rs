@@ -1,18 +1,19 @@
 use crate::expressions::Expr;
 use crate::items::Item;
-use crate::parser::Parser;
 use crate::parser::errors::{
   ABIMustBeExplicit, ComptimeExternTogether, ConstCannotBeUninitialized,
   ConstExpectedFuncOrIdent, ConstItemsNeedTypeAnnotation, InvalidAbi, ModStringLit,
 };
+use crate::parser::Parser;
 use crate::{
-  ConstItem, FunctionModifiers, ItemKind, ModItem, NodeId, Path, PathParsingContext,
-  TokenType, Type, Visibility, log_parse_failure,
+  log_parse_failure, ConstItem, FunctionModifiers, ItemKind, ModItem, NodeId, Path,
+  PathParsingContext, TokenType, Type, Visibility,
 };
 use boron_session::prelude::debug;
 use boron_source::prelude::Span;
 use boron_target::abi::Abi;
 
+mod enums;
 mod functions;
 mod import;
 mod structs;
@@ -26,10 +27,11 @@ pub const ITEM_TOKENS: &[TokenType] = &[
   TokenType::Comptime,
   TokenType::Struct,
   TokenType::Extern,
+  TokenType::Enum,
 ];
 
-// tokens allowed to start a new item inside a struct
-pub const STRUCT_ITEM_TOKENS: &[TokenType] =
+// tokens allowed to start a new item inside an ADT
+pub const ADT_ITEM_TOKENS: &[TokenType] =
   &[TokenType::Pub, TokenType::Const, TokenType::Func, TokenType::Comptime];
 
 impl Parser<'_> {
@@ -111,6 +113,10 @@ impl Parser<'_> {
       TokenType::Func => Some(ItemKind::Function(log_parse_failure!(
         self.parse_function(FunctionModifiers::empty(), span_start),
         "function item"
+      )?)),
+      TokenType::Enum => Some(ItemKind::Enum(log_parse_failure!(
+        self.parse_enum(span_start),
+        "enum item"
       )?)),
       TokenType::Import => {
         let import = self.parse_import();

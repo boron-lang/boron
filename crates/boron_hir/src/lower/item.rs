@@ -1,19 +1,21 @@
 use crate::generics::{GenericParam, GenericParamKind, Generics, TypeBound};
 use crate::item::{
-  Const, Enum, Field, Function, Param, ParamKind, SelfKind, Struct, Variant,
-  VariantField, VariantKind,
+  Const, Enum, EnumVariantStructField, Field, Function, Param, ParamKind, SelfKind,
+  Struct, Variant, VariantKind,
 };
 use crate::lower::context::LoweringContext;
-use boron_parser::ast::ProgramNode;
 use boron_parser::ast::items::{
   ConstItem, EnumItem, FunctionItem, Item as AstItem, ItemKind, StructField, StructItem,
   StructMember, Variant as AstVariant, VariantPayload as AstVariantPayload, Visibility,
 };
 use boron_parser::ast::params;
+use boron_parser::ast::ProgramNode;
 use boron_parser::ast::{
   GenericParam as AstGenericParam, GenericParams as AstGenericParams,
-  TypeBound as AstTypeBound, VariantField as AstVariantField,
+  TypeBound as AstTypeBound,
 };
+use boron_parser::EnumMember;
+use itertools::Itertools;
 
 impl LoweringContext<'_> {
   pub fn lower_module(&mut self, node: &ProgramNode) {
@@ -137,9 +139,34 @@ impl LoweringContext<'_> {
     let hir_enum = self.with_owner(def_id, |ctx| {
       let hir_id = LoweringContext::owner_hir_id(def_id);
       let generics = ctx.lower_generics(&e.generics);
-      let variants = e.variants.iter().map(|v| ctx.lower_variant(v)).collect();
+      let mut variants = vec![];
+      let mut items = vec![];
 
-      Enum { hir_id, def_id, name: e.name, visibility, generics, variants, span: e.span }
+      for member in &e.members {
+        match member {
+          EnumMember::Variant(v) => {
+            variants.push(ctx.lower_variant(v));
+          }
+          EnumMember::Item(m) => {
+            ctx.lower_item(m);
+
+            if let Some(def_id) = self.resolver.symbols.get_resolution(m.id) {
+              items.push(def_id);
+            }
+          }
+        }
+      }
+
+      Enum {
+        hir_id,
+        def_id,
+        name: e.name,
+        visibility,
+        generics,
+        variants,
+        items,
+        span: e.span,
+      }
     });
 
     self.hir.enums.insert(def_id, hir_enum);
@@ -149,13 +176,24 @@ impl LoweringContext<'_> {
     let def_id = self.get_def_id(v.id);
 
     let kind = match &v.payload {
-      None => VariantKind::Unit,
-      Some(AstVariantPayload::Tuple(fields)) => {
-        VariantKind::Tuple(fields.iter().map(|f| self.lower_variant_field(f)).collect())
+      AstVariantPayload::Unit => VariantKind::Unit,
+      AstVariantPayload::Tuple(fields) => {
+        VariantKind::Tuple(fields.iter().map(|f| self.lower_type(f)).collect())
       }
-      Some(AstVariantPayload::Discriminant(expr)) => {
+      AstVariantPayload::Discriminant(expr) => {
         VariantKind::Discriminant(self.lower_expr(expr))
       }
+      AstVariantPayload::Struct(fields) => VariantKind::Struct(
+        fields
+          .iter()
+          .map(|field| EnumVariantStructField {
+            ty: self.lower_type(&field.ty),
+            id: self.next_hir_id(),
+            span: field.span,
+            name: field.name,
+          })
+          .collect_vec(),
+      ),
     };
 
     Variant {
@@ -165,10 +203,6 @@ impl LoweringContext<'_> {
       kind,
       span: v.span,
     }
-  }
-
-  fn lower_variant_field(&mut self, f: &AstVariantField) -> VariantField {
-    todo!()
   }
 
   fn lower_const(&mut self, c: &ConstItem, visibility: Visibility) {

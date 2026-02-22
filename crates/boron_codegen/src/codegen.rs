@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use boron_ir::{Ir, IrId};
 use boron_resolver::DefId;
 use boron_session::prelude::{Mode, Session};
@@ -12,7 +12,6 @@ use inkwell::types::StructType;
 use inkwell::values::{FunctionValue, PointerValue};
 use std::cell::RefCell;
 use std::fmt::Display;
-use boron_hir::HirId;
 
 pub struct LLVMCodegen<'ctx> {
   pub sess: &'ctx Session,

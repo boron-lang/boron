@@ -1,18 +1,22 @@
 use crate::checker::TyChecker;
 use crate::errors::{
-  ArityMismatch, CannotCall, FuncArgMismatch, NoMethodForTy, NoValuePassedForParameter,
+  ArityMismatch, CannotCall, CannotConstructEnumVariantUsingCall, FuncArgMismatch,
+  NoMethodForTy, NoValuePassedForParameter,
 };
 use crate::table::TypeEnv;
 use crate::ty::{InferTy, SubstitutionMap, TyParam};
 use crate::unify::{Expectation, UnifyError, UnifyResult};
 use crate::TypeScheme;
 use boron_hir::expr::Argument;
+use boron_hir::item::VariantKind;
 use boron_hir::{Expr, ExprKind, HirId};
+use boron_parser::VariantPayload;
 use boron_resolver::DefId;
 use boron_session::prelude::{debug, Span};
 use boron_source::ident_table::Identifier;
 use itertools::Itertools;
 use std::collections::HashSet;
+use std::env::var;
 
 impl TyChecker<'_> {
   pub fn check_call(
@@ -23,13 +27,14 @@ impl TyChecker<'_> {
     span: Span,
     call_hir_id: HirId,
   ) -> InferTy {
-    let (callee_def_id, explicit_type_args) = self.resolve_callee_metadata(callee, env);
+    let (callee_def_id, explicit_type_args, last_segment) =
+      self.resolve_callee_metadata(callee, env);
     let Some(def_id) = callee_def_id else { panic!() };
 
     let callee_ty = self.check_expr(callee, env, &Expectation::none());
     let resolved = self.infcx.resolve(&callee_ty);
 
-    match resolved {
+    match &resolved {
       InferTy::Fn { params, ret, .. } => {
         self.check_fn_call(callee, args, &params, env, def_id);
 
@@ -40,12 +45,56 @@ impl TyChecker<'_> {
           call_hir_id,
         );
 
-        *ret
+        *ret.clone()
+      }
+
+      InferTy::Adt { def_id, .. } => {
+        let enum_ = self.hir.get_enum(*def_id).expect("should exist");
+        let variant = enum_
+          .variants
+          .iter()
+          .find(|variant| variant.name == last_segment)
+          .expect("checked in resolver");
+
+        let scheme = self.table.def_type(*def_id).unwrap();
+        let (resolved, subst) = self.instantiate(&scheme);
+
+        let VariantKind::Tuple(tuple) = &variant.kind else {
+          self.dcx().emit(CannotConstructEnumVariantUsingCall {
+            span: callee.span,
+            name: last_segment,
+          });
+          return InferTy::Err(Span::dummy());
+        };
+
+        if args.len() != tuple.len() {
+          self.dcx().emit(ArityMismatch {
+            callee: format!("tuple enum variant {}", last_segment),
+            span: callee.span,
+            expected: tuple.len(),
+            found: args.len(),
+          });
+        }
+
+        for (i, arg) in args.iter().enumerate() {
+          let raw_ty = self.lower_hir_ty(&tuple[i]);
+          let expected_ty = Self::apply_subst(&raw_ty, &subst);
+          let arg_ty =
+            self.check_expr(&arg.value, env, &Expectation::has_type(expected_ty.clone()));
+          self.check_arg_unification(&arg.value, &expected_ty, &arg_ty);
+        }
+
+        let resolved = Self::apply_subst(&resolved, &subst);
+        self.table.record_monomorphization(*def_id, subst.clone());
+        self.table.record_expr_monomorphization(call_hir_id, *def_id, subst);
+
+        resolved
       }
 
       InferTy::Var(_, _) => self.infer_call_from_var(callee_ty, args, env, span),
 
       _ => {
+        debug!("cannot call on {:#?}", resolved);
         self
           .dcx()
           .emit(CannotCall { span: callee.span, callee: self.format_type(&resolved) });
@@ -58,7 +107,7 @@ impl TyChecker<'_> {
     &mut self,
     callee: &Expr,
     env: &mut TypeEnv,
-  ) -> (Option<DefId>, Vec<InferTy>) {
+  ) -> (Option<DefId>, Vec<InferTy>, Identifier) {
     match &callee.kind {
       ExprKind::Path(path) => {
         let args = path
@@ -68,11 +117,11 @@ impl TyChecker<'_> {
           .map(|ty| self.lower_hir_ty(ty))
           .collect();
 
-        (Some(path.def_id), args)
+        (Some(path.def_id), args, path.segments.last().expect("no last segment").name)
       }
       _ => {
         debug!("calling on {:#?}", callee);
-        (None, vec![])
+        (None, vec![], Identifier::dummy())
       }
     }
   }
@@ -179,8 +228,8 @@ impl TyChecker<'_> {
     explicit_type_args: &[InferTy],
     call_hir_id: HirId,
   ) {
-    let Some(def_id) = callee_def_id else { return };
-    let Some(scheme) = self.table.def_type(def_id) else { return };
+    let Some(def_id) = callee_def_id else { panic!("do def id") };
+    let Some(scheme) = self.table.def_type(def_id) else { panic!("no ty scheme") };
 
     let mut subst = SubstitutionMap::new();
 
@@ -191,23 +240,26 @@ impl TyChecker<'_> {
       }
 
       self.table.record_monomorphization(def_id, subst.clone());
-
-      if let Some(parent_struct_id) = self.resolver.find_parent(def_id) {
-        if let Some(struct_scheme) = self.table.def_type(parent_struct_id) {
-          if !struct_scheme.vars.is_empty() {
-            let mut struct_subst = SubstitutionMap::new();
-            for param in &struct_scheme.vars {
-              if let Some(ty) = subst.get(param.def_id) {
-                struct_subst.add(*param, ty.clone());
-              }
-            }
-            self.table.record_monomorphization(parent_struct_id, struct_subst);
-          }
-        }
-      }
+      self.monomorphize_parent(def_id, &mut subst);
     }
 
     self.table.record_expr_monomorphization(call_hir_id, def_id, subst);
+  }
+
+  fn monomorphize_parent(&mut self, def_id: DefId, subst: &mut SubstitutionMap) {
+    if let Some(parent_struct_id) = self.resolver.find_parent(def_id) {
+      if let Some(struct_scheme) = self.table.def_type(parent_struct_id) {
+        if !struct_scheme.vars.is_empty() {
+          let mut struct_subst = SubstitutionMap::new();
+          for param in &struct_scheme.vars {
+            if let Some(ty) = subst.get(param.def_id) {
+              struct_subst.add(*param, ty.clone());
+            }
+          }
+          self.table.record_monomorphization(parent_struct_id, struct_subst);
+        }
+      }
+    }
   }
 
   fn apply_explicit_type_args(
