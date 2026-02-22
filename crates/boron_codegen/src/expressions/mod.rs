@@ -20,7 +20,7 @@ pub enum ValueKind<'ctx> {
 
 unsafe impl<'ctx> AnyValue<'ctx> for ValueKind<'ctx> {}
 
-unsafe impl<'ctx> AsValueRef for ValueKind<'ctx> {
+unsafe impl AsValueRef for ValueKind<'_> {
   fn as_value_ref(&self) -> LLVMValueRef {
     match self {
       ValueKind::LValue(l) => l.as_value_ref(),
@@ -179,7 +179,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
             else_branch
               .as_ref()
               .map(|b| b.hir_id.to_string())
-              .unwrap_or("none".to_string())
+              .unwrap_or("none".to_owned())
           ),
         );
         let merge_bb = self.context.append_basic_block(function, "ifcont");
@@ -326,8 +326,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
             let load = self.value_to_basic(ty, value)?.into_int_value();
 
             let bool_ty = self.context.bool_type();
-            let res =
-              self.builder.build_xor(load, bool_ty.const_int(1, false).into(), "not")?;
+            let res = self.builder.build_xor(load, bool_ty.const_int(1, false), "not")?;
 
             Ok(ValueKind::RValue(res.into()))
           }

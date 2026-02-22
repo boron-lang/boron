@@ -1,15 +1,15 @@
 use crate::ast::expressions::*;
 use crate::ast::types::Mutability;
 use crate::lexer::IntBase as LexIntBase;
+use crate::parser::Parser;
 use crate::parser::errors::{
   DuplicateNamedArg, EmptyMatch, ExpectedExpressionFound, ExpectedFatArrow,
   ExpectedFieldName, InvalidAssignTarget, InvalidFieldInit, InvalidRepeatSyntax,
   MissingColonInTernary, MissingInKeyword, PositionalArgAfterNamed,
   RepeatSyntaxOnlyAtStart, RepeatSyntaxRequiredValue,
 };
-use crate::parser::Parser;
 use crate::{IntBase, NodeId, Path, PathParsingContext, PathSegment, TokenType};
-use boron_session::prelude::{warn, Identifier};
+use boron_session::prelude::{Identifier, warn};
 use boron_source::prelude::Span;
 use indexmap::IndexMap;
 
@@ -81,7 +81,8 @@ impl Parser<'_> {
       break;
     }
 
-    left.interpreter_mode = if comptime { InterpreterMode::Runtime } else { InterpreterMode::NoEval };
+    left.interpreter_mode =
+      if comptime { InterpreterMode::Runtime } else { InterpreterMode::NoEval };
     left
   }
 
@@ -132,7 +133,7 @@ impl Parser<'_> {
 
     if let Some(op) = unary_op {
       self.advance();
-      if let Some(UnaryOp::AddrOf { mutability: Mutability::Mut }) = unary_op {
+      if unary_op == Some(UnaryOp::AddrOf { mutability: Mutability::Mut }) {
         self.advance();
       }
 
@@ -887,8 +888,10 @@ impl Parser<'_> {
       } else {
         let expr = self.parse_expr();
         if !named_args.is_empty() {
-          self
-            .emit(PositionalArgAfterNamed { named: named_args[0], positional: expr.span })
+          self.emit(PositionalArgAfterNamed {
+            named: named_args[0],
+            positional: expr.span,
+          });
         }
 
         (None, expr)

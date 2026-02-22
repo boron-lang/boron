@@ -421,16 +421,12 @@ impl<'a> Interpreter<'a> {
           ConstValue::Poison
         }
       }
-      ExprKind::Comptime { callee, .. } => {
-        let const_val = if let ComptimeCallee::BuiltIn(_) = callee {
-          self.built_in_results.get(expr.hir_id)
-        } else {
-          self.cache.get(expr.hir_id)
-        }
-        .expect("comptime functions should be resolved by now");
-
-        const_val
+      ExprKind::Comptime { callee, .. } => if let ComptimeCallee::BuiltIn(_) = callee {
+        self.built_in_results.get(expr.hir_id)
+      } else {
+        self.cache.get(expr.hir_id)
       }
+      .expect("comptime functions should be resolved by now"),
       _ => {
         self.dcx.emit(UnsupportedConstExpr { span: expr.span });
         ConstValue::Poison

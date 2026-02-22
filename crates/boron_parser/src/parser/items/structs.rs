@@ -1,5 +1,5 @@
-use crate::parser::items::ADT_ITEM_TOKENS;
 use crate::parser::Parser;
+use crate::parser::items::ADT_ITEM_TOKENS;
 use crate::{NodeId, StructField, StructItem, StructMember, TokenType, Visibility};
 use boron_source::span::Span;
 
@@ -17,12 +17,12 @@ impl Parser<'_> {
 
         if self.check(TokenType::Pub)
           && let Some(ident) = self.peek_ahead(1)
-          && let TokenType::Dot = &ident.kind
+          && matches!(&ident.kind, TokenType::Dot)
         {
           self.eat(TokenType::Pub);
           members.push(self.parse_field(span, Visibility::Public(span)));
           self.eat_commas();
-        } else if let TokenType::Dot = &self.peek().kind {
+        } else if matches!(&self.peek().kind, TokenType::Dot) {
           members.push(self.parse_field(span, Visibility::Private));
           self.eat_commas();
         } else if self.check(TokenType::RightBrace) {

@@ -19,7 +19,7 @@ pub struct Expr {
 pub enum InterpreterMode {
   Const,
   Runtime,
-  NoEval
+  NoEval,
 }
 
 #[derive(Debug, Clone)]
@@ -59,7 +59,7 @@ pub enum ExprKind {
 
 impl Expr {
   pub fn new(kind: ExprKind, span: Span) -> Self {
-    Self { id: NodeId::new(), kind, span, interpreter_mode: InterpreterMode::NoEval  }
+    Self { id: NodeId::new(), kind, span, interpreter_mode: InterpreterMode::NoEval }
   }
 
   pub fn new_const(kind: ExprKind, span: Span) -> Self {

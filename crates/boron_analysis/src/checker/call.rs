@@ -1,3 +1,4 @@
+use crate::TypeScheme;
 use crate::checker::TyChecker;
 use crate::errors::{
   ArityMismatch, CannotCall, CannotConstructEnumVariantUsingCall, FuncArgMismatch,
@@ -6,17 +7,14 @@ use crate::errors::{
 use crate::table::TypeEnv;
 use crate::ty::{InferTy, SubstitutionMap, TyParam};
 use crate::unify::{Expectation, UnifyError, UnifyResult};
-use crate::TypeScheme;
 use boron_hir::expr::Argument;
 use boron_hir::item::VariantKind;
 use boron_hir::{Expr, ExprKind, HirId};
-use boron_parser::VariantPayload;
 use boron_resolver::DefId;
-use boron_session::prelude::{debug, Span};
+use boron_session::prelude::{Span, debug};
 use boron_source::ident_table::Identifier;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use std::collections::HashSet;
-use std::env::var;
 
 impl TyChecker<'_> {
   pub fn check_call(
@@ -36,7 +34,7 @@ impl TyChecker<'_> {
 
     match &resolved {
       InferTy::Fn { params, ret, .. } => {
-        self.check_fn_call(callee, args, &params, env, def_id);
+        self.check_fn_call(callee, args, params, env, def_id);
 
         self.handle_monomorphization(
           callee_def_id,
@@ -69,7 +67,7 @@ impl TyChecker<'_> {
 
         if args.len() != tuple.len() {
           self.dcx().emit(ArityMismatch {
-            callee: format!("tuple enum variant {}", last_segment),
+            callee: format!("tuple enum variant {last_segment}"),
             span: callee.span,
             expected: tuple.len(),
             found: args.len(),
@@ -94,7 +92,7 @@ impl TyChecker<'_> {
       InferTy::Var(_, _) => self.infer_call_from_var(callee_ty, args, env, span),
 
       _ => {
-        debug!("cannot call on {:#?}", resolved);
+        debug!("cannot call on {resolved:#?}");
         self
           .dcx()
           .emit(CannotCall { span: callee.span, callee: self.format_type(&resolved) });
@@ -108,21 +106,18 @@ impl TyChecker<'_> {
     callee: &Expr,
     env: &mut TypeEnv,
   ) -> (Option<DefId>, Vec<InferTy>, Identifier) {
-    match &callee.kind {
-      ExprKind::Path(path) => {
-        let args = path
-          .segments
-          .iter()
-          .flat_map(|seg| seg.args.iter())
-          .map(|ty| self.lower_hir_ty(ty))
-          .collect();
+    if let ExprKind::Path(path) = &callee.kind {
+      let args = path
+        .segments
+        .iter()
+        .flat_map(|seg| seg.args.iter())
+        .map(|ty| self.lower_hir_ty(ty))
+        .collect();
 
-        (Some(path.def_id), args, path.segments.last().expect("no last segment").name)
-      }
-      _ => {
-        debug!("calling on {:#?}", callee);
-        (None, vec![], Identifier::dummy())
-      }
+      (Some(path.def_id), args, path.segments.last().expect("no last segment").name)
+    } else {
+      debug!("calling on {callee:#?}");
+      (None, vec![], Identifier::dummy())
     }
   }
 
@@ -178,7 +173,7 @@ impl TyChecker<'_> {
           param: def.name,
           func_call: callee.span,
           param_span: def.span,
-        })
+        });
       }
     }
   }
@@ -356,19 +351,18 @@ impl TyChecker<'_> {
     let receiver_ty = self.check_expr(receiver, env, &Expectation::none());
     let resolved_receiver = self.infcx.resolve(&receiver_ty);
 
-    let struct_def_id = match &resolved_receiver {
-      InferTy::Adt { def_id, .. } => *def_id,
-      _ => {
-        self.dcx().emit(CannotCall {
-          span,
-          callee: format!(
-            "method `{}` on {}",
-            method.text(),
-            self.format_type(&resolved_receiver)
-          ),
-        });
-        return InferTy::Err(span);
-      }
+    let struct_def_id = if let InferTy::Adt { def_id, .. } = &resolved_receiver {
+      *def_id
+    } else {
+      self.dcx().emit(CannotCall {
+        span,
+        callee: format!(
+          "method `{}` on {}",
+          method.text(),
+          self.format_type(&resolved_receiver)
+        ),
+      });
+      return InferTy::Err(span);
     };
 
     let Some(method_def_id) = self.resolver.lookup_adt_member(struct_def_id, method)
@@ -384,18 +378,13 @@ impl TyChecker<'_> {
     let method_ty = self.check_path(method_def_id, env, None);
     let resolved_method = self.infcx.resolve(&method_ty);
 
-    match resolved_method {
-      InferTy::Fn { params, ret, .. } => {
-        self.check_fn_call_args(args, &params, env, method_def_id, span);
-        self.handle_monomorphization(Some(method_def_id), &method_ty, &[], call_hir_id);
-        *ret
-      }
-      _ => {
-        self
-          .dcx()
-          .emit(CannotCall { span, callee: format!("method `{}`", method.text()) });
-        InferTy::Err(span)
-      }
+    if let InferTy::Fn { params, ret, .. } = resolved_method {
+      self.check_fn_call_args(args, &params, env, method_def_id, span);
+      self.handle_monomorphization(Some(method_def_id), &method_ty, &[], call_hir_id);
+      *ret
+    } else {
+      self.dcx().emit(CannotCall { span, callee: format!("method `{}`", method.text()) });
+      InferTy::Err(span)
     }
   }
 

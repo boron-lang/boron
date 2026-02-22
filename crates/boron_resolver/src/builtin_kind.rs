@@ -28,7 +28,7 @@ impl BuiltInKind {
       Self::TypeOf => "typeOf",
       Self::CompileError => "compileError",
       Self::Unreachable => "unreachable",
-      Self::Os => "os"
+      Self::Os => "os",
     }
   }
 }

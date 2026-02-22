@@ -8,8 +8,8 @@ use boron_parser::module::Modules;
 use boron_parser::{NodeId, Path};
 use boron_source::ident_table::Identifier;
 use boron_source::prelude::SourceFileId;
-use dashmap::mapref::one::Ref;
 use dashmap::DashMap;
+use dashmap::mapref::one::Ref;
 use parking_lot::RwLock;
 
 /// The main resolver structure.
@@ -203,7 +203,7 @@ impl Resolver {
       .adt_members
       .iter()
       .find(|parent| parent.value().iter().any(|c| c.value() == &child))
-      .map(|p| p.key().clone())
+      .map(|p| *p.key())
   }
 
   pub fn find_parent(&self, child_id: DefId) -> Option<DefId> {
@@ -211,7 +211,7 @@ impl Resolver {
       .adt_members
       .iter()
       .find(|members| members.iter().any(|member| *member == child_id))
-      .map(|def| def.key().clone())
+      .map(|def| *def.key())
   }
 
   pub fn lookup_file_for_path(&self, path: &Path) -> Option<SourceFileId> {

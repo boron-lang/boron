@@ -9,7 +9,7 @@ pub mod semantic_type;
 pub mod ty;
 
 pub use expr::{
-    Block, ComptimeCallee, Expr, ExprKind, Literal, Local, MatchArm, Stmt, StmtKind,
+  Block, ComptimeCallee, Expr, ExprKind, Literal, Local, MatchArm, Stmt, StmtKind,
 };
 pub use generics::{GenericParam, GenericParamKind, Generics, TypeBound};
 pub use hir::{Hir, HirMap};

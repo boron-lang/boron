@@ -6,7 +6,6 @@ use crate::ast::statements::Block;
 use crate::ast::types::Type;
 use boron_session::prelude::{Identifier, Span};
 use boron_target::abi::Abi;
-use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct Item {

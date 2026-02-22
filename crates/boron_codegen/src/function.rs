@@ -76,17 +76,14 @@ impl<'ctx> LLVMCodegen<'ctx> {
       }
 
       if let Some(tail_expr) = &body.block.expr {
-        match &func.return_type {
-          SemanticTy::Unit => {
-            let _ = self.builder.build_return(None);
-          }
-          _ => {
-            let val = self.generate_expr(tail_expr)?;
-            self.require_llvm(
-              self.builder.build_return(Some(&val)),
-              "couldn't build return with value",
-            )?;
-          }
+        if func.return_type == SemanticTy::Unit {
+          let _ = self.builder.build_return(None);
+        } else {
+          let val = self.generate_expr(tail_expr)?;
+          self.require_llvm(
+            self.builder.build_return(Some(&val)),
+            "couldn't build return with value",
+          )?;
         }
       } else {
         let _ = self.builder.build_return(None);
@@ -124,7 +121,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
         struct_ty,
         ptr,
         field_idx,
-        &format!("field.ptr.{}.{}", local_hir_id, field_idx),
+        &format!("field.ptr.{local_hir_id}.{field_idx}"),
       ),
       "struct field gep",
     )

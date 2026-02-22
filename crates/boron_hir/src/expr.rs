@@ -3,8 +3,8 @@ use crate::pat::Pat;
 use crate::ty::Ty;
 use boron_parser::ast::expressions::{BinaryOp, UnaryOp};
 use boron_parser::{FloatSuffix, IntBase, IntSuffix, InterpreterMode};
-use boron_resolver::prelude::BuiltInKind;
 use boron_resolver::DefId;
+use boron_resolver::prelude::BuiltInKind;
 use boron_session::prelude::Span;
 use boron_source::ident_table::Identifier;
 

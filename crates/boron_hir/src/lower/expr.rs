@@ -8,10 +8,10 @@ use boron_parser::ast::expressions::{
 };
 use boron_parser::ast::statements;
 use boron_parser::{
-  ast, AssignOp, ElseBranch as AstElseBranch, IfExpr as AstIfExpr, IntBase,
-  IntSuffix, InterpreterMode,
+  AssignOp, ElseBranch as AstElseBranch, IfExpr as AstIfExpr, IntBase, IntSuffix,
+  InterpreterMode,
 };
-use boron_session::prelude::{debug, Identifier};
+use boron_session::prelude::{Identifier, debug};
 use boron_source::prelude::Span;
 use expressions::Literal as AstLiteral;
 use itertools::Itertools as _;
@@ -304,7 +304,7 @@ impl LoweringContext<'_> {
         }
       }
     }
-    
+
     Block { hir_id: self.next_hir_id(), stmts, expr: trailing_expr, span: block.span }
   }
 

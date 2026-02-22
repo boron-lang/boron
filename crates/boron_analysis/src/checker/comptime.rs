@@ -1,4 +1,4 @@
-use crate::builtins::{get_builtin, BuiltInFunction, BuiltInParam};
+use crate::builtins::{BuiltInFunction, BuiltInParam, get_builtin};
 use crate::errors::{ArityMismatch, FuncArgMismatch};
 use crate::functions::FinalComptimeArg;
 use crate::unify::{Expectation, UnifyError, UnifyResult};
@@ -15,7 +15,7 @@ impl TyChecker<'_> {
     args: &Vec<ComptimeArg>,
   ) -> InferTy {
     if let ComptimeCallee::BuiltIn(builtin) = callee {
-      let func = get_builtin(&builtin);
+      let func = get_builtin(builtin);
 
       if func.params.len() != args.len() {
         self.dcx().emit(ArityMismatch {

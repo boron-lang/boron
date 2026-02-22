@@ -1,9 +1,8 @@
 use crate::codegen::LLVMCodegen;
-use crate::expressions::ValueKind;
 use anyhow::Result;
 use boron_ir::{IrBlock, IrStmt, IrStmtKind};
 
-impl<'ctx> LLVMCodegen<'ctx> {
+impl LLVMCodegen<'_> {
   pub fn generate_block(&self, block: &IrBlock) -> Result<()> {
     for stmt in &block.stmts {
       self.generate_stmt(stmt)?;

@@ -250,7 +250,7 @@ impl<'a> ThirLowerer<'a> {
       ty: self
         .type_table
         .node_type(expr.hir_id)
-        .expect(&format!("couldn't find node ty for expr {:#?}", expr)),
+        .unwrap_or_else(|| panic!("couldn't find node ty for expr {expr:#?}")),
       kind,
       span: expr.span,
     }
@@ -271,9 +271,7 @@ impl<'a> ThirLowerer<'a> {
       } else if let Some(branch) = else_branch {
         match branch {
           ElseBranch::Block(block) => self.lower_block_expr(block),
-          ElseBranch::If(branch) => {
-            return self.lower_full_if(branch, Some(if_expr));
-          }
+          ElseBranch::If(branch) => self.lower_full_if(branch, Some(if_expr)),
         }
       } else {
         ExprKind::Literal(FullLiteral::Unit)
@@ -310,7 +308,7 @@ impl<'a> ThirLowerer<'a> {
         )
         .unwrap(),
       );
-    };
+    }
 
     if let Some(def) = self.resolver.get_definition(path.def_id) {
       match def.kind {
@@ -549,7 +547,7 @@ impl<'a> ThirLowerer<'a> {
             span: Span::default(),
           },
           ElseBranch::Block(block) => Expr {
-            kind: ExprKind::Block(self.lower_block(&block)),
+            kind: ExprKind::Block(self.lower_block(block)),
             hir_id: block.hir_id,
             ty: self.type_table.node_type(block.hir_id).unwrap(),
             span: Span::default(),

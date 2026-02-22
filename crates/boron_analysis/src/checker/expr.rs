@@ -1,18 +1,15 @@
-use crate::builtins::{get_builtin, BuiltInParam};
 use crate::checker::TyChecker;
 use crate::errors::{
-  ArityMismatch, AssignTypeMismatch, FuncArgMismatch, IndexTypeMismatch, InvalidBinaryOp,
-  TypeMismatch,
+  AssignTypeMismatch, IndexTypeMismatch, InvalidBinaryOp, TypeMismatch,
 };
-use crate::functions::FinalComptimeArg;
 use crate::table::TypeEnv;
 use crate::ty::{ArrayLength, InferTy};
 use crate::unify::{Expectation, UnifyError, UnifyResult};
-use boron_hir::expr::{ComptimeArg, ElseBranch, IfExpr};
-use boron_hir::{Block, ComptimeCallee, Expr, ExprKind, Literal};
+use boron_hir::expr::{ElseBranch, IfExpr};
+use boron_hir::{Block, Expr, ExprKind, Literal};
 use boron_parser::ast::types::PrimitiveKind;
-use boron_parser::{BinaryOp, InterpreterMode, Mutability};
-use boron_session::prelude::{warn, Span};
+use boron_parser::{BinaryOp, Mutability};
+use boron_session::prelude::{Span, warn};
 
 impl TyChecker<'_> {
   pub(crate) fn check_expr(

@@ -71,7 +71,7 @@ impl<'a> SymbolMangler<'a> {
         self.mangle_name_with_type_args(&parent_struct.name.text(), struct_type_args);
       let fn_part = self.mangle_name_with_type_args(&func.name.text(), fn_type_args);
 
-      format!("boron${}${}", struct_part, fn_part)
+      format!("boron${struct_part}${fn_part}")
     } else {
       self.mangle_name(&func.name.text(), type_args, false)
     };

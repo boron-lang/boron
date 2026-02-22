@@ -6,9 +6,9 @@ use boron_hir::expr::{ElseBranch, IfExpr};
 use boron_hir::{
   Block, ComptimeCallee, Expr, ExprKind, Function, Hir, ParamKind, StmtKind,
 };
-use boron_resolver::prelude::BuiltInKind;
 use boron_resolver::Resolver;
-use boron_session::prelude::{debug, Session};
+use boron_resolver::prelude::BuiltInKind;
+use boron_session::prelude::{Session, debug};
 
 pub struct BuiltInExpander<'a> {
   pub sess: &'a Session,

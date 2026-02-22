@@ -1,13 +1,12 @@
-use crate::{Expr, Hir};
+use crate::Expr;
 use crate::expr::Block;
 use crate::generics::Generics;
 use crate::ids::HirId;
 use crate::ty::Ty;
-use boron_parser::{FunctionModifiers, NodeId, Type};
+use boron_parser::FunctionModifiers;
 use boron_parser::ast::items::Visibility;
 use boron_resolver::DefId;
 use boron_session::prelude::{Identifier, Span};
-use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct Function {

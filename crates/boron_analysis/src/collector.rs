@@ -78,7 +78,7 @@ impl TyChecker<'_> {
           }
           VariantKind::Tuple(types) => {
             for (field, ty) in types.iter().enumerate() {
-              let field_ty = self.lower_hir_ty(&ty);
+              let field_ty = self.lower_hir_ty(ty);
               self.table.record_field_type(variant.def_id, field.to_string(), field_ty);
             }
           }

@@ -5,7 +5,7 @@ use crate::validator::errors::ComptimeNoGenerics;
 use boron_hir::expr::{ElseBranch, IfExpr};
 use boron_hir::{Block, Expr, ExprKind, Function, Hir, Stmt, StmtKind};
 use boron_resolver::{DefId, Resolver};
-use boron_session::prelude::{debug, DiagnosticCtx};
+use boron_session::prelude::{DiagnosticCtx, debug};
 
 pub struct ComptimeValidator<'a> {
   pub hir: &'a Hir,
@@ -47,7 +47,7 @@ impl ComptimeValidator<'_> {
       match branch {
         ElseBranch::Block(block) => self.validate_block(block),
         ElseBranch::If(if_expr) => {
-          self.validate_if(&if_expr.condition, &if_expr.then_block, &if_expr.else_branch)
+          self.validate_if(&if_expr.condition, &if_expr.then_block, &if_expr.else_branch);
         }
       }
     }
@@ -72,7 +72,7 @@ impl ComptimeValidator<'_> {
       }
 
       ExprKind::If(IfExpr { condition, then_block, else_branch, .. }) => {
-        self.validate_if(condition, then_block, else_branch)
+        self.validate_if(condition, then_block, else_branch);
       }
 
       ExprKind::Block(block) => self.validate_block(block),

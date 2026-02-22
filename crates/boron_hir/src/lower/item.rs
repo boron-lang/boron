@@ -4,18 +4,18 @@ use crate::item::{
   Struct, Variant, VariantKind,
 };
 use crate::lower::context::LoweringContext;
+use boron_parser::EnumMember;
+use boron_parser::ast::ProgramNode;
 use boron_parser::ast::items::{
   ConstItem, EnumItem, FunctionItem, Item as AstItem, ItemKind, StructField, StructItem,
   StructMember, Variant as AstVariant, VariantPayload as AstVariantPayload, Visibility,
 };
 use boron_parser::ast::params;
-use boron_parser::ast::ProgramNode;
 use boron_parser::ast::{
   GenericParam as AstGenericParam, GenericParams as AstGenericParams,
   TypeBound as AstTypeBound,
 };
-use boron_parser::EnumMember;
-use itertools::Itertools;
+use itertools::Itertools as _;
 
 impl LoweringContext<'_> {
   pub fn lower_module(&mut self, node: &ProgramNode) {

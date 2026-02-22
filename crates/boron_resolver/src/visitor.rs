@@ -9,6 +9,7 @@ use crate::resolver::Resolver;
 use crate::scope::ScopeKind;
 use crate::symbol::{Symbol, SymbolKind};
 use crate::{DefId, ScopeId};
+use boron_parser::ast::ProgramNode;
 use boron_parser::ast::expressions::{Expr, ExprKind};
 use boron_parser::ast::items::{
   ConstItem, EnumItem, FunctionItem, Item, ItemKind, ModItem, StructItem, Visibility,
@@ -16,13 +17,12 @@ use boron_parser::ast::items::{
 use boron_parser::ast::params::Param;
 use boron_parser::ast::statements::{Block, Statement};
 use boron_parser::ast::types::Type;
-use boron_parser::ast::ProgramNode;
 use boron_parser::module::Modules;
 use boron_parser::{
   ComptimeArg, ElseBranch, EnumMember, GenericParams, IfExpr, NodeId, Path, Pattern,
   PatternKind, StructMember, VariantPayload,
 };
-use boron_session::prelude::{get_or_intern, Identifier, Session};
+use boron_session::prelude::{Identifier, Session, get_or_intern};
 use boron_source::prelude::{SourceFileId, Span};
 
 #[derive(Clone, Debug, Copy, Hash, PartialEq, Eq)]
@@ -384,7 +384,7 @@ impl<'a> ResolveVisitor<'a> {
         .parent_scope(function_scope)
         .expect("a method should always be inside a struct");
       let scope = self.resolver().scopes.get(parent).expect("parent should exist");
-      self.resolver().add_self_mapping(def_id, scope.owner.unwrap())
+      self.resolver().add_self_mapping(def_id, scope.owner.unwrap());
     }
   }
 

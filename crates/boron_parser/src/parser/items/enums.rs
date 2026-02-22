@@ -1,13 +1,13 @@
+use crate::parser::Parser;
 use crate::parser::errors::InvalidVariantStart;
 use crate::parser::items::ADT_ITEM_TOKENS;
-use crate::parser::Parser;
 use crate::{
   EnumItem, EnumMember, EnumVariantStructField, NodeId, TokenType, Variant,
   VariantPayload,
 };
 use boron_source::span::Span;
 
-impl<'ctx> Parser<'ctx> {
+impl Parser<'_> {
   pub fn parse_enum(&mut self, span_start: Span) -> Option<EnumItem> {
     let name = self.parse_identifier();
     let generics = self.parse_generic_parameters();
@@ -139,7 +139,7 @@ impl<'ctx> Parser<'ctx> {
         }
       };
 
-      members.push(payload)
+      members.push(payload);
     }
 
     members

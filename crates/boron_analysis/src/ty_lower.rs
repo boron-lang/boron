@@ -1,6 +1,6 @@
 use crate::errors::ArrayLenNotANumber;
-use crate::interpreter::values::ConstValue;
 use crate::interpreter::InterpreterContext;
+use crate::interpreter::values::ConstValue;
 use crate::ty::{ArrayLength, TyParam};
 use crate::{InferTy, TyChecker, TypeEnv};
 use boron_hir::ty::ArrayLen;

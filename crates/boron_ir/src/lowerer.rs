@@ -278,7 +278,7 @@ impl<'a> IrLowerer<'a> {
         todo!("lower match into IR");
       }
       ThirExprKind::Err => {
-        panic!("err expr shouldn't exist at this point: {:#?}", expr)
+        panic!("err expr shouldn't exist at this point: {expr:#?}")
       }
     };
 
@@ -446,7 +446,7 @@ impl<'a> IrLowerer<'a> {
       InferTy::Never(_) => SemanticTy::Never,
 
       InferTy::Var(_, _) | InferTy::Param(_) => SemanticTy::Error,
-      InferTy::Err(_) => panic!("error shouldn't appear this late {:#?}", ty),
+      InferTy::Err(_) => panic!("error shouldn't appear this late {ty:#?}"),
     }
   }
 

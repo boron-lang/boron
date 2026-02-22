@@ -89,7 +89,7 @@ impl Span {
   pub fn range(&self) -> Range<usize> {
     self.start..self.end
   }
-  
+
   pub fn is_dummy(&self) -> bool {
     // 0 in ids is reserved for dummies
     self.file_id.0 == 0
