@@ -1,5 +1,5 @@
-use crate::align_of::{align_of_ty, calculate_struct_alignment};
 use crate::TyChecker;
+use crate::align_of::{align_of_ty, calculate_struct_alignment};
 pub(crate) use crate::{BuiltinFunctionCtx, InferTy};
 use boron_resolver::{DefId, DefKind};
 use boron_target::abi::layout::align_up;
@@ -48,7 +48,7 @@ pub fn calculate_struct_size<'a>(
   }
 
   offset = align_up(offset, struct_alignment.get());
-  dbg!(offset);
+  offset;
   offset
 }
 

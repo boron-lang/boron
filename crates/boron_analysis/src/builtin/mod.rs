@@ -14,7 +14,7 @@ pub struct BuiltinFunctionCtx<'a> {
   pub sess: &'a Session,
   pub resolver: &'a Resolver,
   pub hir: &'a Hir,
-  pub ty_table: &'a TypeTable
+  pub ty_table: &'a TypeTable,
 }
 
 pub fn expand_builtins<'a>(

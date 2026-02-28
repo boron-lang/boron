@@ -1,16 +1,16 @@
 use crate::errors::{DuplicateDefinition, SelfOutsideMethod};
 use crate::visitor::Namespace;
 use crate::{
-    DefId, DefKind, Definition, ResolveVisitor, Resolver, ScopeId, ScopeKind, Symbol,
-    SymbolKind,
+  DefId, DefKind, Definition, ResolveVisitor, Resolver, ScopeId, ScopeKind, Symbol,
+  SymbolKind,
 };
 use boron_parser::module::Modules;
 use boron_parser::{
-    ConstItem, EnumItem, EnumMember, FunctionItem, Item, ItemKind, ModItem, NodeId, Param,
-    ProgramNode, StructItem, StructMember, Visibility,
+  ConstItem, EnumItem, EnumMember, FunctionItem, Item, ItemKind, ModItem, NodeId, Param,
+  ProgramNode, StructItem, StructMember, Visibility,
 };
 use boron_session::prelude::Session;
-use boron_source::ident_table::{get_or_intern, Identifier};
+use boron_source::ident_table::{Identifier, get_or_intern};
 use boron_source::prelude::Span;
 
 impl<'a> ResolveVisitor<'a> {
@@ -307,7 +307,7 @@ impl<'a> ResolveVisitor<'a> {
       {
         self.resolver().add_self_mapping(def_id, owner);
       } else {
-        self.dcx().emit(SelfOutsideMethod { span })
+        self.dcx().emit(SelfOutsideMethod { span });
       }
     }
   }

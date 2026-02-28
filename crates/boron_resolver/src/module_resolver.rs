@@ -88,7 +88,7 @@ impl<'a> ModuleResolver<'a> {
     }
     None
   }
-  
+
   pub fn lookup(&self, name: &Identifier) -> Option<DefId> {
     self.lookup_value(name).or_else(|| self.lookup_type(name))
   }

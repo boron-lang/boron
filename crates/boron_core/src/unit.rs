@@ -2,7 +2,7 @@ use crate::errors::{MainNoGenerics, MainNoParams, MainRetNotAUnit, NoMainFunctio
 use crate::prelude::*;
 use boron_analysis::results::BuiltInResults;
 use boron_analysis::validator::validate_comptime;
-use boron_analysis::{expand_builtins, typeck_hir, InferTy, TypeTable};
+use boron_analysis::{InferTy, TypeTable, expand_builtins, typeck_hir};
 use boron_codegen::run_codegen;
 use boron_compiler::CompilerBuild;
 use boron_hir::hir::Hir;

@@ -52,5 +52,5 @@ pub struct IrEnum {
   pub type_args: Vec<SemanticTy>,
   pub name: String,
   pub variants: Vec<IrEnumVariant>,
-  pub layout: Layout
+  pub layout: Layout,
 }

@@ -8,8 +8,8 @@ use boron_parser::module::Modules;
 use boron_parser::{NodeId, Path};
 use boron_source::ident_table::Identifier;
 use boron_source::prelude::SourceFileId;
-use dashmap::mapref::one::Ref;
 use dashmap::DashMap;
+use dashmap::mapref::one::Ref;
 use parking_lot::RwLock;
 
 #[derive(Debug)]

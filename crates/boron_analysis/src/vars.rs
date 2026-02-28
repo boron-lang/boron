@@ -14,12 +14,8 @@ impl TyChecker<'_> {
       self.table.node_types.insert(hir_id, defaulted);
     }
 
-    let field_entries: Vec<_> = self
-      .table
-      .field_types
-      .iter()
-      .map(|e| (e.key().clone(), e.value().clone()))
-      .collect();
+    let field_entries: Vec<_> =
+      self.table.field_types.iter().map(|e| (*e.key(), e.value().clone())).collect();
 
     for (key, ty) in field_entries {
       let resolved = self.infcx.resolve(&ty);

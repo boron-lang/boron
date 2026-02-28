@@ -1,16 +1,16 @@
+use crate::align_of::align_of_ty;
 use crate::interpreter::values::ConstValue;
 use crate::results::BuiltInResults;
+use crate::size_of::size_of_ty;
 use crate::{BuiltinFunctionCtx, InferTy, TypeTable};
 use boron_diagnostics::DiagnosticCtx;
 use boron_hir::expr::{ElseBranch, IfExpr};
 use boron_hir::{
   Block, ComptimeCallee, Expr, ExprKind, Function, Hir, ParamKind, StmtKind,
 };
-use boron_resolver::prelude::BuiltInKind;
 use boron_resolver::Resolver;
-use boron_session::prelude::{debug, Session};
-use crate::align_of::align_of_ty;
-use crate::size_of::size_of_ty;
+use boron_resolver::prelude::BuiltInKind;
+use boron_session::prelude::{Session, debug};
 
 pub struct BuiltInExpander<'a> {
   pub bctx: BuiltinFunctionCtx<'a>,
@@ -26,7 +26,7 @@ impl<'a> BuiltInExpander<'a> {
   ) -> Self {
     Self {
       results: BuiltInResults::new(),
-      bctx: BuiltinFunctionCtx { ty_table, sess, hir, resolver },
+      bctx: BuiltinFunctionCtx { sess, resolver, hir, ty_table },
     }
   }
 
@@ -91,9 +91,13 @@ impl<'a> BuiltInExpander<'a> {
           };
 
           let result = match builtin {
-            BuiltInKind::SizeOf => ConstValue::Int(size_of_ty(&self.bctx, args[0].as_ty()) as i128),
-            BuiltInKind::AlignOf => ConstValue::Int(align_of_ty(&self.bctx, args[0].as_ty()).get() as i128),
-            
+            BuiltInKind::SizeOf => {
+              ConstValue::Int(size_of_ty(&self.bctx, args[0].as_ty()) as i128)
+            }
+            BuiltInKind::AlignOf => {
+              ConstValue::Int(align_of_ty(&self.bctx, args[0].as_ty()).get() as i128)
+            }
+
             BuiltInKind::Os => self.os_builtin(),
             _ => todo!("{:#?}", builtin),
           };

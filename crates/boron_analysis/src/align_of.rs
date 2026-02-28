@@ -1,4 +1,4 @@
-use crate::{BuiltinFunctionCtx, InferTy, TyChecker};
+use crate::{BuiltinFunctionCtx, InferTy};
 use boron_resolver::{DefId, DefKind};
 use boron_target::abi::layout::Alignment;
 
@@ -8,7 +8,7 @@ pub fn align_of_ty<'a>(sz: &'a BuiltinFunctionCtx<'a>, ty: &InferTy) -> Alignmen
   match ty {
     InferTy::Primitive(p, _) => target.size_of(*p).into(),
     InferTy::Ptr { .. } => target.pointer_width.size_bytes().into(),
-    InferTy::Array { ty, len, .. } => align_of_ty(sz, ty),
+    InferTy::Array { ty, .. } => align_of_ty(sz, ty),
     InferTy::Adt { def_id, args, .. } => {
       let def = sz.resolver.get_definition(*def_id).unwrap();
       match def.kind {

@@ -1,16 +1,14 @@
 use crate::codes::collect_struct_code;
-use crate::utils::{
-  get_lit_str, is_span_type, is_vec_span_type, is_vec_string_type,
-};
+use crate::placeholder::extract_named_placeholders;
+use crate::utils::{get_lit_str, is_span_type, is_vec_span_type, is_vec_string_type};
 use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
 use quote::quote;
 use std::collections::HashMap;
 use syn::{
-  parse_macro_input, spanned::Spanned, Data, DeriveInput, Expr, Fields, FieldsNamed,
+  Data, DeriveInput, Expr, Fields, FieldsNamed, parse_macro_input, spanned::Spanned,
 };
 use thiserror::Error;
-use crate::placeholder::extract_named_placeholders;
 
 #[derive(Debug, Error)]
 pub enum MacroFunctionError {

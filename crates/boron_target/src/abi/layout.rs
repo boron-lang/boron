@@ -18,7 +18,7 @@ impl Alignment {
   pub fn new(alignment: usize) -> Self {
     assert_ne!(alignment, 0);
     assert!(alignment.is_power_of_two());
-    Alignment(alignment)
+    Self(alignment)
   }
 
   pub fn get(&self) -> usize {
@@ -32,7 +32,7 @@ pub fn align_up(size: usize, align: usize) -> usize {
 
 impl From<usize> for Alignment {
   fn from(value: usize) -> Self {
-    Alignment::new(value)
+    Self::new(value)
   }
 }
 

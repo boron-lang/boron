@@ -1,10 +1,10 @@
 use boron_diagnostic_macro::Diagnostic;
 use boron_source::prelude::{SourceFileId, Span};
 use parking_lot::RwLock;
+use petgraph::Direction;
 use petgraph::algo::{has_path_connecting, toposort};
 use petgraph::graph::{DiGraph, NodeIndex};
 use std::collections::{HashMap, HashSet};
-use petgraph::Direction;
 
 /// Graph of import dependencies between modules.
 #[derive(Debug)]
