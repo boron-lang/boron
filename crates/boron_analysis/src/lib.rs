@@ -1,3 +1,4 @@
+pub mod align_of;
 mod builtin;
 mod checker;
 mod collector;
@@ -6,7 +7,7 @@ mod formatter;
 pub mod interpreter;
 mod literals;
 mod monomorphizations;
-mod size_of;
+pub mod size_of;
 mod table;
 pub mod ty;
 mod ty_lower;
@@ -15,7 +16,7 @@ pub mod validator;
 mod vars;
 
 pub use builtin::*;
-pub use checker::{TyChecker, typeck_hir};
+pub use checker::{typeck_hir, TyChecker};
 pub use literals::*;
 pub use table::{InferCtx, TypeEnv, TypeTable};
 pub use ty::{InferTy, TyVar, TyVarKind, TypeScheme};

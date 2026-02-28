@@ -15,6 +15,7 @@ dashmap = { workspace = true }
 boron_resolver = { workspace = true }
 itertools = { workspace = true }
 boron_source = { workspace = true }
+boron_target = { workspace = true }
 
 [lints]
 workspace = true

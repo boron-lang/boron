@@ -151,9 +151,9 @@ dependencies = [
  "boron_resolver",
  "boron_session",
  "boron_source",
+ "boron_target",
  "dashmap 7.0.0-rc2",
  "itertools",
- "log",
  "rustc_apfloat",
 ]
 
@@ -275,6 +275,7 @@ dependencies = [
  "boron_resolver",
  "boron_session",
  "boron_source",
+ "boron_target",
  "boron_thir",
  "dashmap 7.0.0-rc2",
  "itertools",

@@ -1,4 +1,4 @@
-use crate::builtins::{BuiltInFunction, BuiltInParam, get_builtin};
+use crate::builtins::{get_builtin, BuiltInFunction, BuiltInParam};
 use crate::errors::{ArityMismatch, FuncArgMismatch};
 use crate::functions::FinalComptimeArg;
 use crate::unify::{Expectation, UnifyError, UnifyResult};

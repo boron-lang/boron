@@ -154,7 +154,7 @@ impl<'a> ThirLowerer<'a> {
       .map(|f| {
         let ty = self
           .type_table
-          .field_type(strukt.def_id, &f.name.to_string())
+          .field_type(strukt.def_id, f.name)
           .unwrap_or(InferTy::Err(f.span));
 
         Field { hir_id: f.hir_id, name: f.name, ty, span: f.span }
@@ -373,24 +373,24 @@ impl<'a> ThirLowerer<'a> {
     };
 
     let args = args.iter().map(|a| self.lower_expr(&a.value)).collect();
-    let type_args = self.lower_call_type_args(call_hir_id, callee_def_id);
-    ExprKind::Call { callee: callee_def_id, type_args, args }
+    let type_args = self.lower_call_type_args(call_hir_id);
+
+    ExprKind::Call {
+      callee: if let Some(entry) = self.type_table.expr_monomorphization(call_hir_id) {
+        entry.def_id
+      } else {
+        callee_def_id
+      },
+      type_args,
+      args,
+    }
   }
 
-  fn lower_call_type_args(
-    &self,
-    call_hir_id: HirId,
-    callee_def_id: DefId,
-  ) -> Vec<InferTy> {
+  fn lower_call_type_args(&self, call_hir_id: HirId) -> Vec<InferTy> {
     let Some(mono) = self.type_table.expr_monomorphization(call_hir_id) else {
       return vec![];
     };
-
-    if mono.def_id != callee_def_id {
-      return vec![];
-    }
-
-    let Some(scheme) = self.type_table.def_type(callee_def_id) else {
+    let Some(scheme) = self.type_table.def_type(mono.def_id) else {
       return vec![];
     };
 
@@ -444,7 +444,7 @@ impl<'a> ThirLowerer<'a> {
     let mut lowered_args = vec![lowered_receiver];
     lowered_args.extend(args.iter().map(|a| self.lower_expr(&a.value)));
 
-    let type_args = self.lower_call_type_args(call_hir_id, method_def_id);
+    let type_args = self.lower_call_type_args(call_hir_id);
 
     ExprKind::Call { callee: method_def_id, type_args, args: lowered_args }
   }
@@ -596,7 +596,7 @@ impl<'a> ThirLowerer<'a> {
     field: &HirFieldInit,
     subst: &SubstitutionMap,
   ) -> FieldInit {
-    let ty = self.type_table.field_type(def_id, &field.name.text()).unwrap();
+    let ty = self.type_table.field_type(def_id, field.name).unwrap();
     let ty = Self::apply_subst_by_def_id(&ty, subst);
     FieldInit {
       hir_id: field.hir_id,

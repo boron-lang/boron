@@ -6,19 +6,13 @@ pub enum SemanticTy {
   Primitive(PrimitiveKind),
 
   Struct { def_id: DefId, args: Vec<SemanticTy> },
-
-  Enum { def_id: DefId, variants: Vec<EnumVariant> },
+  Enum { def_id: DefId, args: Vec<SemanticTy>, variants: Vec<EnumVariant> },
 
   Ptr { mutability: Mutability, inner: Box<SemanticTy> },
-
   Optional(Box<SemanticTy>),
-
   Array { elem: Box<SemanticTy>, len: usize },
-
   Slice(Box<SemanticTy>),
-
   Tuple(Vec<SemanticTy>),
-
   Fn { params: Vec<SemanticTy>, ret: Box<SemanticTy> },
 
   Unit,

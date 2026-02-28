@@ -3,8 +3,8 @@ use crate::errors::{FieldInitMismatch, InvalidStructInit, NoFieldForStructInit};
 use crate::table::TypeEnv;
 use crate::ty::{InferTy, SubstitutionMap};
 use crate::unify::{Expectation, UnifyError, UnifyResult};
-use boron_hir::Expr;
 use boron_hir::expr::FieldInit;
+use boron_hir::Expr;
 use boron_resolver::{DefId, DefKind};
 
 impl TyChecker<'_> {
@@ -37,7 +37,7 @@ impl TyChecker<'_> {
           });
         } else {
           let field_ty = Self::apply_subst(
-            &self.table.field_type(*def_id, &field.name.text()).unwrap(),
+            &self.table.field_type(*def_id, field.name).unwrap(),
             &subst,
           );
           let arg_ty =

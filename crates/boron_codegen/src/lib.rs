@@ -1,4 +1,5 @@
 mod codegen;
+mod enums;
 mod expressions;
 mod function;
 mod output;

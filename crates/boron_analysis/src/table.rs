@@ -4,6 +4,7 @@ use crate::ty::{InferTy, SubstitutionMap, TyVar, TyVarKind, TypeScheme};
 use boron_hir::HirId;
 use boron_resolver::DefId;
 use boron_session::prelude::Span;
+use boron_source::ident_table::Identifier;
 use dashmap::DashMap;
 use std::collections::{HashMap, HashSet};
 
@@ -11,10 +12,8 @@ use std::collections::{HashMap, HashSet};
 pub struct TypeTable {
   /// Maps HIR nodes to their inferred types
   pub(crate) node_types: DashMap<HirId, InferTy>,
-  /// Maps definitions to their type schemes
   pub(crate) def_types: DashMap<DefId, TypeScheme>,
-  /// Maps struct fields to their types.
-  pub(crate) field_types: DashMap<(DefId, String), InferTy>,
+  pub(crate) field_types: DashMap<(DefId, Identifier), InferTy>,
   /// Maps method signatures to thier type scheme.
   pub(crate) method_types: DashMap<(DefId, String), TypeScheme>,
   /// Maps comptime function call to it's arguments
@@ -76,12 +75,12 @@ impl TypeTable {
     self.def_types.get(&def_id).map(|s| s.clone())
   }
 
-  pub fn record_field_type(&self, struct_id: DefId, field_name: String, ty: InferTy) {
+  pub fn record_field_type(&self, struct_id: DefId, field_name: Identifier, ty: InferTy) {
     self.field_types.insert((struct_id, field_name), ty);
   }
 
-  pub fn field_type(&self, struct_id: DefId, field_name: &str) -> Option<InferTy> {
-    self.field_types.get(&(struct_id, field_name.to_owned())).map(|t| t.clone())
+  pub fn field_type(&self, struct_id: DefId, field_name: Identifier) -> Option<InferTy> {
+    self.field_types.get(&(struct_id, field_name)).map(|t| t.clone())
   }
 
   pub fn record_method_type(

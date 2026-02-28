@@ -1,11 +1,11 @@
 use crate::codegen::LLVMCodegen;
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use boron_ir::SemanticTy;
 use boron_parser::PrimitiveKind;
 use boron_resolver::DefId;
 use boron_session::prelude::warn;
-use inkwell::AddressSpace;
 use inkwell::types::{BasicType as _, BasicTypeEnum, StructType};
+use inkwell::AddressSpace;
 
 impl<'ctx> LLVMCodegen<'ctx> {
   pub fn primitive_ty(&self, prim: &PrimitiveKind) -> BasicTypeEnum<'ctx> {
@@ -39,12 +39,25 @@ impl<'ctx> LLVMCodegen<'ctx> {
     self.struct_ty_by_id(&strukt.id)
   }
 
+  pub fn get_enum_ty(
+    &self,
+    def_id: &DefId,
+    args: &Vec<SemanticTy>,
+  ) -> Result<StructType<'ctx>> {
+    let strukt = self.ir.find_enum(def_id, args);
+    self.struct_ty_by_id(&strukt.id)
+  }
+
   pub fn ty(&self, ty: &SemanticTy) -> Result<BasicTypeEnum<'ctx>> {
     match ty {
       SemanticTy::Primitive(p) => Ok(self.primitive_ty(p)),
 
       SemanticTy::Struct { def_id, args } => {
         Ok(self.get_struct_ty(def_id, args)?.as_basic_type_enum())
+      }
+
+      SemanticTy::Enum { def_id, args, .. } => {
+        Ok(self.get_enum_ty(def_id, args)?.as_basic_type_enum())
       }
 
       SemanticTy::Ptr { .. } => {

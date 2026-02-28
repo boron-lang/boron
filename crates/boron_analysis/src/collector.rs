@@ -1,6 +1,7 @@
 use crate::{InferTy, TyChecker, TypeScheme};
 use boron_hir::item::VariantKind;
 use boron_hir::{Function, Generics, Param, ParamKind};
+use boron_source::ident_table::get_or_intern;
 use boron_source::span::Span;
 
 impl TyChecker<'_> {
@@ -50,7 +51,7 @@ impl TyChecker<'_> {
       let generics = self.register_generics(&strukt.generics);
       for field in &strukt.fields {
         let field_ty = self.lower_hir_ty(&field.ty);
-        self.table.record_field_type(def_id, field.name.text(), field_ty);
+        self.table.record_field_type(def_id, field.name, field_ty);
       }
 
       let struct_ty = InferTy::Adt {
@@ -73,13 +74,17 @@ impl TyChecker<'_> {
           VariantKind::Struct(fields) => {
             for field in fields {
               let field_ty = self.lower_hir_ty(&field.ty);
-              self.table.record_field_type(variant.def_id, field.name.text(), field_ty);
+              self.table.record_field_type(variant.def_id, field.name, field_ty);
             }
           }
           VariantKind::Tuple(types) => {
             for (field, ty) in types.iter().enumerate() {
               let field_ty = self.lower_hir_ty(ty);
-              self.table.record_field_type(variant.def_id, field.to_string(), field_ty);
+              self.table.record_field_type(
+                variant.def_id,
+                get_or_intern(&field.to_string(), None),
+                field_ty,
+              );
             }
           }
         }

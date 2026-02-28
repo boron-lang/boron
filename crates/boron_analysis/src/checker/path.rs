@@ -57,7 +57,7 @@ impl TyChecker<'_> {
     (Self::apply_subst(&scheme.ty, &subst), subst)
   }
 
-  pub(crate) fn instantiate_with_args(
+  pub fn instantiate_with_args(
     scheme: &TypeScheme,
     args: &[InferTy],
   ) -> (InferTy, SubstitutionMap) {

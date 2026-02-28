@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use boron_ir::{Ir, IrId};
 use boron_resolver::DefId;
 use boron_session::prelude::{Mode, Session};
@@ -31,6 +31,10 @@ impl LLVMCodegen<'_> {
     for strukt in &ir.structs {
       self.create_struct_type(strukt);
     }
+    for _enum in &ir.enums {
+      self.create_enum_type(_enum);
+    }
+
     for strukt in &ir.structs {
       self.generate_struct_body(strukt)?;
     }

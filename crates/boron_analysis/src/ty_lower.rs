@@ -30,9 +30,7 @@ impl TyChecker<'_> {
           .map(|t| self.lower_hir_ty(t))
           .collect();
 
-        self.check_path(*def_id, &TypeEnv::new(), Some(&infer_args));
-
-        InferTy::Adt { def_id: *def_id, args: infer_args, span: ty.span }
+        self.check_path(*def_id, &TypeEnv::new(), Some(&infer_args))
       }
 
       TyKind::Ptr { mutability, ty: inner } => InferTy::Ptr {

@@ -1,6 +1,4 @@
 mod os;
-mod size_of;
-
 use crate::InferTy;
 use boron_hir::Expr;
 

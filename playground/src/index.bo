@@ -1,3 +1,6 @@
+mod vec;
+import * from vec;
+
 extern "C" func puts(text: *const u8);
 
 pub enum Option<T> {

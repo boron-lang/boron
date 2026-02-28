@@ -14,7 +14,7 @@ impl TyChecker<'_> {
 
     match resolved.clone() {
       InferTy::Adt { def_id, args, .. } => {
-        if let Some(field_ty) = self.table.field_type(def_id, &field.text()) {
+        if let Some(field_ty) = self.table.field_type(def_id, *field) {
           let substituted = if let Some(scheme) = self.table.def_type(def_id) {
             if !scheme.vars.is_empty() && scheme.vars.len() == args.len() {
               let mut subst = SubstitutionMap::new();

@@ -2,6 +2,7 @@ use crate::IrBlock;
 use crate::IrId;
 use boron_hir::SemanticTy;
 use boron_resolver::DefId;
+use boron_target::abi::layout::Layout;
 
 #[derive(Debug, Clone)]
 pub struct IrFunction {
@@ -51,4 +52,5 @@ pub struct IrEnum {
   pub type_args: Vec<SemanticTy>,
   pub name: String,
   pub variants: Vec<IrEnumVariant>,
+  pub layout: Layout
 }

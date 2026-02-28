@@ -1,35 +1,37 @@
 use crate::interpreter::values::ConstValue;
 use crate::results::BuiltInResults;
-use crate::{InferTy, TypeTable};
+use crate::{BuiltinFunctionCtx, InferTy, TypeTable};
 use boron_diagnostics::DiagnosticCtx;
 use boron_hir::expr::{ElseBranch, IfExpr};
 use boron_hir::{
   Block, ComptimeCallee, Expr, ExprKind, Function, Hir, ParamKind, StmtKind,
 };
-use boron_resolver::Resolver;
 use boron_resolver::prelude::BuiltInKind;
-use boron_session::prelude::{Session, debug};
+use boron_resolver::Resolver;
+use boron_session::prelude::{debug, Session};
+use crate::align_of::align_of_ty;
+use crate::size_of::size_of_ty;
 
 pub struct BuiltInExpander<'a> {
-  pub sess: &'a Session,
-  pub resolver: &'a Resolver,
+  pub bctx: BuiltinFunctionCtx<'a>,
   pub results: BuiltInResults,
-  pub hir: &'a Hir,
-  pub type_table: &'a TypeTable,
 }
 
 impl<'a> BuiltInExpander<'a> {
   pub fn new(
     sess: &'a Session,
     resolver: &'a Resolver,
-    type_table: &'a TypeTable,
+    ty_table: &'a TypeTable,
     hir: &'a Hir,
   ) -> Self {
-    Self { sess, results: BuiltInResults::new(), resolver, hir, type_table }
+    Self {
+      results: BuiltInResults::new(),
+      bctx: BuiltinFunctionCtx { ty_table, sess, hir, resolver },
+    }
   }
 
   pub fn dcx(&self) -> &'a DiagnosticCtx {
-    self.sess.dcx()
+    self.bctx.sess.dcx()
   }
 
   pub fn expand_function(&self, func: &Function) {
@@ -75,7 +77,7 @@ impl<'a> BuiltInExpander<'a> {
       }
 
       ExprKind::Comptime { callee, args } => {
-        if let Some(ty) = self.type_table.node_type(expr.hir_id)
+        if let Some(ty) = self.bctx.ty_table.node_type(expr.hir_id)
           && let InferTy::Err(_) = ty
         {
           self.results.insert(expr.hir_id, ConstValue::Poison);
@@ -83,13 +85,15 @@ impl<'a> BuiltInExpander<'a> {
         }
 
         if let ComptimeCallee::BuiltIn(builtin) = callee {
-          let Some(args) = self.type_table.comptime_args.get(&expr.hir_id) else {
+          let Some(args) = self.bctx.ty_table.comptime_args.get(&expr.hir_id) else {
             debug!("skipping builtin because there might have been an error before");
             return;
           };
 
           let result = match builtin {
-            BuiltInKind::SizeOf => self.size_of(args[0].as_ty()),
+            BuiltInKind::SizeOf => ConstValue::Int(size_of_ty(&self.bctx, args[0].as_ty()) as i128),
+            BuiltInKind::AlignOf => ConstValue::Int(align_of_ty(&self.bctx, args[0].as_ty()).get() as i128),
+            
             BuiltInKind::Os => self.os_builtin(),
             _ => todo!("{:#?}", builtin),
           };

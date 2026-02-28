@@ -10,6 +10,13 @@ use boron_hir::Hir;
 use boron_resolver::Resolver;
 use boron_session::prelude::Session;
 
+pub struct BuiltinFunctionCtx<'a> {
+  pub sess: &'a Session,
+  pub resolver: &'a Resolver,
+  pub hir: &'a Hir,
+  pub ty_table: &'a TypeTable
+}
+
 pub fn expand_builtins<'a>(
   sess: &'a Session,
   resolver: &'a Resolver,

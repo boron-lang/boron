@@ -1,22 +1,24 @@
 use crate::{
-  Ir, IrBlock, IrBody, IrExpr, IrExprKind, IrFieldInit, IrFunction, IrId, IrLocal,
-  IrParam, IrStmt, IrStmtKind, IrStruct, Projection, SymbolMangler,
+  Ir, IrBlock, IrBody, IrEnum, IrExpr, IrExprKind, IrFieldInit, IrFunction, IrId,
+  IrLocal, IrParam, IrStmt, IrStmtKind, IrStruct, Projection, SymbolMangler,
 };
 use boron_analysis::ty::SubstitutionMap;
 use boron_analysis::{InferTy, TypeScheme, TypeTable};
 use boron_hir::pat::PatKind;
-use boron_hir::{Hir, ParamKind, Pat, SemanticTy};
+use boron_hir::{EnumVariant, Hir, ParamKind, Pat, SemanticTy};
+use boron_resolver::DefId;
 use boron_session::prelude::debug;
+use boron_target::abi::layout::Layout;
 use boron_thir::{
-  Block as ThirBlock, Expr as ThirExpr, ExprKind as ThirExprKind,
-  FieldInit as ThirFieldInit, Function as ThirFunction, Struct as ThirStruct, Thir,
+  Block as ThirBlock, Enum as ThirEnum, Expr as ThirExpr, ExprKind as ThirExprKind,
+  FieldInit as ThirFieldInit, Function as ThirFunction, StmtKind, Struct as ThirStruct,
+  Thir, VariantKind,
 };
 use itertools::Itertools as _;
 
 #[derive(Debug)]
 struct LoweringContext {
-  #[expect(dead_code)]
-  owner: boron_resolver::DefId,
+  owner: DefId,
   type_args: SubstitutionMap,
 }
 
@@ -61,6 +63,10 @@ impl<'a> IrLowerer<'a> {
       self.lower_struct(strukt.value());
     }
 
+    for enum_ in &self.thir.enums {
+      self.lower_enum(enum_.value());
+    }
+
     self.ir.clone()
   }
 
@@ -97,7 +103,7 @@ impl<'a> IrLowerer<'a> {
     id: IrId,
   ) {
     let params = self.lower_function_params(func, type_args);
-    let concrete_type_args = Self::collect_type_args(scheme, type_args);
+    let concrete_type_args = self.collect_type_args(scheme, type_args);
     let mangled_name = self.mangler.mangle_function(func.def_id, &concrete_type_args);
     let return_ty = Self::apply_subst_by_def_id(&func.return_type, type_args);
     let body = func.body.as_ref().map(|b| self.lower_body(b, type_args, func.def_id));
@@ -107,7 +113,7 @@ impl<'a> IrLowerer<'a> {
       params,
       id,
       type_args: concrete_type_args,
-      return_type: Self::lower_type(&return_ty),
+      return_type: self.lower_type(&return_ty),
       def_id: func.def_id,
       body,
     });
@@ -135,7 +141,7 @@ impl<'a> IrLowerer<'a> {
           .unwrap_or_else(|| format!("param_{}", p.def_id.index()));
 
         let substituted_ty = Self::apply_subst_by_def_id(&p.ty, type_args);
-        IrParam { def_id: p.def_id, name, ty: Self::lower_type(&substituted_ty) }
+        IrParam { def_id: p.def_id, name, ty: self.lower_type(&substituted_ty) }
       })
       .collect()
   }
@@ -144,7 +150,7 @@ impl<'a> IrLowerer<'a> {
     &mut self,
     block: &ThirBlock,
     type_args: &SubstitutionMap,
-    owner: boron_resolver::DefId,
+    owner: DefId,
   ) -> IrBody {
     self.lowering_context = Some(LoweringContext { owner, type_args: type_args.clone() });
 
@@ -160,9 +166,9 @@ impl<'a> IrLowerer<'a> {
 
     for stmt in &block.stmts {
       match &stmt.kind {
-        boron_thir::StmtKind::Local(local) => {
+        StmtKind::Local(local) => {
           let type_args = &self.context().type_args;
-          let ty = Self::lower_semantic_ty(&local.ty, type_args);
+          let ty = self.lower_semantic_ty(&local.ty, type_args);
           let mut projections = vec![];
           let hir_id = local.hir_id;
 
@@ -184,7 +190,7 @@ impl<'a> IrLowerer<'a> {
             span: stmt.span,
           });
         }
-        boron_thir::StmtKind::Expr(expr) => {
+        StmtKind::Expr(expr) => {
           let lowered = self.lower_expr(expr);
           stmts.push(IrStmt {
             hir_id: stmt.hir_id,
@@ -202,7 +208,7 @@ impl<'a> IrLowerer<'a> {
 
   fn lower_expr(&mut self, expr: &ThirExpr) -> IrExpr {
     let type_args = &self.context().type_args;
-    let ty = Self::lower_semantic_ty(&expr.ty, type_args);
+    let ty = self.lower_semantic_ty(&expr.ty, type_args);
 
     let kind = match &expr.kind {
       ThirExprKind::Literal(lit) => IrExprKind::Literal(lit.clone()),
@@ -225,14 +231,14 @@ impl<'a> IrLowerer<'a> {
       }
       ThirExprKind::Cast { expr: inner, ty } => {
         let inner = self.lower_expr(inner);
-        let cast_ty = Self::lower_semantic_ty(ty, &self.context().type_args);
+        let cast_ty = self.lower_semantic_ty(ty, &self.context().type_args);
         IrExprKind::Cast { expr: Box::new(inner), ty: cast_ty }
       }
       ThirExprKind::Call { callee, type_args: call_type_args, args } => {
         let args = args.iter().map(|arg| self.lower_expr(arg)).collect();
         let type_args = call_type_args
           .iter()
-          .map(|ty| Self::lower_semantic_ty(ty, &self.context().type_args))
+          .map(|ty| self.lower_semantic_ty(ty, &self.context().type_args))
           .collect();
         IrExprKind::Call { callee: *callee, type_args, args }
       }
@@ -249,7 +255,7 @@ impl<'a> IrLowerer<'a> {
         let fields = fields.iter().map(|f| self.lower_field_init(f)).collect();
         let type_args = struct_type_args
           .iter()
-          .map(|ty| Self::lower_semantic_ty(ty, &self.context().type_args))
+          .map(|ty| self.lower_semantic_ty(ty, &self.context().type_args))
           .collect();
         IrExprKind::Struct { def_id: *def_id, type_args, fields }
       }
@@ -287,7 +293,7 @@ impl<'a> IrLowerer<'a> {
 
   fn lower_field_init(&mut self, field: &ThirFieldInit) -> IrFieldInit {
     let type_args = &self.context().type_args;
-    let ty = Self::lower_semantic_ty(&field.ty, type_args);
+    let ty = self.lower_semantic_ty(&field.ty, type_args);
 
     IrFieldInit {
       hir_id: field.hir_id,
@@ -317,14 +323,53 @@ impl<'a> IrLowerer<'a> {
     }
   }
 
+  pub fn lower_enum(&mut self, enum_: &ThirEnum) {
+    let scheme = self.type_table.def_type(enum_.def_id).unwrap();
+    let Some(monomorphizations) = self.type_table.monomorphizations.get(&enum_.def_id)
+    else {
+      if scheme.vars.is_empty() {
+        let empty_subst = SubstitutionMap::new();
+        self.push_enum_instance(enum_, &scheme, &empty_subst);
+      }
+      return;
+    };
+
+    for mono in monomorphizations
+      .iter()
+      .filter(|mono| !mono.type_args.map().iter().any(|(_, ty)| ty.has_params()))
+    {
+      self.push_enum_instance(enum_, &scheme, &mono.type_args);
+    }
+  }
+
+  fn push_enum_instance(
+    &mut self,
+    enum_: &ThirEnum,
+    scheme: &TypeScheme,
+    type_args: &SubstitutionMap,
+  ) {
+    let fields = enum_.variants.iter().map(|variant| true);
+    let concrete_type_args = self.collect_type_args(scheme, type_args);
+    let mangled_name = self.mangler.mangle_enum(enum_.def_id, &concrete_type_args);
+
+    self.ir.enums.push(IrEnum {
+      name: mangled_name,
+      id: IrId::new(),
+      type_args: concrete_type_args,
+      def_id: enum_.def_id,
+      variants: vec![],
+      layout: Layout::new(2, 2),
+    });
+  }
+
   fn push_struct_instance(
     &mut self,
     strukt: &ThirStruct,
     scheme: &TypeScheme,
     type_args: &SubstitutionMap,
   ) {
-    let fields = Self::lower_struct_fields(strukt, type_args);
-    let concrete_type_args = Self::collect_type_args(scheme, type_args);
+    let fields = self.lower_struct_fields(strukt, type_args);
+    let concrete_type_args = self.collect_type_args(scheme, type_args);
     let mangled_name = self.mangler.mangle_struct(strukt.def_id, &concrete_type_args);
 
     self.ir.structs.push(IrStruct {
@@ -337,17 +382,19 @@ impl<'a> IrLowerer<'a> {
   }
 
   fn collect_type_args(
+    &self,
     scheme: &TypeScheme,
     type_args: &SubstitutionMap,
   ) -> Vec<SemanticTy> {
     scheme
       .vars
       .iter()
-      .filter_map(|param| type_args.get(param.def_id).map(Self::lower_type))
+      .filter_map(|param| type_args.get(param.def_id).map(|ty| self.lower_type(ty)))
       .collect()
   }
 
   fn lower_struct_fields(
+    &self,
     strukt: &ThirStruct,
     type_args: &SubstitutionMap,
   ) -> Vec<(String, SemanticTy)> {
@@ -356,7 +403,7 @@ impl<'a> IrLowerer<'a> {
       .iter()
       .map(|f| {
         let substituted_ty = Self::apply_subst_by_def_id(&f.ty, type_args);
-        (f.name.text(), Self::lower_type(&substituted_ty))
+        (f.name.text(), self.lower_type(&substituted_ty))
       })
       .collect()
   }
@@ -403,43 +450,77 @@ impl<'a> IrLowerer<'a> {
     }
   }
 
-  pub fn lower_semantic_ty(ty: &InferTy, type_args: &SubstitutionMap) -> SemanticTy {
+  pub fn lower_semantic_ty(
+    &self,
+    ty: &InferTy,
+    type_args: &SubstitutionMap,
+  ) -> SemanticTy {
     let substituted = Self::apply_subst_by_def_id(ty, type_args);
-    Self::lower_type(&substituted)
+    self.lower_type(&substituted)
   }
 
-  fn lower_type(ty: &InferTy) -> SemanticTy {
+  fn lower_type(&self, ty: &InferTy) -> SemanticTy {
     match ty {
       InferTy::Primitive(kind, _) => SemanticTy::Primitive(*kind),
 
       InferTy::Adt { def_id, args, .. } => {
-        let args = args.iter().map(Self::lower_type).collect();
+        let args = args.iter().map(|a| self.lower_type(a)).collect();
+
+        if self.thir.structs.iter().any(|s| s.def_id == *def_id) {
+          return SemanticTy::Struct { def_id: *def_id, args };
+        }
+
+        if let Some(enum_entry) = self.thir.enums.get(def_id) {
+          let variants = enum_entry
+            .variants
+            .iter()
+            .enumerate()
+            .map(|(idx, v)| {
+              let payload = match &v.kind {
+                VariantKind::Unit => None,
+                VariantKind::Tuple(tys) => Some(SemanticTy::Tuple(
+                  tys.iter().map(|t| self.lower_type(t)).collect(),
+                )),
+                VariantKind::Struct(fields) => {
+                  let tys = fields.iter().map(|f| self.lower_type(&f.ty)).collect();
+                  Some(SemanticTy::Tuple(tys))
+                }
+                VariantKind::Discriminant(_) => None,
+              };
+
+              EnumVariant { name: v.name.text(), discr: idx as i128, payload }
+            })
+            .collect();
+
+          return SemanticTy::Enum { def_id: *def_id, args, variants };
+        }
+
         SemanticTy::Struct { def_id: *def_id, args }
       }
 
       InferTy::Ptr { mutability, ty: inner, .. } => SemanticTy::Ptr {
         mutability: *mutability,
-        inner: Box::new(Self::lower_type(inner)),
+        inner: Box::new(self.lower_type(inner)),
       },
 
       InferTy::Optional(inner, _) => {
-        SemanticTy::Optional(Box::new(Self::lower_type(inner)))
+        SemanticTy::Optional(Box::new(self.lower_type(inner)))
       }
 
       InferTy::Array { ty: inner, len, .. } => SemanticTy::Array {
-        elem: Box::new(Self::lower_type(inner)),
+        elem: Box::new(self.lower_type(inner)),
         len: len.expect_len(),
       },
 
-      InferTy::Slice(inner, _) => SemanticTy::Slice(Box::new(Self::lower_type(inner))),
+      InferTy::Slice(inner, _) => SemanticTy::Slice(Box::new(self.lower_type(inner))),
 
       InferTy::Tuple(tys, _) => {
-        SemanticTy::Tuple(tys.iter().map(Self::lower_type).collect())
+        SemanticTy::Tuple(tys.iter().map(|t| self.lower_type(t)).collect())
       }
 
       InferTy::Fn { params, ret, .. } => SemanticTy::Fn {
-        params: params.iter().map(Self::lower_type).collect(),
-        ret: Box::new(Self::lower_type(ret)),
+        params: params.iter().map(|p| self.lower_type(p)).collect(),
+        ret: Box::new(self.lower_type(ret)),
       },
 
       InferTy::Unit(_) => SemanticTy::Unit,

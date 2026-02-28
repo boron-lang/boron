@@ -17,6 +17,10 @@ impl<'ctx> LLVMCodegen<'ctx> {
     type_args: &Vec<SemanticTy>,
     args: &Vec<IrExpr>,
   ) -> Result<BasicValueEnum<'ctx>> {
+    if let Some(enum_) = self.ir.get_enum(callee, type_args) {
+      return Ok(self.context.bool_type().const_int(0, false).into())
+    }
+
     let ir_function = self.ir.find_function(callee, type_args);
     let function = self.function_value(&ir_function.id)?;
     let mut largs = vec![];

@@ -1,5 +1,5 @@
 use crate::items::IrFunction;
-use crate::{IrLocal, IrStruct};
+use crate::{IrEnum, IrLocal, IrStruct};
 use boron_hir::SemanticTy;
 use boron_resolver::DefId;
 use boron_source::new_id;
@@ -11,6 +11,7 @@ new_id!(IrId);
 pub struct Ir {
   pub functions: Vec<IrFunction>,
   pub structs: Vec<IrStruct>,
+  pub enums: Vec<IrEnum>,
   // all variables for current function
   pub locals: DashMap<IrId, Vec<IrLocal>>,
 }
@@ -24,6 +25,19 @@ impl Ir {
     } else {
       panic!("couldn't find struct for {id:?} {types:#?}")
     }
+  }
+
+  pub fn find_enum(&self, id: &DefId, types: &Vec<SemanticTy>) -> &IrEnum {
+    let _enum = self.enums.iter().find(|s| &s.def_id == id && types == &s.type_args);
+    if let Some(_enum) = _enum {
+      _enum
+    } else {
+      panic!("couldn't find enum for {id:?} {types:#?}")
+    }
+  }
+
+  pub fn get_enum(&self, id: &DefId, types: &Vec<SemanticTy>) -> Option<&IrEnum> {
+    self.enums.iter().find(|s| &s.def_id == id && types == &s.type_args)
   }
 
   pub fn find_function(&self, id: &DefId, types: &Vec<SemanticTy>) -> &IrFunction {
