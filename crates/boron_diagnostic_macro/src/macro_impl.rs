@@ -1,8 +1,16 @@
+use crate::codes::collect_struct_code;
+use crate::utils::{
+  get_lit_str, is_span_type, is_vec_span_type, is_vec_string_type,
+};
 use proc_macro::TokenStream;
+use proc_macro2::{Ident, Span};
 use quote::quote;
-use std::collections::{BTreeSet, HashMap};
-use syn::{DeriveInput, Expr, parse_macro_input, spanned::Spanned};
+use std::collections::HashMap;
+use syn::{
+  parse_macro_input, spanned::Spanned, Data, DeriveInput, Expr, Fields, FieldsNamed,
+};
 use thiserror::Error;
+use crate::placeholder::extract_named_placeholders;
 
 #[derive(Debug, Error)]
 pub enum MacroFunctionError {
@@ -16,175 +24,6 @@ pub enum MacroFunctionError {
 
 const VALID_SEVERITIES: &[&str] = &["help", "warning", "error", "bug", "note"];
 const VALID_LABEL_SEVERITIES: &[&str] = &["error", "warning", "help_label"];
-
-fn is_span_type(ty: &syn::Type) -> bool {
-  match ty {
-    syn::Type::Path(type_path) => {
-      type_path.path.segments.last().map(|seg| seg.ident == "Span").unwrap_or(false)
-    }
-    _ => false,
-  }
-}
-
-fn is_vec_span_type(ty: &syn::Type) -> bool {
-  match ty {
-    syn::Type::Path(type_path) => {
-      let last_seg = type_path.path.segments.last();
-      if let Some(seg) = last_seg {
-        if seg.ident != "Vec" {
-          return false;
-        }
-        if let syn::PathArguments::AngleBracketed(args) = &seg.arguments {
-          if let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first() {
-            return is_span_type(inner_ty);
-          }
-        }
-      }
-      false
-    }
-    _ => false,
-  }
-}
-
-fn is_string_type(ty: &syn::Type) -> bool {
-  match ty {
-    syn::Type::Path(type_path) => {
-      type_path.path.segments.last().map(|seg| seg.ident == "String").unwrap_or(false)
-    }
-    _ => false,
-  }
-}
-
-fn is_vec_string_type(ty: &syn::Type) -> bool {
-  match ty {
-    syn::Type::Path(type_path) => {
-      let last_seg = type_path.path.segments.last();
-      if let Some(seg) = last_seg {
-        if seg.ident != "Vec" {
-          return false;
-        }
-        if let syn::PathArguments::AngleBracketed(args) = &seg.arguments {
-          if let Some(syn::GenericArgument::Type(inner_ty)) = args.args.first() {
-            return is_string_type(inner_ty);
-          }
-        }
-      }
-      false
-    }
-    _ => false,
-  }
-}
-
-fn get_lit_str(expr: &Expr) -> Result<syn::LitStr, MacroFunctionError> {
-  match expr {
-    Expr::Lit(expr_lit) => {
-      if let syn::Lit::Str(lit_str) = &expr_lit.lit {
-        Ok(lit_str.clone())
-      } else {
-        Err(MacroFunctionError::InvalidAttribute(
-          "Message must be a string literal".to_string(),
-        ))
-      }
-    }
-    _ => Err(MacroFunctionError::InvalidAttribute(
-      "Message must be a string literal".to_string(),
-    )),
-  }
-}
-
-fn is_valid_format_ident(ident: &str) -> bool {
-  let ident = ident.strip_prefix("r#").unwrap_or(ident);
-  let mut chars = ident.chars();
-  let Some(first) = chars.next() else {
-    return false;
-  };
-  if !(first == '_' || first.is_ascii_alphabetic()) {
-    return false;
-  }
-  chars.all(|c| c == '_' || c.is_ascii_alphanumeric())
-}
-
-/// Extracts *named* formatting placeholders used by a Rust format string.
-///
-/// - Supports escaped braces (`{{` and `}}`).
-/// - Rejects positional placeholders (`{}`, `{0}`, `{:?}`), since this macro
-///   only permits `{name}`.
-/// - Ignores format specifiers (e.g. `{name:?}`, `{name:>10}`) when extracting the name.
-fn extract_named_placeholders(fmt: &str) -> Result<Vec<String>, MacroFunctionError> {
-  let mut out: BTreeSet<String> = BTreeSet::new();
-  let mut chars = fmt.chars().peekable();
-
-  while let Some(ch) = chars.next() {
-    match ch {
-      '{' => {
-        if chars.peek() == Some(&'{') {
-          chars.next();
-          continue;
-        }
-
-        let mut inner = String::new();
-        let mut closed = false;
-        for next in chars.by_ref() {
-          if next == '}' {
-            closed = true;
-            break;
-          }
-          inner.push(next);
-        }
-
-        if !closed {
-          return Err(MacroFunctionError::InvalidAttribute(
-            "unclosed `{` in format string".to_string(),
-          ));
-        }
-
-        let inner = inner.trim();
-        if inner.is_empty() {
-          return Err(MacroFunctionError::InvalidAttribute(
-            "positional formatting (`{}`) is not supported; use `{field}`".to_string(),
-          ));
-        }
-
-        // Split off formatting spec (e.g. name:? or name:>10)
-        let name_part = inner.split([':', '!']).next().unwrap_or("").trim();
-
-        if name_part.is_empty() {
-          return Err(MacroFunctionError::InvalidAttribute(
-            "positional formatting (`{:...}`) is not supported; use `{field}`"
-              .to_string(),
-          ));
-        }
-
-        if name_part.chars().next().is_some_and(|c| c.is_ascii_digit()) {
-          return Err(MacroFunctionError::InvalidAttribute(
-            "positional formatting (`{0}`) is not supported; use `{field}`".to_string(),
-          ));
-        }
-
-        if !is_valid_format_ident(name_part) {
-          return Err(MacroFunctionError::InvalidAttribute(format!(
-            "invalid format placeholder `{{{}}}`; use a field name like `{{expected}}`",
-            name_part
-          )));
-        }
-
-        out.insert(name_part.to_string());
-      }
-      '}' => {
-        if chars.peek() == Some(&'}') {
-          chars.next();
-        } else {
-          return Err(MacroFunctionError::InvalidAttribute(
-            "unmatched `}` in format string".to_string(),
-          ));
-        }
-      }
-      _ => {}
-    }
-  }
-
-  Ok(out.into_iter().collect())
-}
 
 fn collect_struct_messages(
   ast: &DeriveInput,
@@ -202,61 +41,6 @@ fn collect_struct_messages(
 
     let expr = attr.parse_args::<Expr>()?;
     out.push(get_lit_str(&expr)?);
-  }
-
-  Ok(out)
-}
-
-fn parse_code_to_tokens(
-  expr: &Expr,
-) -> Result<proc_macro2::TokenStream, MacroFunctionError> {
-  match expr {
-    Expr::Path(path) => {
-      let segments = &path.path.segments;
-      if segments.len() == 1 {
-        let ident = &segments[0].ident;
-        Ok(quote! { boron_diagnostics::codes::#ident })
-      } else {
-        Ok(quote! { #path })
-      }
-    }
-
-    _ => Err(MacroFunctionError::InvalidAttribute(
-      "code must be an integer literal or a path (e.g. LEX_FOO)".to_string(),
-    )),
-  }
-}
-
-fn collect_struct_code(
-  ast: &DeriveInput,
-) -> Result<Option<proc_macro2::TokenStream>, MacroFunctionError> {
-  let mut out: Option<proc_macro2::TokenStream> = None;
-
-  for attr in &ast.attrs {
-    let is_match =
-      attr.path().segments.last().map(|seg| seg.ident == "code").unwrap_or(false);
-    if !is_match {
-      continue;
-    }
-
-    if out.is_some() {
-      return Err(MacroFunctionError::InvalidAttribute(
-        "duplicate #[code] attribute".to_string(),
-      ));
-    }
-
-    // Support both: #[code(1234)] and #[code = 1234]
-    let code_expr: Expr = match &attr.meta {
-      syn::Meta::List(_) => attr.parse_args::<Expr>()?,
-      syn::Meta::NameValue(nv) => nv.value.clone(),
-      syn::Meta::Path(_) => {
-        return Err(MacroFunctionError::InvalidAttribute(
-          "#[code] requires a value like #[code(1234)]".to_string(),
-        ));
-      }
-    };
-
-    out = Some(parse_code_to_tokens(&code_expr)?);
   }
 
   Ok(out)
@@ -284,35 +68,19 @@ fn get_diagnostic_level(severity: &str) -> proc_macro2::TokenStream {
   }
 }
 
-fn get_help_fields(fields: &syn::FieldsNamed) -> Vec<(&syn::Ident, bool)> {
+pub fn get_side_fields<'a>(
+  fields: &'a FieldsNamed,
+  name: &str,
+) -> Vec<(&'a syn::Ident, bool)> {
   fields
     .named
     .iter()
     .filter_map(|field| {
-      let has_help = field.attrs.iter().any(|attr| {
-        attr.path().segments.last().map(|seg| seg.ident == "help").unwrap_or(false)
+      let has_field = field.attrs.iter().any(|attr| {
+        attr.path().segments.last().map(|seg| seg.ident == name).unwrap_or(false)
       });
 
-      if has_help {
-        let is_vec = is_vec_string_type(&field.ty);
-        field.ident.as_ref().map(|ident| (ident, is_vec))
-      } else {
-        None
-      }
-    })
-    .collect()
-}
-
-fn get_note_fields(fields: &syn::FieldsNamed) -> Vec<(&syn::Ident, bool)> {
-  fields
-    .named
-    .iter()
-    .filter_map(|field| {
-      let has_note = field.attrs.iter().any(|attr| {
-        attr.path().segments.last().map(|seg| seg.ident == "note").unwrap_or(false)
-      });
-
-      if has_note {
+      if has_field {
         let is_vec = is_vec_string_type(&field.ty);
         field.ident.as_ref().map(|ident| (ident, is_vec))
       } else {
@@ -340,7 +108,6 @@ fn impl_diagnostic_derive(ast: &DeriveInput) -> Result<TokenStream, MacroFunctio
   let struct_help_messages = collect_struct_messages(ast, "help")?;
   let struct_code = collect_struct_code(ast)?;
 
-  // Find the main diagnostic attribute (#[error], #[warning], or #[bug])
   let diagnostic_attr = ast
     .attrs
     .iter()
@@ -363,8 +130,8 @@ fn impl_diagnostic_derive(ast: &DeriveInput) -> Result<TokenStream, MacroFunctio
   let error_message = error_message_lit.value();
 
   let fields = match &ast.data {
-    syn::Data::Struct(data) => match &data.fields {
-      syn::Fields::Named(fields) => fields,
+    Data::Struct(data) => match &data.fields {
+      Fields::Named(fields) => fields,
       _ => {
         return Err(MacroFunctionError::InvalidAttribute(
           "Only named fields are supported".to_string(),
@@ -396,11 +163,11 @@ fn impl_diagnostic_derive(ast: &DeriveInput) -> Result<TokenStream, MacroFunctio
     })
     .collect();
 
-  let message_field_map: HashMap<String, &syn::Ident> =
+  let message_field_map: HashMap<String, &Ident> =
     message_fields.iter().map(|&ident| (ident.to_string(), ident)).collect();
 
   let main_message_used_names = extract_named_placeholders(&error_message)?;
-  let mut main_message_used_fields: Vec<&syn::Ident> = Vec::new();
+  let mut main_message_used_fields: Vec<&Ident> = Vec::new();
   for name in main_message_used_names {
     let Some(ident) = message_field_map.get(&name) else {
       return Err(MacroFunctionError::InvalidAttribute(format!(
@@ -411,45 +178,9 @@ fn impl_diagnostic_derive(ast: &DeriveInput) -> Result<TokenStream, MacroFunctio
     main_message_used_fields.push(*ident);
   }
 
-  let label_fields: Vec<_> = fields
-    .named
-    .iter()
-    .filter_map(|field| {
-      let is_span = is_span_type(&field.ty);
-      let is_vec_span = is_vec_span_type(&field.ty);
-
-      if !is_span && !is_vec_span {
-        return None;
-      }
-
-      let attr = field.attrs.iter().find(|attr| {
-        attr
-          .path()
-          .segments
-          .last()
-          .map(|seg| is_valid_label_severity(&seg.ident.to_string()))
-          .unwrap_or(false)
-      })?;
-
-      let field_ident = field.ident.as_ref()?;
-      let severity =
-        attr.path().segments.last().unwrap().ident.to_string().to_lowercase();
-
-      let message = attr
-        .parse_args::<Expr>()
-        .ok()
-        .and_then(|expr| get_string_literal(&expr).ok())
-        .unwrap_or_default();
-
-      Some((field_ident.clone(), message, severity, is_vec_span))
-    })
-    .collect();
-
-  // Fields with #[note] attribute
-  let note_fields = get_note_fields(fields);
-
-  // Fields with #[help] attribute
-  let help_fields = get_help_fields(fields);
+  let label_fields = get_label_fields(fields);
+  let note_fields = get_side_fields(fields, "note");
+  let help_fields = get_side_fields(fields, "help");
 
   let main_message_field_refs = main_message_used_fields.iter().map(|&ident| {
     quote! { let #ident = &self.#ident; }
@@ -474,7 +205,7 @@ fn impl_diagnostic_derive(ast: &DeriveInput) -> Result<TokenStream, MacroFunctio
       continue;
     }
 
-    let message_lit = syn::LitStr::new(message, proc_macro2::Span::call_site());
+    let message_lit = syn::LitStr::new(message, Span::call_site());
     let used_names = extract_named_placeholders(message)?;
     let mut used_fields: Vec<&syn::Ident> = Vec::new();
     for name in used_names {
@@ -643,4 +374,41 @@ fn impl_diagnostic_derive(ast: &DeriveInput) -> Result<TokenStream, MacroFunctio
           }
       }
   }))
+}
+
+fn get_label_fields(fields: &FieldsNamed) -> Vec<(Ident, String, String, bool)> {
+  let label_fields: Vec<_> = fields
+    .named
+    .iter()
+    .filter_map(|field| {
+      let is_span = is_span_type(&field.ty);
+      let is_vec_span = is_vec_span_type(&field.ty);
+
+      if !is_span && !is_vec_span {
+        return None;
+      }
+
+      let attr = field.attrs.iter().find(|attr| {
+        attr
+          .path()
+          .segments
+          .last()
+          .map(|seg| is_valid_label_severity(&seg.ident.to_string()))
+          .unwrap_or(false)
+      })?;
+
+      let field_ident = field.ident.as_ref()?;
+      let severity =
+        attr.path().segments.last().unwrap().ident.to_string().to_lowercase();
+
+      let message = attr
+        .parse_args::<Expr>()
+        .ok()
+        .and_then(|expr| get_string_literal(&expr).ok())
+        .unwrap_or_default();
+
+      Some((field_ident.clone(), message, severity, is_vec_span))
+    })
+    .collect();
+  label_fields
 }
