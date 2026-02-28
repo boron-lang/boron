@@ -8,32 +8,24 @@ use boron_parser::module::Modules;
 use boron_parser::{NodeId, Path};
 use boron_source::ident_table::Identifier;
 use boron_source::prelude::SourceFileId;
-use dashmap::DashMap;
 use dashmap::mapref::one::Ref;
+use dashmap::DashMap;
 use parking_lot::RwLock;
 
-/// The main resolver structure.
-/// This struct contains all shared state for name resolution.
 #[derive(Debug)]
 pub struct Resolver {
-  /// All scopes in the program
   pub scopes: Scopes,
-  /// The symbol table mapping names to definitions
   pub symbols: SymbolTable,
-  /// All definitions in the program
   pub definitions: DashMap<DefId, Definition>,
-  /// The import dependency graph
   pub import_graph: ImportGraph,
   /// Path to `SourceFileId` mapping
   pub path_to_files: DashMap<NodeId, SourceFileId>,
-  /// Per-file exported symbols for cross-module resolution
+
   pub module_exports_values: DashMap<SourceFileId, DashMap<Identifier, DefId>>,
-  /// Per-file exported symbols for cross-module resolution
   pub module_exports_types: DashMap<SourceFileId, DashMap<Identifier, DefId>>,
-  /// Per-DefId exported symbols for inline modules
   pub inline_module_exports_values: DashMap<DefId, DashMap<Identifier, DefId>>,
-  /// Per-DefId exported symbols for inline modules
   pub inline_module_exports_types: DashMap<DefId, DashMap<Identifier, DefId>>,
+
   pub adt_members: DashMap<DefId, DashMap<Identifier, DefId>>,
   module_ribs: DashMap<SourceFileId, RwLock<(ScopeId, Rib)>>,
   pub comptime_using_builtins: DashMap<NodeId, BuiltInKind>,
@@ -151,7 +143,6 @@ impl Resolver {
     exports.get(name).map(|r| *r)
   }
 
-  /// Export a value from an inline module
   pub fn export_inline_value(&self, module_def: DefId, name: Identifier, def_id: DefId) {
     self
       .inline_module_exports_values
@@ -160,7 +151,6 @@ impl Resolver {
       .insert(name, def_id);
   }
 
-  /// Export a type from an inline module
   pub fn export_inline_type(&self, module_def: DefId, name: Identifier, def_id: DefId) {
     self
       .inline_module_exports_types
@@ -169,7 +159,6 @@ impl Resolver {
       .insert(name, def_id);
   }
 
-  /// Look up a value in an inline module's exports
   pub fn lookup_inline_module_value(
     &self,
     module_def: DefId,
@@ -179,7 +168,6 @@ impl Resolver {
     exports.get(name).map(|r| *r)
   }
 
-  /// Look up a type in an inline module's exports
   pub fn lookup_inline_module_type(
     &self,
     module_def: DefId,
@@ -187,6 +175,12 @@ impl Resolver {
   ) -> Option<DefId> {
     let exports = self.inline_module_exports_types.get(&module_def)?;
     exports.get(name).map(|r| *r)
+  }
+
+  pub fn lookup_inline(&self, module_def: DefId, name: &Identifier) -> Option<DefId> {
+    self
+      .lookup_inline_module_value(module_def, name)
+      .or_else(|| self.lookup_inline_module_type(module_def, name))
   }
 
   pub fn add_adt_member(&self, struct_def: DefId, name: Identifier, def_id: DefId) {

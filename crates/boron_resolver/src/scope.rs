@@ -13,7 +13,6 @@ pub struct Scope {
   pub parent: Option<ScopeId>,
   pub kind: ScopeKind,
   pub source_file: SourceFileId,
-  /// The definition that created this scope
   pub owner: Option<DefId>,
 }
 

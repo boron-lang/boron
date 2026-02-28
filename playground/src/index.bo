@@ -8,6 +8,8 @@ pub enum Option<T> {
     None,
 }
 
+func x(self) {}
+
 func main() {
     var value = Option::Some("hello");
 }

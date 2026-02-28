@@ -3,7 +3,8 @@ use boron_source::prelude::{SourceFileId, Span};
 use parking_lot::RwLock;
 use petgraph::algo::{has_path_connecting, toposort};
 use petgraph::graph::{DiGraph, NodeIndex};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use petgraph::Direction;
 
 /// Graph of import dependencies between modules.
 #[derive(Debug)]
@@ -104,7 +105,7 @@ impl ImportGraph {
     };
 
     let mut deps = Vec::new();
-    let mut visited = std::collections::HashSet::new();
+    let mut visited = HashSet::new();
     Self::collect_dependencies_inner(&inner.graph, idx, &mut deps, &mut visited);
     deps
   }
@@ -113,9 +114,9 @@ impl ImportGraph {
     graph: &DiGraph<SourceFileId, ()>,
     idx: NodeIndex,
     deps: &mut Vec<SourceFileId>,
-    visited: &mut std::collections::HashSet<NodeIndex>,
+    visited: &mut HashSet<NodeIndex>,
   ) {
-    for neighbor in graph.neighbors_directed(idx, petgraph::Direction::Incoming) {
+    for neighbor in graph.neighbors_directed(idx, Direction::Incoming) {
       if visited.insert(neighbor) {
         deps.push(graph[neighbor]);
         Self::collect_dependencies_inner(graph, neighbor, deps, visited);

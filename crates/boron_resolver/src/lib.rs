@@ -1,4 +1,5 @@
 mod builtin_kind;
+mod collector;
 mod def;
 pub mod errors;
 mod import_order;

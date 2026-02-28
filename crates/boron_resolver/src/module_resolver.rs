@@ -5,12 +5,10 @@ use crate::scope::{ScopeId, ScopeKind};
 use boron_session::prelude::Identifier;
 use boron_source::prelude::SourceFileId;
 
-/// This holds the mutable state needed during resolution of a single module.
 pub struct ModuleResolver<'a> {
   pub resolver: &'a Resolver,
   pub current_file: SourceFileId,
   rib_stack: Vec<Rib>,
-  /// The current scope being resolved.
   current_scope: Option<ScopeId>,
 }
 
@@ -89,6 +87,10 @@ impl<'a> ModuleResolver<'a> {
       }
     }
     None
+  }
+  
+  pub fn lookup(&self, name: &Identifier) -> Option<DefId> {
+    self.lookup_value(name).or_else(|| self.lookup_type(name))
   }
 
   pub fn is_at_module_scope(&self) -> bool {
