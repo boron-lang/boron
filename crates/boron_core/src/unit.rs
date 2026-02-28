@@ -2,7 +2,7 @@ use crate::errors::{MainNoGenerics, MainNoParams, MainRetNotAUnit, NoMainFunctio
 use crate::prelude::*;
 use boron_analysis::results::BuiltInResults;
 use boron_analysis::validator::validate_comptime;
-use boron_analysis::{InferTy, TypeTable, expand_builtins, typeck_hir};
+use boron_analysis::{expand_builtins, typeck_hir, InferTy, TypeTable};
 use boron_codegen::run_codegen;
 use boron_compiler::CompilerBuild;
 use boron_hir::hir::Hir;
@@ -51,29 +51,23 @@ impl<'ctx> CompilationUnit<'ctx> {
       return;
     };
 
-    self.resolver.build_import_graph(&self.modules);
-    if self.run_step("Name resolution", |this| this.resolve_names()) {
-      return;
-    }
-    if self.run_step("HIR lowering", |this| this.lower_to_hir()) {
-      return;
-    }
-    if self.run_step("Comptime validation", |this| this.validate_comptime()) {
-      return;
+    macro_rules! steps {
+        ($($name:expr => $action:expr),* $(,)?) => {
+          $( if self.run_step($name, $action) { return; })*
+        };
     }
 
-    if self.run_step("Type inference and checking", |this| this.typeck()) {
-      return;
-    }
-    if self.run_step("Built-in expanding", |this| this.expand_builtins()) {
-      return;
-    }
-    if self.run_step("THIR lowering", |this| this.lower_to_thir()) {
-      return;
-    }
-    self.find_main_function();
-
-    let _ = self.run_step("IR lowering", |this| this.lower_to_ir());
+    steps!(
+      "Import graph" => |this| this.resolver.build_import_graph(&this.modules),
+      "Name resolution" => |this| this.resolve_names(),
+      "HIR lowering" => |this| this.lower_to_hir(),
+      "Comptime Validation" => |this|  this.validate_comptime(),
+      "Type inference and checking" => |this| this.typeck(),
+      "Built-in expanding" => |this| this.expand_builtins(),
+      "THIR lowering" => |this| this.lower_to_thir(),
+      "Main function validation" => |this| this.find_main_function(),
+      "IR lowering" => |this| this.lower_to_ir()
+    );
   }
 
   fn find_main_function(&mut self) {
