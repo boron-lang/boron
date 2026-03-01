@@ -90,6 +90,7 @@ define_codes! {
   PARSE_COMPTIME_EXTERN_TOGETHER => 148,
   PARSE_POSITIONAL_AFTER_NAMED => 149,
   PARSE_INVALID_VARIANT => 150,
+  PARSE_UNEXPECTED_TOKEN_IN_STRUCT => 151,
 
   // Resolver (0200..0299)
   RESOLVE_UNDEFINED_NAME => 200,
@@ -162,7 +163,6 @@ define_codes! {
 
 #[cfg(test)]
 mod tests {
-  use super::*;
   use std::collections::HashSet;
 
   #[test]

@@ -433,10 +433,10 @@ pub struct SuperOnlyInModOrImport {
 }
 
 #[derive(Diagnostic)]
-#[error("struct fields init follow this format: .name = value, but found name: value")]
+#[error("struct fields follow this format: .name = value, but found name: value")]
 #[code(PARSE_INVALID_FIELD_INIT)]
-pub struct InvalidFieldInit {
-  #[error("in this field init")]
+pub struct InvalidStructField {
+  #[error("in this struct field")]
   pub span: Span,
 }
 
@@ -511,4 +511,14 @@ pub struct InvalidVariantStart {
   #[error("here")]
   pub span: Span,
   pub found: TokenType,
+}
+
+#[derive(Diagnostic)]
+#[error("expected a field or a method in a struct body, but found {found}")]
+#[code(PARSE_UNEXPECTED_TOKEN_IN_STRUCT)]
+#[help("fields follow this syntax .name = type")]
+pub struct UnexpectedTokenInStruct {
+  pub found: TokenType,
+  #[error("here")]
+  pub span: Span,
 }

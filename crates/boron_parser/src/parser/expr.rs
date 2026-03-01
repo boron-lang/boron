@@ -1,15 +1,15 @@
 use crate::ast::expressions::*;
 use crate::ast::types::Mutability;
 use crate::lexer::IntBase as LexIntBase;
-use crate::parser::Parser;
 use crate::parser::errors::{
   DuplicateNamedArg, EmptyMatch, ExpectedExpressionFound, ExpectedFatArrow,
-  ExpectedFieldName, InvalidAssignTarget, InvalidFieldInit, InvalidRepeatSyntax,
+  ExpectedFieldName, InvalidAssignTarget, InvalidRepeatSyntax, InvalidStructField,
   MissingColonInTernary, MissingInKeyword, PositionalArgAfterNamed,
   RepeatSyntaxOnlyAtStart, RepeatSyntaxRequiredValue,
 };
+use crate::parser::Parser;
 use crate::{IntBase, NodeId, Path, PathParsingContext, PathSegment, TokenType};
-use boron_session::prelude::{Identifier, warn};
+use boron_session::prelude::{warn, Identifier};
 use boron_source::prelude::Span;
 use indexmap::IndexMap;
 
@@ -574,7 +574,7 @@ impl Parser<'_> {
   fn parse_single_field_init(&mut self, field_start: Span) -> Option<StructFieldInit> {
     let has_dot = self.eat(TokenType::Dot);
     if !has_dot && matches!(self.peek().kind, TokenType::Identifier(_)) {
-      self.emit(InvalidFieldInit { span: self.span_from(field_start) });
+      self.emit(InvalidStructField { span: self.span_from(field_start) });
     }
 
     let name = match &self.peek().kind {

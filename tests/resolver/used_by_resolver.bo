@@ -1,14 +1,14 @@
 // used by resolver tests
 
 pub struct Vec2 {
-    x: f32,
-    y: f32
+    .x = f32,
+    .y = f32
 }
 
 struct Vec3 {
-    x: f32,
-    y: f32,
-    z: f32
+    .x = f32,
+    .y = f32,
+    .z = f32
 }
 
 func main() {}

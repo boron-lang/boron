@@ -8,8 +8,7 @@ pub enum Option<T> {
     None,
 }
 
-func x(self) {}
-
 func main() {
     var value = Option::Some("hello");
+    var x = Vec2 { .x = 10.0, .y = 20.0 };
 }

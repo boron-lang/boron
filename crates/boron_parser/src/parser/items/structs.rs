@@ -1,5 +1,6 @@
-use crate::parser::Parser;
+use crate::parser::errors::UnexpectedTokenInStruct;
 use crate::parser::items::ADT_ITEM_TOKENS;
+use crate::parser::Parser;
 use crate::{NodeId, StructField, StructItem, StructMember, TokenType, Visibility};
 use boron_source::span::Span;
 
@@ -42,6 +43,10 @@ impl Parser<'_> {
           } else if self.check(TokenType::RightBrace) {
             break;
           } else {
+            self.emit(UnexpectedTokenInStruct {
+              span: self.peek().span,
+              found: self.peek().kind.clone(),
+            });
             self.advance_until_one_of(
               &[ADT_ITEM_TOKENS, &[TokenType::RightBrace]].concat(),
             );
