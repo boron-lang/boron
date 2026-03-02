@@ -244,7 +244,25 @@ impl<'a> IrLowerer<'a> {
       }
       ThirExprKind::Field { object, field } => {
         let object = self.lower_expr(object);
-        IrExprKind::Field { object: Box::new(object), field: *field }
+        let field_idx = match &object.ty {
+          SemanticTy::Struct { def_id, .. } => {
+            let strukt =
+              self.hir.get_struct(*def_id).expect("struct type should point to a struct");
+            strukt
+              .fields
+              .iter()
+              .position(|f| f.name == *field)
+              .map(|idx| idx as u32)
+              .expect("field should exist on struct")
+          }
+          SemanticTy::Tuple(_) => field
+            .text()
+            .parse::<u32>()
+            .expect("tuple field should be a numeric index"),
+          _ => unreachable!("field access should only be lowered for struct/tuple"),
+        };
+
+        IrExprKind::Field { object: Box::new(object), field_idx }
       }
       ThirExprKind::Index { object, index } => {
         let object = self.lower_expr(object);

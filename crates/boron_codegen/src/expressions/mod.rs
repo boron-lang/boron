@@ -295,36 +295,25 @@ impl<'ctx> LLVMCodegen<'ctx> {
         self.builder.position_at_end(dead_bb);
         Ok(self.context.bool_type().const_int(0, false).as_basic_value_enum().into())
       }
-      // TODO: lower field name to index before
-      IrExprKind::Field { object, field } => {
+      IrExprKind::Field { object, field_idx } => {
         let value = self.generate_expr(object)?;
 
         match &object.ty {
           SemanticTy::Struct { def_id, args } => {
-            let strukt = self.ir.find_struct(def_id, args);
-            let field_idx = strukt
-              .fields
-              .iter()
-              .position(|(name, _)| name == &field.text())
-              .expect("couldn't find field index");
-
             let field_ptr = self.generate_field(
               def_id,
               args,
-              field_idx as u32,
+              *field_idx,
               object.hir_id,
               value,
             )?;
             Ok(field_ptr.into())
           }
-          SemanticTy::Tuple(elements) => {
-            let ty = self.tuple_ty(elements)?.into_struct_type();
-            let index = field.text().parse::<usize>()?;
-
+          SemanticTy::Tuple(_) => {
             let gep = self.builder.build_extract_value(
               value.as_basic_value_enum().into_struct_value(),
-              index as u32,
-              &format!("tuple.extract.{index}"),
+              *field_idx,
+              &format!("tuple.extract.{field_idx}"),
             )?;
 
             Ok(gep.into())

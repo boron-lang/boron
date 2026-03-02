@@ -3,7 +3,6 @@ use boron_hir::{HirId, SemanticTy};
 use boron_parser::{BinaryOp, UnaryOp};
 use boron_resolver::DefId;
 use boron_session::prelude::Span;
-use boron_source::ident_table::Identifier;
 
 #[derive(Debug, Clone)]
 pub struct IrExpr {
@@ -30,7 +29,7 @@ pub enum IrExprKind {
 
   Call { callee: DefId, type_args: Vec<SemanticTy>, args: Vec<IrExpr> },
 
-  Field { object: Box<IrExpr>, field: Identifier },
+  Field { object: Box<IrExpr>, field_idx: u32 },
 
   Index { object: Box<IrExpr>, index: Box<IrExpr> },
 
