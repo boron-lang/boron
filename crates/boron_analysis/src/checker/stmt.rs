@@ -1,5 +1,5 @@
-use crate::checker::TyChecker;
 use crate::checker::pattern::{ExpectedPattern, PatternContext};
+use crate::checker::TyChecker;
 use crate::errors::VarInitMismatch;
 use crate::table::TypeEnv;
 use crate::ty::InferTy;

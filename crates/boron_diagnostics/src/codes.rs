@@ -163,6 +163,7 @@ define_codes! {
 
 #[cfg(test)]
 mod tests {
+  use crate::codes::ALL_CODES;
   use std::collections::HashSet;
 
   #[test]

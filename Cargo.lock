@@ -186,6 +186,7 @@ dependencies = [
  "dashmap 7.0.0-rc2",
  "fs-err",
  "inkwell",
+ "itertools",
 ]
 
 [[package]]

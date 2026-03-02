@@ -1,11 +1,11 @@
 use crate::codegen::LLVMCodegen;
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use boron_ir::SemanticTy;
 use boron_parser::PrimitiveKind;
 use boron_resolver::DefId;
 use boron_session::prelude::warn;
-use inkwell::AddressSpace;
 use inkwell::types::{BasicType as _, BasicTypeEnum, StructType};
+use inkwell::AddressSpace;
 
 impl<'ctx> LLVMCodegen<'ctx> {
   pub fn primitive_ty(&self, prim: &PrimitiveKind) -> BasicTypeEnum<'ctx> {
@@ -69,10 +69,23 @@ impl<'ctx> LLVMCodegen<'ctx> {
         Ok(elem_ty.array_type(*len as u32).as_basic_type_enum())
       }
 
+      SemanticTy::Tuple(elements) => self.tuple_ty(elements),
+
       _ => {
         warn!("not handled: {ty:#?}");
         Ok(self.context.i8_type().into())
       }
     }
+  }
+
+  pub fn tuple_ty(&self, elements: &Vec<SemanticTy>) -> Result<BasicTypeEnum<'ctx>> {
+    let mut fields = vec![];
+    for element in elements {
+      fields.push(self.ty(element)?.as_basic_type_enum())
+    }
+
+    let ty = self.context.struct_type(fields.as_slice(), false);
+
+    Ok(ty.into())
   }
 }

@@ -103,18 +103,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
   ) -> Result<PointerValue<'ctx>> {
     let strukt = self.ir.find_struct(struct_id, args);
     let struct_ty = self.struct_ty_by_id(&strukt.id)?;
-    let ptr = match struct_value {
-      ValueKind::LValue(l) => l,
-      ValueKind::RValue(r) => {
-        if r.is_pointer_value() {
-          r.into_pointer_value()
-        } else {
-          let slot = self.builder.build_alloca(r.get_type(), "struct.tmp")?;
-          self.builder.build_store(slot, r)?;
-          slot
-        }
-      }
-    };
+    let ptr = self.value_to_ptr(struct_value)?;
 
     self.require_llvm(
       self.builder.build_struct_gep(
@@ -125,6 +114,24 @@ impl<'ctx> LLVMCodegen<'ctx> {
       ),
       "struct field gep",
     )
+  }
+
+  pub fn value_to_ptr(
+    &self,
+    struct_value: ValueKind<'ctx>,
+  ) -> Result<PointerValue<'ctx>> {
+    Ok(match struct_value {
+      ValueKind::LValue(l) => l,
+      ValueKind::RValue(r) => {
+        if r.is_pointer_value() {
+          r.into_pointer_value()
+        } else {
+          let slot = self.builder.build_alloca(r.get_type(), "struct.tmp")?;
+          self.builder.build_store(slot, r)?;
+          slot
+        }
+      }
+    })
   }
 
   pub fn generate_var_allocas(&self, function: IrId) -> Result<()> {

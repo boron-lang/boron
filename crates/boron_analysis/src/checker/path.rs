@@ -57,6 +57,18 @@ impl TyChecker<'_> {
     (Self::apply_subst(&scheme.ty, &subst), subst)
   }
 
+  pub fn substitute_with_scheme(ty: &InferTy, args: Vec<InferTy>, scheme: TypeScheme) -> InferTy {
+    if !scheme.vars.is_empty() && scheme.vars.len() == args.len() {
+      let mut subst = SubstitutionMap::new();
+      for (var, arg) in scheme.vars.iter().zip(args.iter()) {
+        subst.add(*var, arg.clone());
+      }
+      Self::apply_subst(&ty, &subst)
+    } else {
+      ty.clone()
+    }
+  }
+  
   pub fn instantiate_with_args(
     scheme: &TypeScheme,
     args: &[InferTy],

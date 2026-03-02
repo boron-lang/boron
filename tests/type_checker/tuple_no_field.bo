@@ -1,0 +1,6 @@
+func main() {
+    var temp = (10, 20);
+
+    //#error: no field named `x` on type `(i32, i32)`
+    var x = temp.x;
+}

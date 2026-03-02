@@ -5,6 +5,7 @@ use boron_parser::UnaryOp;
 use inkwell::llvm_sys::prelude::LLVMValueRef;
 use inkwell::types::BasicTypeEnum;
 use inkwell::values::{AnyValue, AsValueRef, BasicValue, BasicValueEnum, PointerValue};
+use itertools::Itertools;
 use std::fmt::Debug;
 
 mod binary_op;
@@ -294,20 +295,42 @@ impl<'ctx> LLVMCodegen<'ctx> {
         self.builder.position_at_end(dead_bb);
         Ok(self.context.bool_type().const_int(0, false).as_basic_value_enum().into())
       }
+      // TODO: lower field name to index before
       IrExprKind::Field { object, field } => {
-        let SemanticTy::Struct { def_id, args } = &object.ty else { unreachable!() };
-
         let value = self.generate_expr(object)?;
-        let strukt = self.ir.find_struct(def_id, args);
-        let field_idx = strukt
-          .fields
-          .iter()
-          .position(|(name, _)| name == &field.text())
-          .expect("couldn't find field index");
 
-        let field_ptr =
-          self.generate_field(def_id, args, field_idx as u32, object.hir_id, value)?;
-        Ok(field_ptr.into())
+        match &object.ty {
+          SemanticTy::Struct { def_id, args } => {
+            let strukt = self.ir.find_struct(def_id, args);
+            let field_idx = strukt
+              .fields
+              .iter()
+              .position(|(name, _)| name == &field.text())
+              .expect("couldn't find field index");
+
+            let field_ptr = self.generate_field(
+              def_id,
+              args,
+              field_idx as u32,
+              object.hir_id,
+              value,
+            )?;
+            Ok(field_ptr.into())
+          }
+          SemanticTy::Tuple(elements) => {
+            let ty = self.tuple_ty(elements)?.into_struct_type();
+            let index = field.text().parse::<usize>()?;
+
+            let gep = self.builder.build_extract_value(
+              value.as_basic_value_enum().into_struct_value(),
+              index as u32,
+              &format!("tuple.extract.{index}"),
+            )?;
+
+            Ok(gep.into())
+          }
+          _ => unreachable!(),
+        }
       }
       IrExprKind::Unary { op, operand } => {
         let value = self.generate_expr(operand)?;
@@ -348,6 +371,30 @@ impl<'ctx> LLVMCodegen<'ctx> {
           UnaryOp::Plus => Ok(value),
           _ => unreachable!(),
         }
+      }
+
+      IrExprKind::Tuple(elements) => {
+        let element_types = elements.iter().map(|e| e.ty.clone()).collect_vec();
+
+        let tuple_ty = self.tuple_ty(&element_types)?.into_struct_type();
+
+        let mut tuple = tuple_ty.get_undef();
+
+        for (i, element) in elements.iter().enumerate() {
+          let value = self.generate_expr(element)?;
+
+          tuple = self
+            .builder
+            .build_insert_value(
+              tuple,
+              value,
+              i as u32,
+              &format!("tuple.insert.{}.{}", expr.hir_id, i),
+            )?
+            .into_struct_value();
+        }
+
+        Ok(ValueKind::RValue(tuple.into()))
       }
 
       IrExprKind::Skip => Err(anyhow::anyhow!("skip expression has no value")),

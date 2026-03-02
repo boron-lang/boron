@@ -322,6 +322,8 @@ pub struct NoFieldForTy {
   pub span: Span,
   pub field: Identifier,
   pub ty: String,
+  #[help]
+  pub help: Vec<String>,
 }
 
 #[derive(Diagnostic)]

@@ -190,7 +190,6 @@ impl Parser<'_> {
           self.span_from(start),
         );
       } else if self.eat(TokenType::Dot) {
-        // Field access or tuple index
         if self.is_identifier() {
           let field = self.parse_identifier();
           expr = Expr::new(

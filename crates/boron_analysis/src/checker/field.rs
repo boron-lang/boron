@@ -1,6 +1,6 @@
 use crate::checker::TyChecker;
 use crate::errors::NoFieldForTy;
-use crate::ty::{InferTy, SubstitutionMap};
+use crate::ty::InferTy;
 use boron_source::ident_table::Identifier;
 
 impl TyChecker<'_> {
@@ -16,15 +16,7 @@ impl TyChecker<'_> {
       InferTy::Adt { def_id, args, .. } => {
         if let Some(field_ty) = self.table.field_type(def_id, *field) {
           let substituted = if let Some(scheme) = self.table.def_type(def_id) {
-            if !scheme.vars.is_empty() && scheme.vars.len() == args.len() {
-              let mut subst = SubstitutionMap::new();
-              for (var, arg) in scheme.vars.iter().zip(args.iter()) {
-                subst.add(*var, arg.clone());
-              }
-              Self::apply_subst(&field_ty, &subst)
-            } else {
-              field_ty
-            }
+            Self::substitute_with_scheme(&field_ty, args, scheme)
           } else {
             field_ty
           };
@@ -35,18 +27,26 @@ impl TyChecker<'_> {
             span,
             field: *field,
             ty: self.format_type(&resolved),
+            help: vec![],
           });
           InferTy::Err(span)
         }
       }
       InferTy::Tuple(tys, span) => {
-        // Check for tuple field access (e.g., tuple.0)
         if let Ok(idx) = field.text().parse::<usize>() {
           if idx < tys.len() {
             return tys[idx].clone();
           }
         }
-        // TODO: Report error
+
+        self.dcx().emit(NoFieldForTy {
+          span: *field.span(),
+          field: *field,
+          ty: self.format_type(&resolved),
+          help: vec![
+            "tuples only accept element's index as field. eg: (10, 20).0".to_owned(),
+          ],
+        });
         InferTy::Err(span)
       }
       _ => {
@@ -55,6 +55,7 @@ impl TyChecker<'_> {
             span,
             field: *field,
             ty: self.format_type(&resolved),
+            help: vec![],
           });
         }
 
