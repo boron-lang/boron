@@ -6,11 +6,12 @@ extern "C" func puts(text: *const u8);
 pub enum Option<T> {
     Some(T),
     None,
+
+    func test(self) {}
 }
 
 func main() {
     var value = Option::Some("hello");
-    var temp = (10, "hello");
 
-    var hello = temp.1;
+    value.test();
 }

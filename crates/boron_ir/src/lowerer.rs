@@ -255,10 +255,9 @@ impl<'a> IrLowerer<'a> {
               .map(|idx| idx as u32)
               .expect("field should exist on struct")
           }
-          SemanticTy::Tuple(_) => field
-            .text()
-            .parse::<u32>()
-            .expect("tuple field should be a numeric index"),
+          SemanticTy::Tuple(_) => {
+            field.text().parse::<u32>().expect("tuple field should be a numeric index")
+          }
           _ => unreachable!("field access should only be lowered for struct/tuple"),
         };
 

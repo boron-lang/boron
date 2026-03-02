@@ -32,6 +32,65 @@ impl Parser<'_> {
       if self.check(TokenType::RightBrace) || self.is_at_end() {
         break;
       }
+
+      self.doc_comment = None;
+      self.check_possible_comment();
+
+      let is_item_start = if self.check(TokenType::Pub) {
+        self.check_next_any(ADT_ITEM_TOKENS)
+      } else {
+        self.check_any(ADT_ITEM_TOKENS)
+      };
+
+      if is_item_start {
+        let item = self.parse_item();
+
+        if let Some(item) = item {
+          members.push(EnumMember::Item(item));
+        } else {
+          while !self.is_at_end() {
+            let is_item_start = if self.check(TokenType::Pub) {
+              self.check_next_any(ADT_ITEM_TOKENS)
+            } else {
+              self.check_any(ADT_ITEM_TOKENS)
+            };
+
+            if self.check(TokenType::RightBrace) || self.is_identifier() || is_item_start
+            {
+              break;
+            }
+
+            self.advance();
+          }
+
+          self.emit(InvalidVariantStart {
+            span: self.peek().span,
+            found: self.peek().kind.clone(),
+          });
+        }
+
+        self.advance_until_one_of(&[TokenType::Comma, TokenType::RightBrace]);
+        self.eat(TokenType::Comma);
+        continue;
+      }
+
+      if !self.is_identifier() {
+        while !self.is_at_end() {
+          let is_item_start = if self.check(TokenType::Pub) {
+            self.check_next_any(ADT_ITEM_TOKENS)
+          } else {
+            self.check_any(ADT_ITEM_TOKENS)
+          };
+
+          if self.check(TokenType::RightBrace) || self.is_identifier() || is_item_start {
+            break;
+          }
+
+          self.advance();
+        }
+        continue;
+      }
+
       // TODO: attributes
       // let attributes = self.parse_attributes()?;
       let name = self.parse_identifier();
@@ -70,7 +129,8 @@ impl Parser<'_> {
             span: self.span_from(span),
           })
         }
-        TokenType::RightBrace => {
+        TokenType::LeftBrace => {
+          self.eat(TokenType::LeftBrace);
           let mut fields = vec![];
 
           loop {
@@ -92,6 +152,9 @@ impl Parser<'_> {
             self.eat(TokenType::Comma);
           }
 
+          self.expect(TokenType::RightBrace, "to close struct variant");
+          self.eat(TokenType::Comma);
+
           EnumMember::Variant(Variant {
             payload: VariantPayload::Struct(fields),
             id: NodeId::new(),
@@ -101,40 +164,20 @@ impl Parser<'_> {
           })
         }
         _ => {
-          self.doc_comment = None;
-          self.check_possible_comment();
+          while !self.is_at_end() {
+            let is_item_start = if self.check(TokenType::Pub) {
+              self.check_next_any(ADT_ITEM_TOKENS)
+            } else {
+              self.check_any(ADT_ITEM_TOKENS)
+            };
 
-          let is_item_start = if self.check(TokenType::Pub) {
-            self.check_next_any(ADT_ITEM_TOKENS)
-          } else {
-            self.check_any(ADT_ITEM_TOKENS)
-          };
+            if self.check(TokenType::RightBrace) || self.is_identifier() || is_item_start
+            {
+              break;
+            }
 
-          let item = if is_item_start {
-            self.parse_item()
-          } else if self.check(TokenType::RightBrace) {
-            break;
-          } else {
-            self.advance_until_one_of(
-              &[ADT_ITEM_TOKENS, &[TokenType::RightBrace]].concat(),
-            );
-            continue;
-          };
-
-          if let Some(item) = item {
-            members.push(EnumMember::Item(item));
-          } else {
-            self.advance_until_one_of(
-              &[ADT_ITEM_TOKENS, &[TokenType::RightBrace]].concat(),
-            );
-
-            self.emit(InvalidVariantStart {
-              span: self.peek().span,
-              found: self.peek().kind.clone(),
-            });
+            self.advance();
           }
-
-          self.advance_until_one_of(&[TokenType::Comma, TokenType::RightBrace]);
           continue;
         }
       };

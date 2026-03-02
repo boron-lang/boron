@@ -300,13 +300,8 @@ impl<'ctx> LLVMCodegen<'ctx> {
 
         match &object.ty {
           SemanticTy::Struct { def_id, args } => {
-            let field_ptr = self.generate_field(
-              def_id,
-              args,
-              *field_idx,
-              object.hir_id,
-              value,
-            )?;
+            let field_ptr =
+              self.generate_field(def_id, args, *field_idx, object.hir_id, value)?;
             Ok(field_ptr.into())
           }
           SemanticTy::Tuple(_) => {
