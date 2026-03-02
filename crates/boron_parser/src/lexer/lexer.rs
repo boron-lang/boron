@@ -88,6 +88,31 @@ impl<'ctx> Lexer<'ctx> {
     self.current.is_none()
   }
 
+  fn previous_non_whitespace_char(&self) -> Option<char> {
+    if self.pos == 0 {
+      return None;
+    }
+
+    let mut idx = self.pos;
+    while idx > 0 {
+      idx -= 1;
+      let ch = self.chars[idx];
+      if !ch.is_whitespace() {
+        return Some(ch);
+      }
+    }
+
+    None
+  }
+
+  fn can_lex_leading_dot_float(&self) -> bool {
+    !matches!(
+      self.previous_non_whitespace_char(),
+      Some(ch)
+        if ch == '_' || ch.is_ascii_alphanumeric() || matches!(ch, ')' | ']' | '}')
+    )
+  }
+
   /// Skip the current character and record an error
   pub(crate) fn skip_with_error(&mut self, kind: LexErrorKind) {
     let span = self.make_char_span();
@@ -134,8 +159,11 @@ impl<'ctx> Lexer<'ctx> {
       // Numbers
       Some(ch) if ch.is_ascii_digit() => self.lex_number(),
 
-      // Float starting with dot (.5)
-      Some('.') if self.peek_ahead(1).is_some_and(|c| c.is_ascii_digit()) => {
+      // Float starting with dot (.5) in value position.
+      Some('.')
+        if self.peek_ahead(1).is_some_and(|c| c.is_ascii_digit())
+          && self.can_lex_leading_dot_float() =>
+      {
         self.lex_decimal_or_float()
       }
 
