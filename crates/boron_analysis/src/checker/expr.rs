@@ -139,7 +139,7 @@ impl TyChecker<'_> {
       ExprKind::Tuple(exprs) => {
         let tys: Vec<InferTy> =
           exprs.iter().map(|e| self.check_expr(e, env, &Expectation::none())).collect();
-        
+
         InferTy::Tuple(tys, expr.span)
       }
 

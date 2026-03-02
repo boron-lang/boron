@@ -375,9 +375,7 @@ impl TyChecker<'_> {
       && expected_id == def_id
       && args.len() == scheme.vars.len()
     {
-      return scheme
-        .substitution_for_args(args.as_slice())
-        .unwrap_or_default();
+      return scheme.substitution_for_args(args.as_slice()).unwrap_or_default();
     }
 
     let (struct_ty, subst) = self.instantiate(&scheme);

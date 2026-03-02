@@ -1,4 +1,6 @@
+use crate::dependency::Dependency;
 use crate::module_graph::ModuleGraph;
+use crate::package_graph::{PackageCycleError, PackageGraph};
 use crate::prelude::{PackageType, create_dir_all};
 use crate::project_config::ProjectConfig;
 use boron_diagnostics::{DiagnosticCtx, DiagnosticWriter};
@@ -140,5 +142,11 @@ impl Session {
 
   pub fn is_binary(&self) -> bool {
     self.config.package_type == PackageType::Binary
+  }
+
+  pub fn sorted_packages(&self) -> Result<Vec<Dependency>, PackageCycleError> {
+    let graph = PackageGraph::from_dependencies(&self.config.packages);
+    let sorted = graph.compilation_order(&self.config.packages)?;
+    Ok(sorted.into_iter().cloned().collect())
   }
 }

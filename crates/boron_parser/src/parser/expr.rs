@@ -1,15 +1,15 @@
 use crate::ast::expressions::*;
 use crate::ast::types::Mutability;
 use crate::lexer::IntBase as LexIntBase;
+use crate::parser::Parser;
 use crate::parser::errors::{
   DuplicateNamedArg, EmptyMatch, ExpectedExpressionFound, ExpectedFatArrow,
   ExpectedFieldName, InvalidAssignTarget, InvalidRepeatSyntax, InvalidStructField,
   MissingColonInTernary, MissingInKeyword, PositionalArgAfterNamed,
   RepeatSyntaxOnlyAtStart, RepeatSyntaxRequiredValue,
 };
-use crate::parser::Parser;
 use crate::{IntBase, NodeId, Path, PathParsingContext, PathSegment, TokenType};
-use boron_session::prelude::{warn, Identifier};
+use boron_session::prelude::{Identifier, warn};
 use boron_source::prelude::Span;
 use indexmap::IndexMap;
 

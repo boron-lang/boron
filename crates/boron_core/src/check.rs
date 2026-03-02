@@ -5,6 +5,8 @@ use boron_session::prelude::Session;
 use yansi::Paint as _;
 
 pub fn compiler_entrypoint(session: &Session) -> Result<()> {
+  let packages = session.sorted_packages()?;
+
   let file = &session.config.entrypoint;
   if let Some(ext) = file.extension() {
     if ext != FILE_EXTENSION {

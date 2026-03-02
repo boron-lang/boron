@@ -115,9 +115,11 @@ pub struct Cli {
     short = 'd',
     long = "packages",
     help = "Add packages that will be resolved by the compiler. \
-        Format: name:write_to=entrypoint \
-        Example: -d std:./std=./std/lib.bo \
-        Order is important, because if one dependency depends on another, but it isn't compiled yet, the compiler will fail."
+        Format: name:root=entrypoint[:dep1,dep2,...] \
+        Example (no deps): -d std:./std=./std/lib.bo \
+        Example (with deps): -d http:./http=./http/lib.bo:std \
+        Inter-package dependencies declared via the optional trailing list are \
+        used to determine compilation order automatically."
   )]
   pub packages: Vec<Dependency>,
 

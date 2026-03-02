@@ -7,11 +7,12 @@ pub struct Dependency {
   pub name: String,
   pub root: PathBuf,
   pub entrypoint: PathBuf,
+  pub depends_on: Vec<String>,
 }
 
 impl Dependency {
   pub fn new(name: String, entrypoint: PathBuf, root: PathBuf) -> Self {
-    Self { name, root, entrypoint }
+    Self { name, root, entrypoint, depends_on: Vec::new() }
   }
 
   pub fn name(&self) -> &str {
@@ -25,24 +26,47 @@ impl Dependency {
   pub fn root(&self) -> &PathBuf {
     &self.root
   }
+
+  pub fn depends_on(&self) -> &[String] {
+    &self.depends_on
+  }
 }
 
 impl FromStr for Dependency {
   type Err = anyhow::Error;
 
+  // Format: name:root=entrypoint[:dep1,dep2,...]
   fn from_str(s: &str) -> anyhow::Result<Self, Self::Err> {
     let Some((name, rest)) = s.split_once(':') else {
-      bail!("Invalid dependency format. Expected 'name:root=entrypoint', got '{s}'")
+      bail!(
+        "Invalid dependency format. Expected 'name:root=entrypoint[:dep1,dep2]', got '{s}'"
+      )
     };
 
-    let Some((root, entrypoint)) = rest.split_once('=') else {
-      bail!("Invalid dependency format. Expected 'name:root=entrypoint', got '{s}'")
+    let Some((root, path_and_deps)) = rest.split_once('=') else {
+      bail!(
+        "Invalid dependency format. Expected 'name:root=entrypoint[:dep1,dep2]', got '{s}'"
+      )
+    };
+
+    let (entrypoint_str, depends_on) = match path_and_deps.split_once(':') {
+      Some((ep, deps_str)) => {
+        let depends_on = deps_str
+          .split(',')
+          .map(str::trim)
+          .filter(|s| !s.is_empty())
+          .map(str::to_owned)
+          .collect();
+        (ep, depends_on)
+      }
+      None => (path_and_deps, Vec::new()),
     };
 
     Ok(Self {
       name: name.to_owned(),
       root: PathBuf::from(root),
-      entrypoint: PathBuf::from(entrypoint),
+      entrypoint: PathBuf::from(entrypoint_str),
+      depends_on,
     })
   }
 }

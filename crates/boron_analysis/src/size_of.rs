@@ -1,4 +1,6 @@
-use crate::align_of::{align_of_ty, calculate_struct_alignment, substituted_struct_field_tys};
+use crate::align_of::{
+  align_of_ty, calculate_struct_alignment, substituted_struct_field_tys,
+};
 pub(crate) use crate::{BuiltinFunctionCtx, InferTy};
 use boron_resolver::{DefId, DefKind};
 use boron_target::abi::layout::align_up;

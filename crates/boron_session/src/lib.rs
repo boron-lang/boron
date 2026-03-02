@@ -2,12 +2,13 @@ pub mod dependency;
 pub mod enums;
 mod errors;
 mod module_graph;
+pub mod package_graph;
 mod path;
 pub mod project_config;
 mod session;
 
 pub mod prelude {
-  pub use crate::{path::*, project_config::*, session::*};
+  pub use crate::{package_graph::*, path::*, project_config::*, session::*};
   pub use anyhow::{Result, anyhow, bail};
   pub use fs_err as fs;
   pub use log::{debug, error, info, warn};
