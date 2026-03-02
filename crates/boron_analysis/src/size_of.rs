@@ -1,5 +1,4 @@
-use crate::TyChecker;
-use crate::align_of::{align_of_ty, calculate_struct_alignment};
+use crate::align_of::{align_of_ty, calculate_struct_alignment, substituted_struct_field_tys};
 pub(crate) use crate::{BuiltinFunctionCtx, InferTy};
 use boron_resolver::{DefId, DefKind};
 use boron_target::abi::layout::align_up;
@@ -30,25 +29,19 @@ pub fn calculate_struct_size<'a>(
   def_id: &DefId,
   args: &Vec<InferTy>,
 ) -> usize {
-  let ty_scheme = ctx.ty_table.def_type(*def_id).unwrap();
-  let (_, map) = TyChecker::instantiate_with_args(&ty_scheme, args.as_slice());
-  let strct = ctx.hir.get_struct(*def_id).unwrap();
-  let fields = &strct.fields;
+  let field_tys = substituted_struct_field_tys(ctx, def_id, args);
   let struct_alignment = calculate_struct_alignment(ctx, def_id, args);
 
   let mut offset = 0;
-  for field in fields {
-    let field_ty = ctx.ty_table.field_type(*def_id, field.name).unwrap();
-    let substituted_field = TyChecker::apply_subst(&field_ty, &map);
+  for substituted_field in &field_tys {
     let (size_f, align_f) =
-      (size_of_ty(ctx, &substituted_field), align_of_ty(ctx, &substituted_field));
+      (size_of_ty(ctx, substituted_field), align_of_ty(ctx, substituted_field));
 
     offset = align_up(offset, align_f.get());
     offset += size_f;
   }
 
   offset = align_up(offset, struct_alignment.get());
-  offset;
   offset
 }
 

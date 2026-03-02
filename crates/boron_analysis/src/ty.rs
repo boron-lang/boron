@@ -173,6 +173,37 @@ impl InferTy {
     Self::Primitive(PrimitiveKind::Bool, span)
   }
 
+  pub fn apply_subst(&self, subst: &SubstitutionMap) -> Self {
+    match self {
+      Self::Var(_, _) => self.clone(),
+      Self::Param(p) => subst.get(p.def_id).cloned().unwrap_or_else(|| self.clone()),
+      Self::Adt { def_id, args, span } => Self::Adt {
+        def_id: *def_id,
+        args: args.iter().map(|t| t.apply_subst(subst)).collect(),
+        span: *span,
+      },
+      Self::Ptr { mutability, ty, span } => Self::Ptr {
+        mutability: *mutability,
+        ty: Box::new(ty.apply_subst(subst)),
+        span: *span,
+      },
+      Self::Optional(ty, span) => Self::Optional(Box::new(ty.apply_subst(subst)), *span),
+      Self::Array { ty, len, span } => {
+        Self::Array { ty: Box::new(ty.apply_subst(subst)), len: *len, span: *span }
+      }
+      Self::Slice(ty, span) => Self::Slice(Box::new(ty.apply_subst(subst)), *span),
+      Self::Tuple(tys, span) => {
+        Self::Tuple(tys.iter().map(|t| t.apply_subst(subst)).collect(), *span)
+      }
+      Self::Fn { params, ret, span } => Self::Fn {
+        params: params.iter().map(|t| t.apply_subst(subst)).collect(),
+        ret: Box::new(ret.apply_subst(subst)),
+        span: *span,
+      },
+      _ => self.clone(),
+    }
+  }
+
   pub fn semantically_eq(&self, other: &Self) -> bool {
     match (self, other) {
       (Self::Primitive(k1, _), Self::Primitive(k2, _)) => k1 == k2,
@@ -225,6 +256,18 @@ impl TypeScheme {
 
   pub fn is_mono(&self) -> bool {
     self.vars.is_empty()
+  }
+
+  pub fn substitution_for_args(&self, args: &[InferTy]) -> Option<SubstitutionMap> {
+    if self.vars.len() != args.len() {
+      return None;
+    }
+
+    let mut subst = SubstitutionMap::new();
+    for (var, arg) in self.vars.iter().zip(args.iter()) {
+      subst.add(*var, arg.clone());
+    }
+    Some(subst)
   }
 }
 

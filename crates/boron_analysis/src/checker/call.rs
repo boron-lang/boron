@@ -263,15 +263,15 @@ impl TyChecker<'_> {
     explicit: &[InferTy],
     subst: &mut SubstitutionMap,
   ) -> bool {
-    if explicit.len() != scheme.vars.len() {
-      return false;
-    }
+    let resolved_explicit: Vec<InferTy> =
+      explicit.iter().map(|arg| self.infcx.resolve(arg)).collect();
 
-    for (var, arg) in scheme.vars.iter().zip(explicit.iter()) {
-      subst.add(*var, self.infcx.resolve(arg));
+    if let Some(map) = scheme.substitution_for_args(resolved_explicit.as_slice()) {
+      *subst = map;
+      true
+    } else {
+      false
     }
-
-    true
   }
 
   fn infer_substitutions_from_instantiation(
@@ -280,22 +280,27 @@ impl TyChecker<'_> {
     callee_ty: &InferTy,
     subst: &mut SubstitutionMap,
   ) {
-    if let (
-      InferTy::Fn { params: inst_params, ret: inst_ret, .. },
-      InferTy::Fn { params: scheme_params, ret: scheme_ret, .. },
-    ) = (callee_ty, &scheme.ty)
-    {
-      for (s, r) in scheme_params.iter().zip(inst_params.iter()) {
-        Self::collect_param_substitutions(s, &self.infcx.resolve(r), &scheme.vars, subst);
-      }
+    *subst = self.substitutions_from_instantiation(scheme, callee_ty);
+  }
 
-      Self::collect_param_substitutions(
-        scheme_ret,
-        &self.infcx.resolve(inst_ret),
-        &scheme.vars,
-        subst,
-      );
+  pub fn substitutions_from_instantiation(
+    &self,
+    scheme: &TypeScheme,
+    instantiated_ty: &InferTy,
+  ) -> SubstitutionMap {
+    if scheme.vars.is_empty() {
+      return SubstitutionMap::new();
     }
+
+    let mut subst = SubstitutionMap::new();
+    let resolved_instantiated = self.infcx.resolve(instantiated_ty);
+    Self::collect_param_substitutions(
+      &scheme.ty,
+      &resolved_instantiated,
+      &scheme.vars,
+      &mut subst,
+    );
+    subst
   }
 
   pub fn collect_param_substitutions(

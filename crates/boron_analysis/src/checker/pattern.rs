@@ -375,11 +375,9 @@ impl TyChecker<'_> {
       && expected_id == def_id
       && args.len() == scheme.vars.len()
     {
-      let mut subst = SubstitutionMap::new();
-      for (var, arg) in scheme.vars.iter().zip(args.iter()) {
-        subst.add(*var, arg.clone());
-      }
-      return subst;
+      return scheme
+        .substitution_for_args(args.as_slice())
+        .unwrap_or_default();
     }
 
     let (struct_ty, subst) = self.instantiate(&scheme);

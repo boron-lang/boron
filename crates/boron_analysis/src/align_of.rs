@@ -1,3 +1,4 @@
+use crate::TyChecker;
 use crate::{BuiltinFunctionCtx, InferTy};
 use boron_resolver::{DefId, DefKind};
 use boron_target::abi::layout::Alignment;
@@ -27,16 +28,29 @@ pub fn calculate_struct_alignment<'a>(
   def_id: &DefId,
   args: &Vec<InferTy>,
 ) -> Alignment {
-  let strct = sz.hir.get_struct(*def_id).unwrap();
-  let fields = &strct.fields;
-
-  fields
+  substituted_struct_field_tys(sz, def_id, args)
     .iter()
-    .fold(0, |acc, field| {
-      let field_ty = sz.ty_table.field_type(*def_id, field.name).unwrap();
-      acc.max(align_of_ty(sz, &field_ty).get())
-    })
+    .fold(0, |acc, field_ty| acc.max(align_of_ty(sz, field_ty).get()))
     .into()
+}
+
+pub(crate) fn substituted_struct_field_tys<'a>(
+  sz: &'a BuiltinFunctionCtx<'a>,
+  def_id: &DefId,
+  args: &Vec<InferTy>,
+) -> Vec<InferTy> {
+  let ty_scheme = sz.ty_table.def_type(*def_id).unwrap();
+  let (_, subst) = TyChecker::instantiate_with_args(&ty_scheme, args.as_slice());
+  let strct = sz.hir.get_struct(*def_id).unwrap();
+
+  strct
+    .fields
+    .iter()
+    .map(|field| {
+      let field_ty = sz.ty_table.field_type(*def_id, field.name).unwrap();
+      TyChecker::apply_subst(&field_ty, &subst)
+    })
+    .collect()
 }
 
 pub fn calculate_enum_alignment<'a>(

@@ -1,7 +1,7 @@
 use crate::checker::TyChecker;
 use crate::errors::{FieldInitMismatch, InvalidStructInit, NoFieldForStructInit};
 use crate::table::TypeEnv;
-use crate::ty::{InferTy, SubstitutionMap};
+use crate::ty::InferTy;
 use crate::unify::{Expectation, UnifyError, UnifyResult};
 use boron_hir::Expr;
 use boron_hir::expr::FieldInit;
@@ -57,20 +57,8 @@ impl TyChecker<'_> {
         }
       }
 
-      let mut resolved_subst = SubstitutionMap::new();
+      let resolved_subst = self.substitutions_from_instantiation(&scheme, &def_ty);
       if !scheme.vars.is_empty() {
-        if let InferTy::Adt { args: scheme_args, .. } = &scheme.ty {
-          if let InferTy::Adt { args: inst_args, .. } = &def_ty {
-            for (scheme_arg, inst_arg) in scheme_args.iter().zip(inst_args.iter()) {
-              Self::collect_param_substitutions(
-                scheme_arg,
-                &self.infcx.resolve(inst_arg),
-                &scheme.vars,
-                &mut resolved_subst,
-              );
-            }
-          }
-        }
         self.table.record_monomorphization(*def_id, resolved_subst.clone());
       }
 
