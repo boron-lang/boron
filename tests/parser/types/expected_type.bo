@@ -1,0 +1,4 @@
+func main() {
+    //#error: expected a type
+    var x: = 10;
+}

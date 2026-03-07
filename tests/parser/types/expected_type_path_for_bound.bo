@@ -1,0 +1,4 @@
+//#error: expected a type path for a type bound, found {}
+func foo<T: 42>() {}
+
+func main() {}

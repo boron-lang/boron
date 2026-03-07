@@ -1,0 +1,5 @@
+//#warning: there is no point of aliasing an import binding
+//#error: cannot find module
+import foo as bar from some::module;
+
+func main() {}

@@ -105,6 +105,24 @@ fn main() -> color_eyre::Result<()> {
                 println!("  - {error}");
               }
             }
+            FailureType::ExpectedWarningNotFound { line, pattern, direction } => {
+              println!(
+                "expected warning on line {} with pattern: {pattern}, but none was found",
+                match direction {
+                  LineDirection::Up => line.saturating_sub(1) + 1,
+                  LineDirection::Down => line + 2,
+                }
+              )
+            }
+            FailureType::UnexpectedWarnings(warnings) => {
+              println!(
+                "found unexpected warnings that weren't annotated with a directive:"
+              );
+
+              for warning in warnings {
+                println!("  - {warning}");
+              }
+            }
           }
 
           failed += 1;

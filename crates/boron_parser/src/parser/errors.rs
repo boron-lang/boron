@@ -345,11 +345,11 @@ pub struct GenericsInImportOrMod {
 
 // TODO: add a proper code suggestion
 #[derive(Diagnostic)]
-#[error("there is no point of aliasing an import binding")]
+#[warning("there is no point of aliasing an import binding")]
 #[help("just use the aliased name")]
 #[code(PARSE_ALIASING_A_BINDING)]
 pub struct AliasingABinding {
-  #[error("found here")]
+  #[warning("found here")]
   pub span: Span,
 }
 

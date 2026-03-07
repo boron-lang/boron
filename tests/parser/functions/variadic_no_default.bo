@@ -1,0 +1,4 @@
+//#error: variadic parameters do not accept default values
+func foo(...x: i32 = 0) {}
+
+func main() {}

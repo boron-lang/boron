@@ -16,6 +16,8 @@ pub enum FailureType {
   ExpectedErrorNotFound { line: usize, pattern: String, direction: LineDirection },
   ExpectedErrorsButCompiled,
   UnexpectedErrors(Vec<String>),
+  ExpectedWarningNotFound { line: usize, pattern: String, direction: LineDirection },
+  UnexpectedWarnings(Vec<String>),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

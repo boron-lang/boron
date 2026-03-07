@@ -7,6 +7,7 @@ pub enum Directive {
   PackageType(PackageType),
   // the pattern can include {} that means that any value matches this part.
   Error { line: usize, direction: LineDirection, pattern: String },
+  Warning { line: usize, direction: LineDirection, pattern: String },
   Invalid,
 }
 
@@ -56,6 +57,23 @@ pub fn parse_directive(directive: String, line: usize, file: &Path) -> Directive
           .unwrap_or(LineDirection::Down);
 
         Directive::Error { line, direction, pattern: value.to_string() }
+      }
+    }
+    "warning" => {
+      if value.is_empty() {
+        panic!("Warning directive must have a pattern message")
+      } else {
+        let direction = attrs
+          .iter()
+          .find(|(k, _)| k == "direction")
+          .map(|(_, v)| match v.as_str() {
+            "up" => LineDirection::Up,
+            "down" => LineDirection::Down,
+            _ => LineDirection::Down,
+          })
+          .unwrap_or(LineDirection::Down);
+
+        Directive::Warning { line, direction, pattern: value.to_string() }
       }
     }
     _ => {

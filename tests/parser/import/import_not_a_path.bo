@@ -1,0 +1,4 @@
+//#error: imports take a path not a string literal
+import x from "./module.bo";
+
+func main() {}

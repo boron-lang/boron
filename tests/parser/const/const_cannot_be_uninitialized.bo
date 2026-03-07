@@ -1,0 +1,4 @@
+//#error: const items cannot be uninitialized
+const X: i32;
+
+func main() {}

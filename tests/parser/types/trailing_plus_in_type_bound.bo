@@ -1,0 +1,4 @@
+//#error: trailing `+` found in type bound
+func foo<T: Display+>() {}
+
+func main() {}

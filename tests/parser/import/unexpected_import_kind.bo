@@ -1,0 +1,4 @@
+//#error: expected wildcard, identifier or import list, found {}
+import 123 from some::module;
+
+func main() {}

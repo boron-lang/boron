@@ -2,7 +2,7 @@ use crate::directives::Directive;
 use crate::output::{FailureType, TestResult, TestStatus};
 use crate::test::Test;
 use boron_core::prelude::*;
-use boron_diagnostics::DiagnosticWriter;
+use boron_diagnostics::{DiagnosticLevel, DiagnosticWriter};
 use itertools::Itertools;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
@@ -54,21 +54,31 @@ pub fn run_single_test_in_process(test: &Test) -> TestResult {
 
     if let Ok(_) = result {
       let sources = sess.dcx().sources();
+      let mut failures = vec![];
+
+      let error_directives = test
+        .directives
+        .iter()
+        .filter_map(|d| match d {
+          Directive::Error { line, direction, pattern } => {
+            Some((*line, direction.clone(), pattern.clone()))
+          }
+          _ => None,
+        })
+        .collect_vec();
+
+      let warning_directives = test
+        .directives
+        .iter()
+        .filter_map(|d| match d {
+          Directive::Warning { line, direction, pattern } => {
+            Some((*line, direction.clone(), pattern.clone()))
+          }
+          _ => None,
+        })
+        .collect_vec();
 
       if sess.dcx().has_errors() {
-        let mut failures = vec![];
-
-        let error_directives = test
-          .directives
-          .iter()
-          .filter_map(|d| match d {
-            Directive::Error { line, direction, pattern } => {
-              Some((*line, direction.clone(), pattern.clone()))
-            }
-            _ => None,
-          })
-          .collect_vec();
-
         failures.extend(
           error_directives
             .iter()
@@ -95,7 +105,40 @@ pub fn run_single_test_in_process(test: &Test) -> TestResult {
           .diagnostics
           .iter()
           .filter(|diagnostic| {
-            !error_directives.iter().any(|(directive_line, direction, pattern)| {
+            diagnostic.value().diag.level == DiagnosticLevel::Error
+              && !error_directives.iter().any(|(directive_line, direction, pattern)| {
+                matches_directive(
+                  diagnostic.value(),
+                  *directive_line,
+                  direction,
+                  pattern,
+                  sources,
+                )
+              })
+          })
+          .map(|diagnostic| diagnostic.value().diag.message.clone())
+          .collect();
+
+        if !unexpected_errors.is_empty() {
+          failures.push(FailureType::UnexpectedErrors(unexpected_errors));
+        }
+      } else if !error_directives.is_empty() {
+        failures.push(FailureType::ExpectedErrorsButCompiled);
+      }
+
+      // --- warning checking ---
+      let actual_warnings = sess
+        .dcx()
+        .diagnostics
+        .iter()
+        .filter(|d| d.value().diag.level == DiagnosticLevel::Warning)
+        .collect_vec();
+
+      failures.extend(
+        warning_directives
+          .iter()
+          .filter(|(directive_line, direction, pattern)| {
+            !actual_warnings.iter().any(|diagnostic| {
               matches_directive(
                 diagnostic.value(),
                 *directive_line,
@@ -105,28 +148,34 @@ pub fn run_single_test_in_process(test: &Test) -> TestResult {
               )
             })
           })
-          .map(|diagnostic| diagnostic.value().diag.message.clone())
-          .collect();
+          .map(|(line, direction, pattern)| FailureType::ExpectedWarningNotFound {
+            line: *line,
+            direction: direction.clone(),
+            pattern: pattern.clone(),
+          }),
+      );
 
-        if !unexpected_errors.is_empty() {
-          failures.push(FailureType::UnexpectedErrors(unexpected_errors));
-        }
+      let unexpected_warnings: Vec<String> = actual_warnings
+        .iter()
+        .filter(|diagnostic| {
+          !warning_directives.iter().any(|(directive_line, direction, pattern)| {
+            matches_directive(
+              diagnostic.value(),
+              *directive_line,
+              direction,
+              pattern,
+              sources,
+            )
+          })
+        })
+        .map(|diagnostic| diagnostic.value().diag.message.clone())
+        .collect();
 
-        if failures.is_empty() {
-          TestStatus::Passed
-        } else {
-          TestStatus::Failed(failures)
-        }
-      } else {
-        let has_error_directives =
-          test.directives.iter().any(|d| matches!(d, Directive::Error { .. }));
-
-        if has_error_directives {
-          TestStatus::Failed(vec![FailureType::ExpectedErrorsButCompiled])
-        } else {
-          TestStatus::Passed
-        }
+      if !unexpected_warnings.is_empty() {
+        failures.push(FailureType::UnexpectedWarnings(unexpected_warnings));
       }
+
+      if failures.is_empty() { TestStatus::Passed } else { TestStatus::Failed(failures) }
     } else {
       TestStatus::Failed(vec![FailureType::OtherCompilerError])
     }
