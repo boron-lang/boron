@@ -4,9 +4,9 @@ use crate::lexer::IntBase as LexIntBase;
 use crate::parser::Parser;
 use crate::parser::errors::{
   DuplicateNamedArg, EmptyMatch, ExpectedExpressionFound, ExpectedFatArrow,
-  ExpectedFieldName, InvalidAssignTarget, InvalidRepeatSyntax, InvalidStructField,
-  MissingColonInTernary, MissingInKeyword, PositionalArgAfterNamed,
-  RepeatSyntaxOnlyAtStart, RepeatSyntaxRequiredValue,
+  ExpectedFieldName, ExpectedFieldValue, InvalidAssignTarget, InvalidRepeatSyntax,
+  InvalidStructField, MissingColonInTernary, MissingInKeyword, MissingOperand,
+  PositionalArgAfterNamed, RepeatSyntaxOnlyAtStart, RepeatSyntaxRequiredValue,
 };
 use crate::{IntBase, NodeId, Path, PathParsingContext, PathSegment, TokenType};
 use boron_session::prelude::{Identifier, warn};
@@ -67,6 +67,20 @@ impl Parser<'_> {
         let precedence = op.precedence();
         if precedence >= min_precedence {
           self.advance();
+          let op_lexeme = self.previous().lexeme.clone();
+          let op_span = self.previous().span;
+          if matches!(
+            self.peek().kind,
+            TokenType::Semicolon
+              | TokenType::RightBrace
+              | TokenType::RightParen
+              | TokenType::RightBracket
+              | TokenType::Comma
+              | TokenType::Eof
+          ) {
+            self.emit(MissingOperand { op: op_lexeme, span: op_span });
+            break;
+          }
           let next_min =
             if op.is_left_associative() { precedence + 1 } else { precedence };
           let right = self.parse_expr_with_precedence(next_min);
@@ -582,8 +596,18 @@ impl Parser<'_> {
     };
 
     let separator = if has_dot { TokenType::Assign } else { TokenType::Colon };
-    let value =
-      if self.eat(separator) { self.parse_expr() } else { self.make_path_expr(name) };
+    let value = if self.eat(separator) {
+      self.parse_expr()
+    } else if has_dot
+      && !self.is_at_end()
+      && !matches!(self.peek().kind, TokenType::Comma | TokenType::RightBrace)
+    {
+      self.emit(ExpectedFieldValue { field: name.text(), span: self.peek().span });
+      self.advance_until_one_of(&[TokenType::Comma, TokenType::RightBrace]);
+      self.make_path_expr(name)
+    } else {
+      self.make_path_expr(name)
+    };
 
     Some(StructFieldInit {
       id: NodeId::new(),

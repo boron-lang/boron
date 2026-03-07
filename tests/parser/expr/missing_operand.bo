@@ -1,0 +1,10 @@
+func main() {
+    //#error: expected expression after `{}` operator
+    var x = 1 +;
+
+    //#error: expected expression after `{}` operator
+    var y = 10 *;
+
+    //#error: expected expression after `{}` operator
+    var z = (2 -);
+}

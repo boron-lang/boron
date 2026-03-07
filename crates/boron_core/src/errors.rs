@@ -1,4 +1,5 @@
 use boron_diagnostic_macro::Diagnostic;
+use boron_parser::Path;
 use boron_source::prelude::Span;
 
 #[derive(Diagnostic)]
@@ -30,5 +31,15 @@ pub struct MainNoParams {
 #[code(MAIN_NOT_A_UNIT)]
 pub struct MainRetNotAUnit {
   #[error("remove this return type")]
+  pub span: Span,
+}
+
+#[derive(Diagnostic)]
+#[error("module `{module}` couldn't be resolved")]
+#[code(MODULE_NOT_FOUND)]
+pub struct ModuleNotFound {
+  pub module: Path,
+
+  #[error("in this `mod` item")]
   pub span: Span,
 }

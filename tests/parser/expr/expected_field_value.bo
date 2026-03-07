@@ -1,0 +1,9 @@
+struct Foo {
+    .x = i32,
+    .y = i32,
+}
+
+func main() {
+    //#error: expected expression after struct field `.{}`
+    var v = Foo { .x 5, .y = 10 };
+}

@@ -1,4 +1,4 @@
-use crate::{Path, TokenType};
+use crate::TokenType;
 use boron_diagnostic_macro::Diagnostic;
 use boron_source::span::Span;
 use std::fmt;
@@ -246,15 +246,6 @@ pub struct ExpectedPattern {
 }
 
 #[derive(Diagnostic)]
-#[error("expected a builtin function name after `@`")]
-#[code(PARSE_EXPECTED_BUILTIN_NAME)]
-pub struct ExpectedBuiltinName {
-  pub found: TokenType,
-  #[error("expected identifier here")]
-  pub span: Span,
-}
-
-#[derive(Diagnostic)]
 #[error("invalid assignment target")]
 #[code(PARSE_INVALID_ASSIGN_TARGET)]
 #[help("assignment targets must be a variable, field access, or index expression")]
@@ -340,16 +331,6 @@ pub struct MissingOperand {
 pub struct ExpectedFieldValue {
   pub field: String,
   #[error("expected `=` or `,` here")]
-  pub span: Span,
-}
-
-#[derive(Diagnostic)]
-#[error("module `{module}` couldn't be resolved")]
-#[code(PARSE_MODULE_NOT_FOUND)]
-pub struct ModuleNotFound {
-  pub module: Path,
-
-  #[error("in this `mod` item")]
   pub span: Span,
 }
 
