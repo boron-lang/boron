@@ -1,4 +1,4 @@
-use crate::directives::Directive;
+use crate::directives::{Directive, LineDirection};
 use crate::output::{FailureType, TestResult, TestStatus};
 use crate::test::Test;
 use boron_core::prelude::*;
@@ -20,10 +20,7 @@ pub fn run_single_test_in_process(test: &Test) -> TestResult {
   let project_type = test
     .directives
     .iter()
-    .find_map(|directive| match directive {
-      Directive::PackageType(package_type) => Some(*package_type),
-      _ => None,
-    })
+    .find_map(|d| if let Directive::PackageType(pt) = d { Some(*pt) } else { None })
     .unwrap_or(PackageType::Binary);
 
   let output = DiagnosticWriter::buffer();
@@ -56,47 +53,54 @@ pub fn run_single_test_in_process(test: &Test) -> TestResult {
       let sources = sess.dcx().sources();
       let mut failures = vec![];
 
-      let error_directives = test
+      let error_specs: Vec<(usize, LineDirection, String)> = test
         .directives
         .iter()
-        .filter_map(|d| match d {
-          Directive::Error { line, direction, pattern } => {
+        .filter_map(|d| {
+          if let Directive::Error { line, direction, pattern } = d {
             Some((*line, direction.clone(), pattern.clone()))
+          } else {
+            None
           }
-          _ => None,
         })
-        .collect_vec();
+        .collect();
 
-      let warning_directives = test
+      let warning_specs: Vec<(usize, LineDirection, String)> = test
         .directives
         .iter()
-        .filter_map(|d| match d {
-          Directive::Warning { line, direction, pattern } => {
+        .filter_map(|d| {
+          if let Directive::Warning { line, direction, pattern } = d {
             Some((*line, direction.clone(), pattern.clone()))
+          } else {
+            None
           }
-          _ => None,
         })
-        .collect_vec();
+        .collect();
+
+      let matches_spec =
+        |diag: &Diagnostic, line: usize, dir: &LineDirection, pat: &str| {
+          matches_directive(diag, line, dir, pat, sources)
+        };
+      let spec_matches_diag =
+        |diag: &Diagnostic, specs: &[(usize, LineDirection, String)]| {
+          specs.iter().any(|(line, dir, pat)| matches_spec(diag, *line, dir, pat))
+        };
 
       if sess.dcx().has_errors() {
         failures.extend(
-          error_directives
+          error_specs
             .iter()
-            .filter(|(directive_line, direction, pattern)| {
-              !sess.dcx().diagnostics.iter().any(|diagnostic| {
-                matches_directive(
-                  diagnostic.value(),
-                  *directive_line,
-                  direction,
-                  pattern,
-                  sources,
-                )
-              })
+            .filter(|(line, dir, pat)| {
+              !sess
+                .dcx()
+                .diagnostics
+                .iter()
+                .any(|d| matches_spec(d.value(), *line, dir, pat))
             })
-            .map(|(line, direction, pattern)| FailureType::ExpectedErrorNotFound {
+            .map(|(line, dir, pat)| FailureType::ExpectedErrorNotFound {
               line: *line,
-              direction: direction.clone(),
-              pattern: pattern.clone(),
+              direction: dir.clone(),
+              pattern: pat.clone(),
             }),
         );
 
@@ -104,29 +108,21 @@ pub fn run_single_test_in_process(test: &Test) -> TestResult {
           .dcx()
           .diagnostics
           .iter()
-          .filter(|diagnostic| {
-            diagnostic.value().diag.level == DiagnosticLevel::Error
-              && !error_directives.iter().any(|(directive_line, direction, pattern)| {
-                matches_directive(
-                  diagnostic.value(),
-                  *directive_line,
-                  direction,
-                  pattern,
-                  sources,
-                )
-              })
+          .filter(|d| {
+            let diag = d.value();
+            diag.diag.level == DiagnosticLevel::Error
+              && !spec_matches_diag(diag, &error_specs)
           })
-          .map(|diagnostic| diagnostic.value().diag.message.clone())
+          .map(|d| d.value().diag.message.clone())
           .collect();
 
         if !unexpected_errors.is_empty() {
           failures.push(FailureType::UnexpectedErrors(unexpected_errors));
         }
-      } else if !error_directives.is_empty() {
+      } else if !error_specs.is_empty() {
         failures.push(FailureType::ExpectedErrorsButCompiled);
       }
 
-      // --- warning checking ---
       let actual_warnings = sess
         .dcx()
         .diagnostics
@@ -135,40 +131,22 @@ pub fn run_single_test_in_process(test: &Test) -> TestResult {
         .collect_vec();
 
       failures.extend(
-        warning_directives
+        warning_specs
           .iter()
-          .filter(|(directive_line, direction, pattern)| {
-            !actual_warnings.iter().any(|diagnostic| {
-              matches_directive(
-                diagnostic.value(),
-                *directive_line,
-                direction,
-                pattern,
-                sources,
-              )
-            })
+          .filter(|(line, dir, pat)| {
+            !actual_warnings.iter().any(|d| matches_spec(d.value(), *line, dir, pat))
           })
-          .map(|(line, direction, pattern)| FailureType::ExpectedWarningNotFound {
+          .map(|(line, dir, pat)| FailureType::ExpectedWarningNotFound {
             line: *line,
-            direction: direction.clone(),
-            pattern: pattern.clone(),
+            direction: dir.clone(),
+            pattern: pat.clone(),
           }),
       );
 
       let unexpected_warnings: Vec<String> = actual_warnings
         .iter()
-        .filter(|diagnostic| {
-          !warning_directives.iter().any(|(directive_line, direction, pattern)| {
-            matches_directive(
-              diagnostic.value(),
-              *directive_line,
-              direction,
-              pattern,
-              sources,
-            )
-          })
-        })
-        .map(|diagnostic| diagnostic.value().diag.message.clone())
+        .filter(|d| !spec_matches_diag(d.value(), &warning_specs))
+        .map(|d| d.value().diag.message.clone())
         .collect();
 
       if !unexpected_warnings.is_empty() {

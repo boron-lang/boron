@@ -36,44 +36,24 @@ pub fn parse_directive(directive: String, line: usize, file: &Path) -> Directive
 
   match name {
     "package-type" => {
-      if value.is_empty() {
-        Directive::PackageType(PackageType::Binary)
-      } else {
-        Directive::PackageType(value.parse().unwrap())
-      }
+      let package_type =
+        if value.is_empty() { PackageType::Binary } else { value.parse().unwrap() };
+      Directive::PackageType(package_type)
     }
     "error" => {
-      if value.is_empty() {
-        panic!("Error directive must have a pattern message")
-      } else {
-        let direction = attrs
-          .iter()
-          .find(|(k, _)| k == "direction")
-          .map(|(_, v)| match v.as_str() {
-            "up" => LineDirection::Up,
-            "down" => LineDirection::Down,
-            _ => LineDirection::Down,
-          })
-          .unwrap_or(LineDirection::Down);
-
-        Directive::Error { line, direction, pattern: value.to_string() }
+      assert!(!value.is_empty(), "Error directive must have a pattern message");
+      Directive::Error {
+        line,
+        direction: parse_direction(&attrs),
+        pattern: value.to_string(),
       }
     }
     "warning" => {
-      if value.is_empty() {
-        panic!("Warning directive must have a pattern message")
-      } else {
-        let direction = attrs
-          .iter()
-          .find(|(k, _)| k == "direction")
-          .map(|(_, v)| match v.as_str() {
-            "up" => LineDirection::Up,
-            "down" => LineDirection::Down,
-            _ => LineDirection::Down,
-          })
-          .unwrap_or(LineDirection::Down);
-
-        Directive::Warning { line, direction, pattern: value.to_string() }
+      assert!(!value.is_empty(), "Warning directive must have a pattern message");
+      Directive::Warning {
+        line,
+        direction: parse_direction(&attrs),
+        pattern: value.to_string(),
       }
     }
     _ => {
@@ -81,6 +61,17 @@ pub fn parse_directive(directive: String, line: usize, file: &Path) -> Directive
       Directive::Invalid
     }
   }
+}
+
+fn parse_direction(attrs: &[(String, String)]) -> LineDirection {
+  attrs
+    .iter()
+    .find(|(k, _)| k == "direction")
+    .map(|(_, v)| match v.as_str() {
+      "up" => LineDirection::Up,
+      _ => LineDirection::Down,
+    })
+    .unwrap_or(LineDirection::Down)
 }
 
 fn parse_attributes(attrs_str: &str) -> Vec<(String, String)> {
