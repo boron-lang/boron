@@ -7,7 +7,7 @@ pub enum Option<T> {
     Some(T),
     None,
 
-    func test() {
+    func test(self) {
         puts("Hello");
     }
 }

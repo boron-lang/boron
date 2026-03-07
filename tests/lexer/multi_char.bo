@@ -1,0 +1,4 @@
+func main() {
+    //#error: character literal contains multiple characters
+    var c = 'ab';
+}

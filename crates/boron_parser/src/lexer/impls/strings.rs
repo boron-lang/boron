@@ -160,7 +160,7 @@ impl Lexer<'_> {
 
     self.advance();
 
-    let value = match self.peek() {
+    match self.peek() {
       None | Some('\n' | '\r') => {
         let span = self.make_span(start_offset);
         return Err(LexError::new(LexErrorKind::UnterminatedChar, span));
@@ -169,37 +169,54 @@ impl Lexer<'_> {
         let span = self.make_span(start_offset);
         return Err(LexError::new(LexErrorKind::EmptyCharLiteral, span));
       }
-      Some('\\') => {
-        lexeme.push('\\');
-        self.advance();
-        match self.parse_escape_sequence(true) {
-          Ok(escaped) => {
-            lexeme.push_str(&escaped);
-            escaped.chars().next().unwrap()
-          }
-          Err(err) => {
-            self.dcx.emit(err);
-            '?'
+      _ => {}
+    }
+
+    let mut chars: Vec<char> = Vec::new();
+
+    loop {
+      match self.peek() {
+        None | Some('\n' | '\r') => {
+          let span = self.make_span(start_offset);
+          return Err(LexError::new(LexErrorKind::UnterminatedChar, span));
+        }
+        Some('\'') => {
+          lexeme.push('\'');
+          self.advance();
+          break;
+        }
+        Some('\\') => {
+          lexeme.push('\\');
+          self.advance();
+          match self.parse_escape_sequence(true) {
+            Ok(escaped) => {
+              lexeme.push_str(&escaped);
+              if let Some(ch) = escaped.chars().next() {
+                chars.push(ch);
+              }
+            }
+            Err(err) => {
+              self.dcx.emit(err);
+              chars.push('?');
+            }
           }
         }
+        Some(ch) => {
+          lexeme.push(ch);
+          self.advance();
+          chars.push(ch);
+        }
       }
-      Some(ch) => {
-        lexeme.push(ch);
-        self.advance();
-        ch
-      }
-    };
-
-    if self.peek() == Some('\'') {
-      lexeme.push('\'');
-      self.advance();
-    } else {
-      let span = self.make_span(start_offset);
-      return Err(LexError::new(LexErrorKind::UnterminatedChar, span));
     }
 
     let span = self.make_span(start_offset);
 
+    if chars.len() > 1 {
+      self.dcx.emit(LexError::new(LexErrorKind::MultiCharLiteral, span));
+      return Ok(Token::new(TokenType::CharLiteral(chars[0]), span, lexeme));
+    }
+
+    let value = chars.into_iter().next().unwrap_or('?');
     Ok(Token::new(TokenType::CharLiteral(value), span, lexeme))
   }
 
