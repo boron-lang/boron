@@ -1,17 +1,18 @@
-use crate::TypeScheme;
 use crate::checker::TyChecker;
 use crate::errors::{
-  ArityMismatch, CannotCall, CannotConstructEnumVariantUsingCall, FuncArgMismatch,
-  NoMethodForTy, NoValuePassedForParameter,
+  ArityMismatch, AssociatedFunctionCallUsingMethodCall, CannotCall,
+  CannotConstructEnumVariantUsingCall, FuncArgMismatch, NoMethodForTy,
+  NoValuePassedForParameter,
 };
 use crate::table::TypeEnv;
 use crate::ty::{InferTy, SubstitutionMap, TyParam};
 use crate::unify::{Expectation, UnifyError, UnifyResult};
+use crate::TypeScheme;
 use boron_hir::expr::Argument;
 use boron_hir::item::VariantKind;
-use boron_hir::{Expr, ExprKind, HirId};
+use boron_hir::{Expr, ExprKind, HirId, ParamKind};
 use boron_resolver::DefId;
-use boron_session::prelude::{Span, debug};
+use boron_session::prelude::{debug, Span};
 use boron_source::ident_table::Identifier;
 use itertools::Itertools as _;
 use std::collections::HashSet;
@@ -379,9 +380,21 @@ impl TyChecker<'_> {
       });
       return InferTy::Err(span);
     };
-
+    let func = self.hir.get_function(method_def_id).unwrap();
     let method_ty = self.check_path(method_def_id, env, None);
     let resolved_method = self.infcx.resolve(&method_ty);
+
+    if !matches!(
+        func.params.first(),
+        Some(param) if matches!(param.kind, ParamKind::SelfParam { .. })
+    ) {
+      self.dcx().emit(AssociatedFunctionCallUsingMethodCall {
+        span,
+        func: format!("{}::{}", self.format_type(&resolved_receiver), method),
+        defined: *func.name.span(),
+      });
+      return InferTy::Err(span);
+    }
 
     if let InferTy::Fn { params, ret, .. } = resolved_method {
       self.check_fn_call_args(args, &params, env, method_def_id, span);

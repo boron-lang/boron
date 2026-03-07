@@ -354,3 +354,14 @@ pub struct CannotConstructEnumVariantUsingCall {
   pub span: Span,
   pub name: Identifier,
 }
+
+#[derive(Diagnostic)]
+#[error("cannot call associated function `{func}` using a method call")]
+#[code(TYPE_CHECKER_ASSOCIATED_FUNCTION_CALL_USING_METHOD_CALL)]
+pub struct AssociatedFunctionCallUsingMethodCall {
+  #[error("in this call")]
+  pub span: Span,
+  #[help_label("attempted to call this associated function")]
+  pub defined: Span,
+  pub func: String,
+}

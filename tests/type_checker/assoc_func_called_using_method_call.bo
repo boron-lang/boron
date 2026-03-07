@@ -1,18 +1,13 @@
-mod vec;
-import * from vec;
-
-extern "C" func puts(text: *const u8);
-
 pub enum Option<T> {
     Some(T),
     None,
 
     func test() {
-        puts("Hello");
     }
 }
 
 func main() {
+    //#error: cannot call associated function `Option<{}>::test` using a method call
     var value = Option::Some("hello");
 
     value.test();
