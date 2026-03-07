@@ -1,4 +1,5 @@
 use crate::{InferTy, TyChecker, TypeScheme};
+use boron_hir::hir::AdtEntry;
 use boron_hir::item::VariantKind;
 use boron_hir::{Function, Generics, Param, ParamKind};
 use boron_source::ident_table::get_or_intern;
@@ -6,9 +7,13 @@ use boron_source::span::Span;
 
 impl TyChecker<'_> {
   fn function_signature(&self, func: &Function) -> TypeScheme {
-    let generics = if let Some(strukt) = self.hir.is_struct_child(&func.def_id) {
+    let generics = if let Some(parent) = self.hir.find_adt_parent(&func.def_id) {
       let mut generics = Generics { span: Span::dummy(), params: vec![] };
-      generics.params.extend(strukt.generics.params.clone());
+
+      if let Some(parent_generics) = self.hir.get_adt_generics(&parent) {
+        generics.params.extend(parent_generics.params);
+      }
+
       generics.params.extend(func.generics.params.clone());
 
       generics
@@ -44,59 +49,64 @@ impl TyChecker<'_> {
       self.table.record_def_type(def_id, scheme);
     }
 
-    for entry in &self.hir.structs {
-      let def_id = *entry.key();
-      let strukt = entry.value();
+    for adt in &self.hir.adts {
+      match adt.value() {
+        AdtEntry::Struct(strukt) => {
+          let def_id = strukt.def_id;
 
-      let generics = self.register_generics(&strukt.generics);
-      for field in &strukt.fields {
-        let field_ty = self.lower_hir_ty(&field.ty);
-        self.table.record_field_type(def_id, field.name, field_ty);
-      }
+          let generics = self.register_generics(&strukt.generics);
+          for field in &strukt.fields {
+            let field_ty = self.lower_hir_ty(&field.ty);
+            self.table.record_field_type(def_id, field.name, field_ty);
+          }
 
-      let struct_ty = InferTy::Adt {
-        def_id,
-        args: generics.iter().map(|&g| InferTy::Param(g)).collect(),
-        span: strukt.span,
-      };
+          let struct_ty = InferTy::Adt {
+            def_id,
+            args: generics.iter().map(|&g| InferTy::Param(g)).collect(),
+            span: strukt.span,
+          };
 
-      self.table.record_def_type(def_id, TypeScheme { vars: generics, ty: struct_ty });
-    }
+          self
+            .table
+            .record_def_type(def_id, TypeScheme { vars: generics, ty: struct_ty });
+        }
+        AdtEntry::Enum(_enum) => {
+          let def_id = _enum.def_id;
 
-    for entry in &self.hir.enums {
-      let def_id = *entry.key();
-      let _enum = entry.value();
-
-      let generics = self.register_generics(&_enum.generics);
-      for variant in &_enum.variants {
-        match &variant.kind {
-          VariantKind::Unit | VariantKind::Discriminant(..) => {}
-          VariantKind::Struct(fields) => {
-            for field in fields {
-              let field_ty = self.lower_hir_ty(&field.ty);
-              self.table.record_field_type(variant.def_id, field.name, field_ty);
+          let generics = self.register_generics(&_enum.generics);
+          for variant in &_enum.variants {
+            match &variant.kind {
+              VariantKind::Unit | VariantKind::Discriminant(..) => {}
+              VariantKind::Struct(fields) => {
+                for field in fields {
+                  let field_ty = self.lower_hir_ty(&field.ty);
+                  self.table.record_field_type(variant.def_id, field.name, field_ty);
+                }
+              }
+              VariantKind::Tuple(types) => {
+                for (field, ty) in types.iter().enumerate() {
+                  let field_ty = self.lower_hir_ty(ty);
+                  self.table.record_field_type(
+                    variant.def_id,
+                    get_or_intern(&field.to_string(), None),
+                    field_ty,
+                  );
+                }
+              }
             }
           }
-          VariantKind::Tuple(types) => {
-            for (field, ty) in types.iter().enumerate() {
-              let field_ty = self.lower_hir_ty(ty);
-              self.table.record_field_type(
-                variant.def_id,
-                get_or_intern(&field.to_string(), None),
-                field_ty,
-              );
-            }
-          }
+
+          let struct_ty = InferTy::Adt {
+            def_id,
+            args: generics.iter().map(|&g| InferTy::Param(g)).collect(),
+            span: _enum.span,
+          };
+
+          self
+            .table
+            .record_def_type(def_id, TypeScheme { vars: generics, ty: struct_ty });
         }
       }
-
-      let struct_ty = InferTy::Adt {
-        def_id,
-        args: generics.iter().map(|&g| InferTy::Param(g)).collect(),
-        span: _enum.span,
-      };
-
-      self.table.record_def_type(def_id, TypeScheme { vars: generics, ty: struct_ty });
     }
 
     for entry in &self.hir.consts {

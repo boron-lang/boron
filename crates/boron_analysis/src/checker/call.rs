@@ -385,7 +385,42 @@ impl TyChecker<'_> {
 
     if let InferTy::Fn { params, ret, .. } = resolved_method {
       self.check_fn_call_args(args, &params, env, method_def_id, span);
-      self.handle_monomorphization(Some(method_def_id), &method_ty, &[], call_hir_id);
+
+      let method_scheme = self.table.def_type(method_def_id);
+      if let Some(method_scheme) = method_scheme {
+        if !method_scheme.vars.is_empty() {
+          let mut subst = SubstitutionMap::new();
+
+          if let Some(adt_scheme) = self.table.def_type(struct_def_id) {
+            Self::collect_param_substitutions(
+              &adt_scheme.ty,
+              &resolved_receiver,
+              &method_scheme.vars,
+              &mut subst,
+            );
+          }
+
+          Self::collect_param_substitutions(
+            &method_scheme.ty,
+            &self.infcx.resolve(&method_ty),
+            &method_scheme.vars,
+            &mut subst,
+          );
+
+          self.table.record_monomorphization(method_def_id, subst.clone());
+          self.monomorphize_parent(method_def_id, &mut subst);
+          self.table.record_expr_monomorphization(call_hir_id, method_def_id, subst);
+        } else {
+          self.table.record_expr_monomorphization(
+            call_hir_id,
+            method_def_id,
+            SubstitutionMap::new(),
+          );
+        }
+      } else {
+        self.handle_monomorphization(Some(method_def_id), &method_ty, &[], call_hir_id);
+      }
+
       *ret
     } else {
       self.dcx().emit(CannotCall { span, callee: format!("method `{}`", method.text()) });

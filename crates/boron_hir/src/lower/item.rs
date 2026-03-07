@@ -1,20 +1,21 @@
 use crate::generics::{GenericParam, GenericParamKind, Generics, TypeBound};
+use crate::hir::AdtEntry;
 use crate::item::{
   Const, Enum, EnumVariantStructField, Field, Function, Param, ParamKind, SelfKind,
   Struct, Variant, VariantKind,
 };
 use crate::lower::context::LoweringContext;
-use boron_parser::EnumMember;
-use boron_parser::ast::ProgramNode;
 use boron_parser::ast::items::{
   ConstItem, EnumItem, FunctionItem, Item as AstItem, ItemKind, StructField, StructItem,
   StructMember, Variant as AstVariant, VariantPayload as AstVariantPayload, Visibility,
 };
 use boron_parser::ast::params;
+use boron_parser::ast::ProgramNode;
 use boron_parser::ast::{
   GenericParam as AstGenericParam, GenericParams as AstGenericParams,
   TypeBound as AstTypeBound,
 };
+use boron_parser::EnumMember;
 use itertools::Itertools as _;
 
 impl LoweringContext<'_> {
@@ -115,7 +116,7 @@ impl LoweringContext<'_> {
       }
     });
 
-    self.hir.structs.insert(def_id, hir_struct);
+    self.hir.adts.insert(def_id, AdtEntry::Struct(hir_struct));
   }
 
   /// Lower a struct field.
@@ -169,7 +170,7 @@ impl LoweringContext<'_> {
       }
     });
 
-    self.hir.enums.insert(def_id, hir_enum);
+    self.hir.adts.insert(def_id, AdtEntry::Enum(hir_enum));
   }
 
   fn lower_variant(&mut self, v: &AstVariant) -> Variant {

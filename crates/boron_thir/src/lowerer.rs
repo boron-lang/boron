@@ -13,6 +13,7 @@ use boron_diagnostics::DiagnosticCtx;
 use boron_hir::expr::{
   Argument, ElseBranch, FieldInit as HirFieldInit, IfExpr, PathExpr as HirPathExpr,
 };
+use boron_hir::hir::AdtEntry;
 use boron_hir::{
   Block as HirBlock, Enum as HirEnum, Expr as HirExpr, ExprKind as HirExprKind,
   Function as HirFunction, Hir, HirId, Literal, Local as HirLocal,
@@ -73,14 +74,17 @@ impl<'a> ThirLowerer<'a> {
       self.thir.functions.insert(*func.key(), lowered);
     }
 
-    for strukt in &self.hir.structs {
-      let lowered = self.lower_struct(strukt.value());
-      self.thir.structs.insert(*strukt.key(), lowered);
-    }
-
-    for enum_ in &self.hir.enums {
-      let lowered = self.lower_enum(enum_.value());
-      self.thir.enums.insert(*enum_.key(), lowered);
+    for adt in &self.hir.adts {
+      match adt.value() {
+        AdtEntry::Struct(strukt) => {
+          let lowered = self.lower_struct(strukt);
+          self.thir.structs.insert(strukt.def_id, lowered);
+        }
+        AdtEntry::Enum(enum_) => {
+          let lowered = self.lower_enum(enum_);
+          self.thir.enums.insert(enum_.def_id, lowered);
+        }
+      }
     }
 
     self.thir

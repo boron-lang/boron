@@ -192,14 +192,6 @@ impl Resolver {
     members.get(name).map(|r| *r)
   }
 
-  pub fn lookup_adt_parent(&self, child: DefId) -> Option<DefId> {
-    self
-      .adt_members
-      .iter()
-      .find(|parent| parent.value().iter().any(|c| c.value() == &child))
-      .map(|p| *p.key())
-  }
-
   pub fn find_parent(&self, child_id: DefId) -> Option<DefId> {
     self
       .adt_members

@@ -63,12 +63,20 @@ impl<'a> SymbolMangler<'a> {
       return mangled;
     }
 
-    let mangled = if let Some(parent_struct) = self.hir.is_struct_child(&def_id) {
-      let struct_generic_count = parent_struct.generics.params.len();
-      let (struct_type_args, fn_type_args) = type_args.split_at(struct_generic_count);
+    let mangled = if let Some(parent_struct) = self.hir.find_adt_parent(&def_id) {
+      let struct_generic_count = self
+        .hir
+        .get_adt_generics(&parent_struct)
+        .map(|generics| generics.params.len())
+        .unwrap_or(0);
 
-      let struct_part =
-        self.mangle_name_with_type_args(&parent_struct.name.text(), struct_type_args);
+      let split = struct_generic_count.min(type_args.len());
+      let (struct_type_args, fn_type_args) = type_args.split_at(split);
+
+      let struct_part = self.mangle_name_with_type_args(
+        &self.hir.get_adt_name(&parent_struct).unwrap().text(),
+        struct_type_args,
+      );
       let fn_part = self.mangle_name_with_type_args(&func.name.text(), fn_type_args);
 
       format!("boron${struct_part}${fn_part}")
