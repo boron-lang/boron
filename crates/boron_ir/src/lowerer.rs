@@ -1,13 +1,18 @@
 use crate::{
-  Ir, IrBlock, IrBody, IrEnum, IrExpr, IrExprKind, IrFieldInit, IrFunction, IrId,
-  IrLocal, IrParam, IrStmt, IrStmtKind, IrStruct, Projection, SymbolMangler,
+  Ir, IrBlock, IrBody, IrEnum, IrEnumVariant, IrExpr, IrExprKind, IrFieldInit,
+  IrFunction, IrId, IrLocal, IrParam, IrStmt, IrStmtKind, IrStruct, Projection,
+  SymbolMangler,
 };
+use boron_analysis::align_of::{calculate_enum_alignment, compute_variant_discriminants};
+use boron_analysis::size_of::calculate_enum_size;
 use boron_analysis::ty::SubstitutionMap;
-use boron_analysis::{InferTy, TypeScheme, TypeTable};
+use boron_analysis::{BuiltinFunctionCtx, InferTy, TypeScheme, TypeTable};
+use boron_hir::item::VariantKind as HirVariantKind;
 use boron_hir::pat::PatKind;
 use boron_hir::{EnumVariant, Hir, ParamKind, Pat, SemanticTy};
-use boron_resolver::DefId;
-use boron_session::prelude::debug;
+use boron_resolver::{DefId, Resolver};
+use boron_session::prelude::{Session, debug};
+use boron_source::ident_table::get_or_intern;
 use boron_target::abi::layout::Layout;
 use boron_thir::{
   Block as ThirBlock, Enum as ThirEnum, Expr as ThirExpr, ExprKind as ThirExprKind,
@@ -22,11 +27,12 @@ struct LoweringContext {
   type_args: SubstitutionMap,
 }
 
-#[derive(Debug)]
 pub struct IrLowerer<'a> {
   hir: &'a Hir,
   thir: &'a Thir,
   type_table: &'a TypeTable,
+  sess: &'a Session,
+  resolver: &'a Resolver,
   pub ir: Ir,
   mangler: SymbolMangler<'a>,
   pub current_function: IrId,
@@ -34,15 +40,32 @@ pub struct IrLowerer<'a> {
 }
 
 impl<'a> IrLowerer<'a> {
-  pub fn new(hir: &'a Hir, thir: &'a Thir, type_table: &'a TypeTable) -> Self {
+  pub fn new(
+    hir: &'a Hir,
+    thir: &'a Thir,
+    type_table: &'a TypeTable,
+    sess: &'a Session,
+    resolver: &'a Resolver,
+  ) -> Self {
     Self {
       hir,
       thir,
       type_table,
+      sess,
+      resolver,
       ir: Ir::default(),
       mangler: SymbolMangler::new(hir),
       current_function: IrId::dummy(),
       lowering_context: None,
+    }
+  }
+
+  fn builtin_ctx(&self) -> BuiltinFunctionCtx<'a> {
+    BuiltinFunctionCtx {
+      sess: self.sess,
+      resolver: self.resolver,
+      hir: self.hir,
+      ty_table: self.type_table,
     }
   }
 
@@ -365,18 +388,90 @@ impl<'a> IrLowerer<'a> {
     scheme: &TypeScheme,
     type_args: &SubstitutionMap,
   ) {
-    let fields = enum_.variants.iter().map(|variant| true);
     let concrete_type_args = self.collect_type_args(scheme, type_args);
     let mangled_name = self.mangler.mangle_enum(enum_.def_id, &concrete_type_args);
+    let variants = self.lower_enum_variants(enum_, type_args);
+
+    let infer_args: Vec<InferTy> = scheme
+      .vars
+      .iter()
+      .filter_map(|param| type_args.get(param.def_id).cloned())
+      .collect();
+
+    let ctx = self.builtin_ctx();
+    let size = calculate_enum_size(&ctx, &enum_.def_id, &infer_args);
+    let alignment = calculate_enum_alignment(&ctx, &enum_.def_id, &infer_args);
 
     self.ir.enums.push(IrEnum {
       name: mangled_name,
       id: IrId::new(),
       type_args: concrete_type_args,
       def_id: enum_.def_id,
-      variants: vec![],
-      layout: Layout::new(2, 2),
+      variants,
+      layout: Layout::new(size, alignment.get()),
     });
+  }
+
+  fn lower_enum_variants(
+    &self,
+    enum_: &ThirEnum,
+    type_args: &SubstitutionMap,
+  ) -> Vec<IrEnumVariant> {
+    let hir_enum = match self.hir.get_enum(enum_.def_id) {
+      Some(e) => e,
+      None => return vec![],
+    };
+
+    let ctx = self.builtin_ctx();
+    let discriminants = compute_variant_discriminants(&ctx, &hir_enum.variants);
+
+    hir_enum
+      .variants
+      .iter()
+      .enumerate()
+      .map(|(idx, variant)| {
+        let payload = match &variant.kind {
+          HirVariantKind::Unit | HirVariantKind::Discriminant(_) => None,
+          HirVariantKind::Tuple(tys) => {
+            let types = tys
+              .iter()
+              .enumerate()
+              .map(|(i, _)| {
+                let field_name = get_or_intern(&i.to_string(), None);
+                let infer_ty =
+                  self.type_table.field_type(variant.def_id, field_name).unwrap_or_else(
+                    || panic!("tuple variant field {i} should have a type"),
+                  );
+                let subst_ty = Self::apply_subst_by_def_id(&infer_ty, type_args);
+                self.lower_type(&subst_ty)
+              })
+              .collect();
+            Some(SemanticTy::Tuple(types))
+          }
+          HirVariantKind::Struct(fields) => {
+            let types = fields
+              .iter()
+              .map(|field| {
+                let infer_ty = self
+                  .type_table
+                  .field_type(variant.def_id, field.name)
+                  .unwrap_or_else(|| {
+                    panic!(
+                      "struct variant field '{}' should have a type",
+                      field.name.text()
+                    )
+                  });
+                let subst_ty = Self::apply_subst_by_def_id(&infer_ty, type_args);
+                self.lower_type(&subst_ty)
+              })
+              .collect();
+            Some(SemanticTy::Tuple(types))
+          }
+        };
+
+        IrEnumVariant { name: variant.name.text(), discriminant: discriminants[idx], payload }
+      })
+      .collect()
   }
 
   fn push_struct_instance(
@@ -488,6 +583,13 @@ impl<'a> IrLowerer<'a> {
         }
 
         if let Some(enum_entry) = self.thir.enums.get(def_id) {
+          let ctx = self.builtin_ctx();
+          let hir_enum = self.hir.get_enum(*def_id);
+          let discriminants = hir_enum
+            .as_ref()
+            .map(|e| compute_variant_discriminants(&ctx, &e.variants))
+            .unwrap_or_default();
+
           let variants = enum_entry
             .variants
             .iter()
@@ -505,7 +607,8 @@ impl<'a> IrLowerer<'a> {
                 VariantKind::Discriminant(_) => None,
               };
 
-              EnumVariant { name: v.name.text(), discr: idx as i128, payload }
+              let discr = discriminants.get(idx).copied().unwrap_or(idx as u64) as i128;
+              EnumVariant { name: v.name.text(), discr, payload }
             })
             .collect();
 

@@ -1,7 +1,8 @@
-use crate::IrBlock;
 use crate::IrId;
+use crate::{IrBlock, IrExpr};
 use boron_hir::SemanticTy;
 use boron_resolver::DefId;
+use boron_source::ident_table::Identifier;
 use boron_target::abi::layout::Layout;
 
 #[derive(Debug, Clone)]

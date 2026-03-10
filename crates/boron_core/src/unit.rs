@@ -161,7 +161,7 @@ impl<'ctx> CompilationUnit<'ctx> {
       return;
     };
 
-    self.ir = Some(IrLowerer::new(hir, thir, typeck).lower());
+    self.ir = Some(IrLowerer::new(hir, thir, typeck, self.sess, &self.resolver).lower());
   }
 
   fn expand_builtins(&mut self) {
