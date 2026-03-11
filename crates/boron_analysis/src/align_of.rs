@@ -116,14 +116,14 @@ pub fn compute_discriminant_tag_size<'a>(
   variants: &[Variant],
 ) -> usize {
   let discriminants = compute_variant_discriminants(ctx, variants);
-  let max_discr = discriminants.into_iter().max().unwrap_or(0) as u128;
+  let max_discr = discriminants.into_iter().max().unwrap_or(0);
   discriminant_size_for_value(max_discr)
 }
 
 pub fn compute_variant_discriminants<'a>(
   ctx: &BuiltinFunctionCtx<'a>,
   variants: &[Variant],
-) -> Vec<u64> {
+) -> Vec<u128> {
   let cache = InterpreterCache::new();
   let results = BuiltInResults::new();
   let interpreter = Interpreter::new(
@@ -136,14 +136,14 @@ pub fn compute_variant_discriminants<'a>(
     InterpreterContext::EnumDiscriminant,
   );
 
-  let mut current: u64 = 0;
+  let mut current: u128 = 0;
   let mut discriminants = Vec::with_capacity(variants.len());
 
   for variant in variants {
     match &variant.kind {
       VariantKind::Discriminant(expr) => {
         if let ConstValue::Int(v) = interpreter.evaluate_expr(expr) {
-          current = v as u64;
+          current = v as u128;
         }
       }
       _ => {}

@@ -4,14 +4,14 @@ use crate::{
   SymbolMangler,
 };
 use boron_analysis::align_of::{calculate_enum_alignment, compute_variant_discriminants};
-use boron_analysis::size_of::calculate_enum_size;
+use boron_analysis::size_of::{calculate_enum_payload_layout, calculate_enum_size};
 use boron_analysis::ty::SubstitutionMap;
 use boron_analysis::{BuiltinFunctionCtx, InferTy, TypeScheme, TypeTable};
 use boron_hir::item::VariantKind as HirVariantKind;
 use boron_hir::pat::PatKind;
 use boron_hir::{EnumVariant, Hir, ParamKind, Pat, SemanticTy};
 use boron_resolver::{DefId, Resolver};
-use boron_session::prelude::{Session, debug};
+use boron_session::prelude::{debug, Session};
 use boron_source::ident_table::get_or_intern;
 use boron_target::abi::layout::Layout;
 use boron_thir::{
@@ -257,13 +257,13 @@ impl<'a> IrLowerer<'a> {
         let cast_ty = self.lower_semantic_ty(ty, &self.context().type_args);
         IrExprKind::Cast { expr: Box::new(inner), ty: cast_ty }
       }
-      ThirExprKind::Call { callee, type_args: call_type_args, args } => {
+      ThirExprKind::Call { callee, callee_name, type_args: call_type_args, args } => {
         let args = args.iter().map(|arg| self.lower_expr(arg)).collect();
         let type_args = call_type_args
           .iter()
           .map(|ty| self.lower_semantic_ty(ty, &self.context().type_args))
           .collect();
-        IrExprKind::Call { callee: *callee, type_args, args }
+        IrExprKind::Call { callee: *callee, callee_name: *callee_name, type_args, args }
       }
       ThirExprKind::Field { object, field } => {
         let object = self.lower_expr(object);
@@ -401,6 +401,7 @@ impl<'a> IrLowerer<'a> {
     let ctx = self.builtin_ctx();
     let size = calculate_enum_size(&ctx, &enum_.def_id, &infer_args);
     let alignment = calculate_enum_alignment(&ctx, &enum_.def_id, &infer_args);
+    let payload_layout = calculate_enum_payload_layout(&ctx, &enum_.def_id, &infer_args);
 
     self.ir.enums.push(IrEnum {
       name: mangled_name,
@@ -409,6 +410,7 @@ impl<'a> IrLowerer<'a> {
       def_id: enum_.def_id,
       variants,
       layout: Layout::new(size, alignment.get()),
+      payload_layout,
     });
   }
 
@@ -469,7 +471,11 @@ impl<'a> IrLowerer<'a> {
           }
         };
 
-        IrEnumVariant { name: variant.name.text(), discriminant: discriminants[idx], payload }
+        IrEnumVariant {
+          name: variant.name.text(),
+          discriminant: discriminants[idx],
+          payload,
+        }
       })
       .collect()
   }
@@ -607,7 +613,7 @@ impl<'a> IrLowerer<'a> {
                 VariantKind::Discriminant(_) => None,
               };
 
-              let discr = discriminants.get(idx).copied().unwrap_or(idx as u64) as i128;
+              let discr = discriminants.get(idx).copied().unwrap_or(idx as u128) as i128;
               EnumVariant { name: v.name.text(), discr, payload }
             })
             .collect();

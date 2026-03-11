@@ -1,8 +1,7 @@
+use crate::IrBlock;
 use crate::IrId;
-use crate::{IrBlock, IrExpr};
 use boron_hir::SemanticTy;
 use boron_resolver::DefId;
-use boron_source::ident_table::Identifier;
 use boron_target::abi::layout::Layout;
 
 #[derive(Debug, Clone)]
@@ -42,7 +41,7 @@ pub struct IrStruct {
 #[derive(Debug, Clone)]
 pub struct IrEnumVariant {
   pub name: String,
-  pub discriminant: u64,
+  pub discriminant: u128,
   pub payload: Option<SemanticTy>,
 }
 
@@ -54,4 +53,5 @@ pub struct IrEnum {
   pub name: String,
   pub variants: Vec<IrEnumVariant>,
   pub layout: Layout,
+  pub payload_layout: Layout,
 }

@@ -29,7 +29,7 @@ pub enum ExprKind {
 
   Cast { expr: Box<Expr>, ty: InferTy },
 
-  Call { callee: DefId, type_args: Vec<InferTy>, args: Vec<Expr> },
+  Call { callee: DefId, callee_name: Identifier, type_args: Vec<InferTy>, args: Vec<Expr> },
 
   Field { object: Box<Expr>, field: Identifier },
 

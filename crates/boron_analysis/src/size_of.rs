@@ -4,7 +4,7 @@ use crate::align_of::{
 };
 pub(crate) use crate::{BuiltinFunctionCtx, InferTy};
 use boron_resolver::{DefId, DefKind};
-use boron_target::abi::layout::align_up;
+use boron_target::abi::layout::{Layout, align_up};
 
 pub fn size_of_ty<'a>(ctx: &BuiltinFunctionCtx<'a>, ty: &InferTy) -> usize {
   let target = ctx.sess.target();
@@ -36,16 +36,37 @@ pub fn calculate_struct_size<'a>(
   let struct_alignment = calculate_struct_alignment(ctx, def_id, args);
 
   let mut offset = 0;
-  for substituted_field in &field_tys {
-    let (size_f, align_f) =
-      (size_of_ty(ctx, substituted_field), align_of_ty(ctx, substituted_field));
-
-    offset = align_up(offset, align_f.get());
-    offset += size_f;
+  for field in &field_tys {
+    offset = align_up(offset, align_of_ty(ctx, field).get());
+    offset += size_of_ty(ctx, field);
   }
 
-  offset = align_up(offset, struct_alignment.get());
-  offset
+  align_up(offset, struct_alignment.get())
+}
+
+fn enum_payload_metrics<'a>(
+  ctx: &BuiltinFunctionCtx<'a>,
+  variant_field_tys: &[Vec<InferTy>],
+) -> (usize, usize) {
+  let max_payload_size = variant_field_tys
+    .iter()
+    .map(|fields| {
+      let mut offset = 0;
+      for field in fields {
+        offset = align_up(offset, align_of_ty(ctx, field).get());
+        offset += size_of_ty(ctx, field);
+      }
+      offset
+    })
+    .max()
+    .unwrap_or(0);
+
+  let payload_align = variant_field_tys
+    .iter()
+    .flat_map(|fields| fields.iter())
+    .fold(1, |acc, field| acc.max(align_of_ty(ctx, field).get()));
+
+  (max_payload_size, payload_align)
 }
 
 pub fn calculate_enum_size<'a>(
@@ -56,32 +77,25 @@ pub fn calculate_enum_size<'a>(
   let e = ctx.hir.get_enum(*def_id).unwrap();
   let tag_size = compute_discriminant_tag_size(ctx, &e.variants);
   let variant_field_tys = substituted_enum_variant_field_tys(ctx, def_id, &e, args);
-
-  let max_payload_size = variant_field_tys
-    .iter()
-    .map(|fields| {
-      let mut offset = 0;
-      for field in fields {
-        let (size_f, align_f) = (size_of_ty(ctx, field), align_of_ty(ctx, field));
-        offset = align_up(offset, align_f.get());
-        offset += size_f;
-      }
-      offset
-    })
-    .max()
-    .unwrap_or(0);
+  let (max_payload_size, payload_align) = enum_payload_metrics(ctx, &variant_field_tys);
 
   if max_payload_size == 0 {
     return tag_size;
   }
 
-  let payload_align = variant_field_tys
-    .iter()
-    .flat_map(|fields| fields.iter())
-    .fold(1, |acc, field_ty| acc.max(align_of_ty(ctx, field_ty).get()));
-
   let enum_align = tag_size.max(payload_align);
-  let payload_offset = align_up(tag_size, payload_align);
-  let total = payload_offset + max_payload_size;
+  let total = align_up(tag_size, payload_align) + max_payload_size;
   align_up(total, enum_align)
+}
+
+pub fn calculate_enum_payload_layout<'a>(
+  ctx: &BuiltinFunctionCtx<'a>,
+  def_id: &DefId,
+  args: &Vec<InferTy>,
+) -> Layout {
+  let e = ctx.hir.get_enum(*def_id).unwrap();
+  let variant_field_tys = substituted_enum_variant_field_tys(ctx, def_id, &e, args);
+  let (max_payload_size, payload_align) = enum_payload_metrics(ctx, &variant_field_tys);
+
+  Layout::new(max_payload_size, payload_align)
 }

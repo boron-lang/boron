@@ -71,8 +71,8 @@ impl<'ctx> LLVMCodegen<'ctx> {
       IrExprKind::Literal(literal) => {
         Ok(ValueKind::RValue(self.build_literal(expr, literal)?))
       }
-      IrExprKind::Call { callee, type_args, args } => {
-        Ok(ValueKind::RValue(self.generate_call(callee, type_args, args)?))
+      IrExprKind::Call { callee, type_args, args, callee_name } => {
+        self.generate_call(callee, callee_name, type_args, args)
       }
       IrExprKind::Binary { lhs, op, rhs } => {
         Ok(ValueKind::RValue(self.generate_binary_op(lhs, op, rhs)?))
@@ -357,32 +357,28 @@ impl<'ctx> LLVMCodegen<'ctx> {
         }
       }
 
-      IrExprKind::Tuple(elements) => {
-        let element_types = elements.iter().map(|e| e.ty.clone()).collect_vec();
-
-        let tuple_ty = self.tuple_ty(&element_types)?.into_struct_type();
-
-        let mut tuple = tuple_ty.get_undef();
-
-        for (i, element) in elements.iter().enumerate() {
-          let value = self.generate_expr(element)?;
-
-          tuple = self
-            .builder
-            .build_insert_value(
-              tuple,
-              value,
-              i as u32,
-              &format!("tuple.insert.{}.{}", expr.hir_id, i),
-            )?
-            .into_struct_value();
-        }
-
-        Ok(ValueKind::RValue(tuple.into()))
-      }
-
+      IrExprKind::Tuple(elements) => self.build_tuple(elements),
       IrExprKind::Skip => Err(anyhow::anyhow!("skip expression has no value")),
       _ => todo!("{:#?}", expr),
     }
+  }
+
+  pub fn build_tuple(&self, elements: &Vec<IrExpr>) -> Result<ValueKind<'ctx>> {
+    let element_types = elements.iter().map(|e| e.ty.clone()).collect_vec();
+
+    let tuple_ty = self.tuple_ty(&element_types)?.into_struct_type();
+
+    let mut tuple = tuple_ty.get_undef();
+
+    for (i, element) in elements.iter().enumerate() {
+      let value = self.generate_expr(element)?;
+
+      tuple = self
+        .builder
+        .build_insert_value(tuple, value, i as u32, &format!("tuple.insert.{}", i))?
+        .into_struct_value();
+    }
+
+    Ok(ValueKind::RValue(tuple.into()))
   }
 }

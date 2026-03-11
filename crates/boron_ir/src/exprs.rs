@@ -3,6 +3,7 @@ use boron_hir::{HirId, SemanticTy};
 use boron_parser::{BinaryOp, UnaryOp};
 use boron_resolver::DefId;
 use boron_session::prelude::Span;
+use boron_source::ident_table::Identifier;
 
 #[derive(Debug, Clone)]
 pub struct IrExpr {
@@ -19,34 +20,70 @@ pub enum IrExprKind {
   LocalRef(DefId),
   Path(DefId),
 
-  Binary { op: BinaryOp, lhs: Box<IrExpr>, rhs: Box<IrExpr> },
+  Binary {
+    op: BinaryOp,
+    lhs: Box<IrExpr>,
+    rhs: Box<IrExpr>,
+  },
 
-  Unary { op: UnaryOp, operand: Box<IrExpr> },
+  Unary {
+    op: UnaryOp,
+    operand: Box<IrExpr>,
+  },
 
-  Assign { target: Box<IrExpr>, value: Box<IrExpr> },
+  Assign {
+    target: Box<IrExpr>,
+    value: Box<IrExpr>,
+  },
 
-  Cast { expr: Box<IrExpr>, ty: SemanticTy },
+  Cast {
+    expr: Box<IrExpr>,
+    ty: SemanticTy,
+  },
 
-  Call { callee: DefId, type_args: Vec<SemanticTy>, args: Vec<IrExpr> },
+  Call {
+    callee: DefId,
+    callee_name: Identifier,
+    type_args: Vec<SemanticTy>,
+    args: Vec<IrExpr>,
+  },
 
-  Field { object: Box<IrExpr>, field_idx: u32 },
+  Field {
+    object: Box<IrExpr>,
+    field_idx: u32,
+  },
 
-  Index { object: Box<IrExpr>, index: Box<IrExpr> },
+  Index {
+    object: Box<IrExpr>,
+    index: Box<IrExpr>,
+  },
 
-  Struct { def_id: DefId, type_args: Vec<SemanticTy>, fields: Vec<IrFieldInit> },
+  Struct {
+    def_id: DefId,
+    type_args: Vec<SemanticTy>,
+    fields: Vec<IrFieldInit>,
+  },
 
   Tuple(Vec<IrExpr>),
   Array(Vec<IrExpr>),
 
   Block(IrBlock),
 
-  If { condition: Box<IrExpr>, then_block: IrBlock, else_branch: Option<Box<IrExpr>> },
+  If {
+    condition: Box<IrExpr>,
+    then_block: IrBlock,
+    else_branch: Option<Box<IrExpr>>,
+  },
 
-  Loop { body: IrBlock },
+  Loop {
+    body: IrBlock,
+  },
 
   Break,
   Continue,
-  Return { value: Option<Box<IrExpr>> },
+  Return {
+    value: Option<Box<IrExpr>>,
+  },
 
   Skip,
 }

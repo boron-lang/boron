@@ -1,8 +1,10 @@
 use crate::codegen::LLVMCodegen;
+use crate::expressions::ValueKind;
 use anyhow::Result;
 use boron_ir::{IrExpr, SemanticTy};
 use boron_resolver::DefId;
-use inkwell::values::{BasicMetadataValueEnum, BasicValueEnum};
+use boron_session::prelude::Identifier;
+use inkwell::values::{BasicMetadataValueEnum, BasicValue, BasicValueEnum};
 
 impl<'ctx> LLVMCodegen<'ctx> {
   fn args_to_metadata(
@@ -14,11 +16,12 @@ impl<'ctx> LLVMCodegen<'ctx> {
   pub fn generate_call(
     &self,
     callee: &DefId,
+    callee_name: &Identifier,
     type_args: &Vec<SemanticTy>,
     args: &Vec<IrExpr>,
-  ) -> Result<BasicValueEnum<'ctx>> {
+  ) -> Result<ValueKind<'ctx>> {
     if let Some(enum_) = self.ir.get_enum(callee, type_args) {
-      return Ok(self.context.bool_type().const_int(0, false).into());
+      return self.build_enum_tuple(enum_, callee_name, args);
     }
 
     let ir_function = self.ir.find_function(callee, type_args);
@@ -39,8 +42,10 @@ impl<'ctx> LLVMCodegen<'ctx> {
     )?;
 
     match call_site.try_as_basic_value().basic() {
-      Some(val) => Ok(val),
-      None => Ok(self.context.i32_type().const_int(0, false).into()),
+      Some(val) => Ok(val.into()),
+      None => {
+        Ok(self.context.i32_type().const_int(0, false).as_basic_value_enum().into())
+      }
     }
   }
 }

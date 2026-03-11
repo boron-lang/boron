@@ -1,7 +1,7 @@
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use boron_ir::{Ir, IrId};
 use boron_resolver::DefId;
-use boron_session::prelude::{Mode, Session};
+use boron_session::prelude::{Identifier, Mode, Session};
 use dashmap::DashMap;
 use inkwell::basic_block::BasicBlock;
 use inkwell::builder::Builder;
@@ -38,6 +38,9 @@ impl LLVMCodegen<'_> {
     for strukt in &ir.structs {
       self.generate_struct_body(strukt)?;
     }
+    for _enum in &ir.enums {
+      self.generate_enum_bodies(_enum)?;
+    }
 
     for func in &ir.functions {
       self.create_function_body(func)?;
@@ -51,7 +54,7 @@ impl LLVMCodegen<'_> {
       let main_fn = self.module.add_function("main", main_ty, None);
       let entry = self.context.append_basic_block(main_fn, "start");
       self.builder.position_at_end(entry);
-      self.generate_call(main_id, &vec![], &vec![])?;
+      self.generate_call(main_id, &Identifier::dummy(), &vec![], &vec![])?;
 
       self.builder.build_return(Some(&self.context.i32_type().const_int(0, false)))?;
     }

@@ -103,8 +103,6 @@ impl<'a> ThirLowerer<'a> {
   }
 
   pub fn lower_enum(&mut self, enum_: &HirEnum) -> Enum {
-    // let variants = enum_.variants.iter().map(|variant| )
-
     Enum {
       hir_id: enum_.hir_id,
       def_id: enum_.def_id,
@@ -371,8 +369,10 @@ impl<'a> ThirLowerer<'a> {
     args: &Vec<Argument>,
     call_hir_id: HirId,
   ) -> ExprKind {
-    let callee_def_id = match &callee.kind {
-      HirExprKind::Path(path) => path.def_id,
+    let (callee_def_id, callee_name) = match &callee.kind {
+      HirExprKind::Path(path) => {
+        (path.def_id, path.segments.last().expect("no last segment").name)
+      }
       _ => todo!("handle correctly"),
     };
 
@@ -385,6 +385,7 @@ impl<'a> ThirLowerer<'a> {
       } else {
         callee_def_id
       },
+      callee_name,
       type_args,
       args,
     }
@@ -450,7 +451,12 @@ impl<'a> ThirLowerer<'a> {
 
     let type_args = self.lower_call_type_args(call_hir_id);
 
-    ExprKind::Call { callee: method_def_id, type_args, args: lowered_args }
+    ExprKind::Call {
+      callee: method_def_id,
+      callee_name: *method,
+      type_args,
+      args: lowered_args,
+    }
   }
 
   fn lower_field(&mut self, object: &HirExpr, field: &Identifier) -> ExprKind {
