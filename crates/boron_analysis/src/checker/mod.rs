@@ -157,8 +157,7 @@ impl<'a> TyChecker<'a> {
         }
         ParamKind::SelfParam { kind } => {
           if let Some(parent) = self.hir.find_adt_parent(&_def_id) {
-            let ty =
-              self.table.def_type(parent).expect("type scheme should exist").ty;
+            let ty = self.table.def_type(parent).expect("type scheme should exist").ty;
 
             match kind {
               SelfKind::Value => ty,

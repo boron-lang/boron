@@ -12,6 +12,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use yansi::Paint as _;
 
+#[derive(Debug)]
 pub struct Session {
   pub config: ProjectConfig,
   dcx: DiagnosticCtx,
@@ -75,6 +76,10 @@ impl Session {
 
   pub fn is_test(&self) -> bool {
     self.compilation_mode == CompilationMode::TestRunner
+  }
+
+  pub fn compilation_mode(&self) -> CompilationMode {
+    self.compilation_mode
   }
 
   pub fn dcx(&self) -> &DiagnosticCtx {

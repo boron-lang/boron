@@ -1,10 +1,9 @@
 use crate::CLAP_STYLING;
+use boron_diagnostics::prelude::DiagnosticOutputType;
 use boron_session::dependency::Dependency;
-use boron_session::enums;
-use boron_session::project_config::ProjectConfig;
+use boron_session::prelude::{LibType, Mode, PackageType};
 use boron_target::target::Compiler;
 use clap::{Parser, ValueEnum};
-use std::env::current_dir;
 use std::path::PathBuf;
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug, Default)]
@@ -14,7 +13,7 @@ pub enum CliMode {
   Release,
 }
 
-impl From<CliMode> for enums::mode::Mode {
+impl From<CliMode> for Mode {
   fn from(value: CliMode) -> Self {
     match value {
       CliMode::Debug => Self::Debug,
@@ -23,6 +22,14 @@ impl From<CliMode> for enums::mode::Mode {
   }
 }
 
+impl From<Mode> for CliMode {
+  fn from(value: Mode) -> Self {
+    match value {
+      Mode::Debug => Self::Debug,
+      Mode::Release => Self::Release,
+    }
+  }
+}
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
 pub enum CliPackageType {
   #[value(alias("bin"))]
@@ -31,7 +38,7 @@ pub enum CliPackageType {
   Library,
 }
 
-impl From<CliPackageType> for enums::project_type::PackageType {
+impl From<CliPackageType> for PackageType {
   fn from(value: CliPackageType) -> Self {
     match value {
       CliPackageType::Binary => Self::Binary,
@@ -46,7 +53,7 @@ pub enum CliLibType {
   Dynamic,
 }
 
-impl From<CliLibType> for enums::lib_type::LibType {
+impl From<CliLibType> for LibType {
   fn from(value: CliLibType) -> Self {
     match value {
       CliLibType::Static => Self::Static,
@@ -70,6 +77,15 @@ impl From<CliCompiler> for Compiler {
   }
 }
 
+impl From<Compiler> for CliCompiler {
+  fn from(value: Compiler) -> Self {
+    match value {
+      Compiler::Clang => Self::Clang,
+      Compiler::Gcc => Self::Gcc,
+    }
+  }
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug)]
 pub enum DiagOutputType {
   Json,
@@ -85,22 +101,16 @@ impl From<DiagOutputType> for DiagnosticOutputType {
   }
 }
 
-#[derive(Parser)]
+#[derive(Parser, Default)]
 #[command(name = "boron")]
 #[command(bin_name = "boron")]
 #[command(styles = CLAP_STYLING)]
 pub struct Cli {
   #[arg(value_name = "entrypoint", help = "Entrypoint of the project")]
-  pub entrypoint: PathBuf,
+  pub entrypoint: Option<PathBuf>,
 
-  #[arg(
-    value_name = "type",
-    short = 't',
-    long = "type",
-    help = "Type of the project",
-    default_value = "library"
-  )]
-  pub ty: CliPackageType,
+  #[arg(value_name = "type", short = 't', long = "type", help = "Type of the project")]
+  pub ty: Option<CliPackageType>,
 
   #[arg(
     value_name = "verbose",
@@ -127,37 +137,30 @@ pub struct Cli {
     value_name = "mode",
     short = 'm',
     long = "mode",
-    help = "Compilation mode: either 'debug' or 'release'",
-    default_value = "debug"
+    help = "Compilation mode: either 'debug' or 'release'"
   )]
-  pub mode: CliMode,
+  pub mode: Option<CliMode>,
 
   #[arg(value_name = "name", long = "name", help = "Name of the project")]
-  pub name: String,
+  pub name: Option<String>,
 
-  #[arg(
-    value_name = "lib-type",
-    long = "lib",
-    help = "Type of the library to generate",
-    default_value = "static"
-  )]
-  pub lib_type: CliLibType,
+  #[arg(value_name = "lib-type", long = "lib", help = "Type of the library to generate")]
+  pub lib_type: Option<CliLibType>,
 
   #[arg(
     value_name = "compiler",
     long = "compiler",
     alias = "linker",
-    help = "Compiler to use (clang, gcc, msvc)"
+    help = "Compiler to use (clang, gcc)"
   )]
   pub compiler: Option<CliCompiler>,
 
   #[arg(
     value_name = "diagnostic-output",
     long = "diagnostic-output",
-    help = "Emitter for diagnostics",
-    default_value = "human-readable"
+    help = "Emitter for diagnostics"
   )]
-  pub diag_output_type: DiagOutputType,
+  pub diag_output_type: Option<DiagOutputType>,
 
   #[arg(
     value_name = "output",
@@ -165,7 +168,7 @@ pub struct Cli {
     long = "output",
     short = 'o'
   )]
-  pub output: PathBuf,
+  pub output: Option<PathBuf>,
 
   #[arg(
     value_name = "check-only",
@@ -191,31 +194,3 @@ pub struct Cli {
   )]
   pub timings: bool,
 }
-
-impl TryFrom<Cli> for ProjectConfig {
-  type Error = anyhow::Error;
-
-  fn try_from(cli: Cli) -> Result<Self, Self::Error> {
-    let root = current_dir()?;
-    Ok(Self {
-      entrypoint: canonicalize_with_strip(cli.entrypoint)?,
-      package_type: cli.ty.into(),
-      packages: cli.packages,
-      mode: cli.mode.into(),
-      name: cli.name,
-      lib_type: cli.lib_type.into(),
-      output: canonicalize_with_strip(cli.output)?,
-      root: canonicalize_with_strip(root)?,
-      compiler: cli.compiler.map(Into::into),
-      diagnostic_output_type: cli.diag_output_type.into(),
-      color: !cli.no_color,
-      check_only: cli.check_only,
-      verbose: cli.verbose,
-      no_backtrace: cli.no_backtrace,
-      timings: cli.timings,
-    })
-  }
-}
-
-use boron_diagnostics::prelude::DiagnosticOutputType;
-use boron_session::prelude::canonicalize_with_strip;

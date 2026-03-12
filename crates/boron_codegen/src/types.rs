@@ -81,7 +81,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
   pub fn tuple_ty(&self, elements: &Vec<SemanticTy>) -> Result<BasicTypeEnum<'ctx>> {
     let mut fields = vec![];
     for element in elements {
-      fields.push(self.ty(element)?.as_basic_type_enum())
+      fields.push(self.ty(element)?.as_basic_type_enum());
     }
 
     let ty = self.context.struct_type(fields.as_slice(), false);

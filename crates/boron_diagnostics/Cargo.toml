@@ -9,6 +9,7 @@ description = "boron diagnostics"
 [dependencies]
 anyhow = { workspace = true }
 dashmap = { workspace = true }
+serde = { workspace = true }
 generational-arena = { workspace = true }
 parking_lot = { workspace = true }
 boron_source = { workspace = true }

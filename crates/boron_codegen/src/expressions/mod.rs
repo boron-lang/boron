@@ -5,7 +5,7 @@ use boron_parser::UnaryOp;
 use inkwell::llvm_sys::prelude::LLVMValueRef;
 use inkwell::types::BasicTypeEnum;
 use inkwell::values::{AnyValue, AsValueRef, BasicValue, BasicValueEnum, PointerValue};
-use itertools::Itertools;
+use itertools::Itertools as _;
 use std::fmt::Debug;
 
 mod binary_op;
@@ -375,7 +375,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
 
       tuple = self
         .builder
-        .build_insert_value(tuple, value, i as u32, &format!("tuple.insert.{}", i))?
+        .build_insert_value(tuple, value, i as u32, &format!("tuple.insert.{i}"))?
         .into_struct_value();
     }
 

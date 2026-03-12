@@ -1,18 +1,37 @@
 use anyhow::bail;
+use boron_diagnostics::prelude::DiagnosticOutputType;
+use boron_target::target::Compiler;
 use parking_lot::RwLock;
 use std::{path::PathBuf, str::FromStr, sync::Arc};
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+use crate::prelude::{LibType, PackageType};
+
+#[derive(Debug, Clone)]
 pub struct Dependency {
   pub name: String,
   pub root: PathBuf,
   pub entrypoint: PathBuf,
   pub depends_on: Vec<String>,
+  pub package_type: Option<PackageType>,
+  pub output: Option<PathBuf>,
+  pub lib_type: Option<LibType>,
+  pub compiler: Option<Compiler>,
+  pub diagnostic_output_type: Option<DiagnosticOutputType>,
 }
 
 impl Dependency {
   pub fn new(name: String, entrypoint: PathBuf, root: PathBuf) -> Self {
-    Self { name, root, entrypoint, depends_on: Vec::new() }
+    Self {
+      name,
+      root,
+      entrypoint,
+      depends_on: Vec::new(),
+      package_type: None,
+      output: None,
+      lib_type: None,
+      compiler: None,
+      diagnostic_output_type: None,
+    }
   }
 
   pub fn name(&self) -> &str {
@@ -67,6 +86,11 @@ impl FromStr for Dependency {
       root: PathBuf::from(root),
       entrypoint: PathBuf::from(entrypoint_str),
       depends_on,
+      package_type: None,
+      output: None,
+      lib_type: None,
+      compiler: None,
+      diagnostic_output_type: None,
     })
   }
 }

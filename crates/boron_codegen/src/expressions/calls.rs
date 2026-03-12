@@ -4,7 +4,7 @@ use anyhow::Result;
 use boron_ir::{IrExpr, SemanticTy};
 use boron_resolver::DefId;
 use boron_session::prelude::Identifier;
-use inkwell::values::{BasicMetadataValueEnum, BasicValue, BasicValueEnum};
+use inkwell::values::{BasicMetadataValueEnum, BasicValue as _, BasicValueEnum};
 
 impl<'ctx> LLVMCodegen<'ctx> {
   fn args_to_metadata(

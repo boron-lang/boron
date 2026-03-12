@@ -1,0 +1,7 @@
+[project]
+name = "std"
+entrypoint = "./src/index.bo"
+type = "lib"
+
+[build]
+output = "build"

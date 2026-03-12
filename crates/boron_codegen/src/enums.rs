@@ -3,8 +3,8 @@ use crate::expressions::ValueKind;
 use anyhow::Result;
 use boron_ir::{IrEnum, IrExpr};
 use boron_session::prelude::Identifier;
-use inkwell::types::BasicTypeEnum;
 use inkwell::AddressSpace;
+use inkwell::types::BasicTypeEnum;
 
 impl<'a> LLVMCodegen<'a> {
   pub fn create_enum_type(&self, enum_: &IrEnum) {

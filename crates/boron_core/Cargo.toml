@@ -22,6 +22,7 @@ boron_ir = { workspace = true }
 boron_codegen = { workspace = true }
 boron_thir = { workspace = true }
 yansi = { workspace = true }
+boron_cli = { workspace = true }
 
 [lints]
 workspace = true

@@ -6,6 +6,7 @@ repository.workspace = true
 edition.workspace = true
 
 [dependencies]
+serde = { workspace = true }
 strum = { workspace = true }
 inkwell = { workspace = true }
 

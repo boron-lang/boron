@@ -55,27 +55,27 @@ impl AdtItem for Enum {
 impl AdtItem for AdtEntry {
   fn get_name(&self) -> Identifier {
     match self {
-      AdtEntry::Struct(s) => s.get_name(),
-      AdtEntry::Enum(e) => e.get_name(),
+      Self::Struct(s) => s.get_name(),
+      Self::Enum(e) => e.get_name(),
     }
   }
   fn get_def_id(&self) -> DefId {
     match self {
-      AdtEntry::Struct(s) => s.get_def_id(),
-      AdtEntry::Enum(e) => e.get_def_id(),
+      Self::Struct(s) => s.get_def_id(),
+      Self::Enum(e) => e.get_def_id(),
     }
   }
   fn get_generics(&self) -> Generics {
     match self {
-      AdtEntry::Struct(s) => s.get_generics(),
-      AdtEntry::Enum(e) => e.get_generics(),
+      Self::Struct(s) => s.get_generics(),
+      Self::Enum(e) => e.get_generics(),
     }
   }
 
   fn has_item(&self, id: &DefId) -> bool {
     match self {
-      AdtEntry::Struct(s) => s.has_item(id),
-      AdtEntry::Enum(e) => e.has_item(id),
+      Self::Struct(s) => s.has_item(id),
+      Self::Enum(e) => e.has_item(id),
     }
   }
 }

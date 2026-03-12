@@ -3,6 +3,7 @@ use dashmap::DashMap;
 use parking_lot::Mutex;
 use petgraph::graph::{DiGraph, NodeIndex};
 
+#[derive(Debug)]
 struct GraphWithMap {
   graph: Mutex<DiGraph<SourceFileId, ()>>,
   map: DashMap<SourceFileId, NodeIndex>,
@@ -24,6 +25,7 @@ impl GraphWithMap {
   }
 }
 
+#[derive(Debug)]
 pub struct ModuleGraph {
   discovered: GraphWithMap,
 }

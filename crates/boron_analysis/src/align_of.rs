@@ -1,7 +1,7 @@
+use crate::TyChecker;
 use crate::builtin::results::BuiltInResults;
 use crate::interpreter::values::ConstValue;
 use crate::interpreter::{Interpreter, InterpreterCache, InterpreterContext};
-use crate::TyChecker;
 use crate::{BuiltinFunctionCtx, InferTy};
 use boron_hir::item::VariantKind;
 use boron_hir::{Enum, Variant};
@@ -10,7 +10,7 @@ use boron_resolver::{DefId, DefKind};
 use boron_source::ident_table::get_or_intern;
 use boron_target::abi::layout::Alignment;
 
-pub fn align_of_ty<'a>(sz: &BuiltinFunctionCtx<'a>, ty: &InferTy) -> Alignment {
+pub fn align_of_ty(sz: &BuiltinFunctionCtx<'_>, ty: &InferTy) -> Alignment {
   let target = sz.sess.target();
 
   match ty {
@@ -30,8 +30,8 @@ pub fn align_of_ty<'a>(sz: &BuiltinFunctionCtx<'a>, ty: &InferTy) -> Alignment {
   }
 }
 
-pub fn calculate_struct_alignment<'a>(
-  sz: &BuiltinFunctionCtx<'a>,
+pub fn calculate_struct_alignment(
+  sz: &BuiltinFunctionCtx<'_>,
   def_id: &DefId,
   args: &Vec<InferTy>,
 ) -> Alignment {
@@ -41,8 +41,8 @@ pub fn calculate_struct_alignment<'a>(
     .into()
 }
 
-pub(crate) fn substituted_struct_field_tys<'a>(
-  sz: &BuiltinFunctionCtx<'a>,
+pub(crate) fn substituted_struct_field_tys(
+  sz: &BuiltinFunctionCtx<'_>,
   def_id: &DefId,
   args: &Vec<InferTy>,
 ) -> Vec<InferTy> {
@@ -60,8 +60,8 @@ pub(crate) fn substituted_struct_field_tys<'a>(
     .collect()
 }
 
-pub fn calculate_enum_alignment<'a>(
-  sz: &BuiltinFunctionCtx<'a>,
+pub fn calculate_enum_alignment(
+  sz: &BuiltinFunctionCtx<'_>,
   def_id: &DefId,
   args: &Vec<InferTy>,
 ) -> Alignment {
@@ -76,8 +76,8 @@ pub fn calculate_enum_alignment<'a>(
   max_field_align.into()
 }
 
-pub(crate) fn substituted_enum_variant_field_tys<'a>(
-  sz: &BuiltinFunctionCtx<'a>,
+pub(crate) fn substituted_enum_variant_field_tys(
+  sz: &BuiltinFunctionCtx<'_>,
   def_id: &DefId,
   e: &Enum,
   args: &Vec<InferTy>,
@@ -111,8 +111,8 @@ pub(crate) fn substituted_enum_variant_field_tys<'a>(
     .collect()
 }
 
-pub fn compute_discriminant_tag_size<'a>(
-  ctx: &BuiltinFunctionCtx<'a>,
+pub fn compute_discriminant_tag_size(
+  ctx: &BuiltinFunctionCtx<'_>,
   variants: &[Variant],
 ) -> usize {
   let discriminants = compute_variant_discriminants(ctx, variants);
@@ -120,8 +120,8 @@ pub fn compute_discriminant_tag_size<'a>(
   discriminant_size_for_value(max_discr)
 }
 
-pub fn compute_variant_discriminants<'a>(
-  ctx: &BuiltinFunctionCtx<'a>,
+pub fn compute_variant_discriminants(
+  ctx: &BuiltinFunctionCtx<'_>,
   variants: &[Variant],
 ) -> Vec<u128> {
   let cache = InterpreterCache::new();
@@ -140,13 +140,10 @@ pub fn compute_variant_discriminants<'a>(
   let mut discriminants = Vec::with_capacity(variants.len());
 
   for variant in variants {
-    match &variant.kind {
-      VariantKind::Discriminant(expr) => {
-        if let ConstValue::Int(v) = interpreter.evaluate_expr(expr) {
-          current = v as u128;
-        }
+    if let VariantKind::Discriminant(expr) = &variant.kind {
+      if let ConstValue::Int(v) = interpreter.evaluate_expr(expr) {
+        current = v as u128;
       }
-      _ => {}
     }
     discriminants.push(current);
     current += 1;

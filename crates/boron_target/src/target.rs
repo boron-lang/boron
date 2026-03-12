@@ -23,7 +23,8 @@ pub enum Os {
   MacOs,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug, EnumString)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, EnumString, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Compiler {
   #[strum(serialize = "clang")]
   Clang,
@@ -203,7 +204,8 @@ impl Target {
   }
 
   pub fn archiver(&self) -> Archiver {
-    self.archiver
+    // msvc not supported
+    Archiver::LlvmAr
   }
 
   pub fn archiver_executable(&self) -> &'static str {
@@ -235,10 +237,10 @@ impl Target {
   }
 
   fn default_archiver_for_triple(triple: &TargetTriple) -> Archiver {
-    let triple_str = triple.as_str().to_string_lossy().to_ascii_lowercase();
-    let is_windows = triple_str.contains("windows");
-    let is_msvc = triple_str.contains("msvc");
+    // let triple_str = triple.as_str().to_string_lossy().to_ascii_lowercase();
+    // let is_windows = triple_str.contains("windows");
+    // let is_msvc = triple_str.contains("msvc");
 
-    if is_windows && is_msvc { Archiver::MsvcLib } else { Archiver::LlvmAr }
+    Archiver::LlvmAr
   }
 }
