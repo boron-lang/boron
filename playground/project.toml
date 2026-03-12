@@ -1,0 +1,10 @@
+[project]
+name = "hello"
+entrypoint = "./src/index.bo"
+type = "bin"
+
+[build]
+output = "build"
+
+[dependencies]
+std = { path = "../std" }
