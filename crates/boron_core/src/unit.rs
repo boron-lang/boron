@@ -3,8 +3,9 @@ use crate::errors::{
 };
 use crate::prelude::*;
 use boron_analysis::results::BuiltInResults;
+use boron_analysis::ty::ArrayLength;
 use boron_analysis::validator::validate_comptime;
-use boron_analysis::{InferTy, TypeTable, expand_builtins, typeck_hir};
+use boron_analysis::{InferTy, TypeScheme, TypeTable, expand_builtins, typeck_hir};
 use boron_codegen::run_codegen;
 use boron_compiler::CompilerBuild;
 use boron_hir::hir::Hir;
@@ -12,9 +13,12 @@ use boron_hir::lower::lower_to_hir;
 use boron_ir::{Ir, IrLowerer};
 use boron_parser::module::{Module, Modules};
 use boron_parser::parser::parse;
-use boron_resolver::{DefId, ResolveVisitor, Resolver};
+use boron_resolver::{DefId, DefKind, ResolveVisitor, Resolver};
 use boron_source::source_file::SourceFileId;
 use boron_thir::{Thir, ThirLowerer};
+use postcard::to_allocvec;
+use std::collections::HashSet;
+use std::path::Path;
 use std::process::exit;
 use std::time::Instant;
 

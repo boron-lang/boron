@@ -237,12 +237,14 @@ dependencies = [
  "boron_diagnostics",
  "boron_hir",
  "boron_ir",
+ "boron_lib",
  "boron_parser",
  "boron_resolver",
  "boron_session",
  "boron_source",
  "boron_thir",
  "fs-err",
+ "postcard",
  "yansi",
 ]
 

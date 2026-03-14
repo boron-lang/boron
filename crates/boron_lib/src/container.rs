@@ -1,5 +1,5 @@
 use crate::library::BLibMetadata;
-use anyhow::{ensure, Context as _, Result};
+use anyhow::{Context as _, Result, ensure};
 use boron_session::prelude::{ProjectConfig, Session};
 use boron_target::target::Target;
 use itertools::Itertools;

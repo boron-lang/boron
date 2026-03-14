@@ -23,6 +23,7 @@ use boron_parser::{BinaryOp, InterpreterMode, UnaryOp};
 use boron_resolver::{DefId, DefKind, Resolver};
 use boron_source::ident_table::Identifier;
 use boron_source::span::Span;
+use dashmap::mapref::one::Ref;
 use dashmap::DashMap;
 
 #[derive(Debug, Default)]
@@ -35,6 +36,18 @@ pub struct Thir {
 impl Thir {
   pub fn new() -> Self {
     Self::default()
+  }
+
+  pub fn get_struct(&self, id: &DefId) -> Ref<'_, DefId, Struct> {
+    self.structs.get(id).unwrap()
+  }
+
+  pub fn get_function(&self, id: &DefId) -> Ref<'_, DefId, Function> {
+    self.functions.get(id).unwrap()
+  }
+  
+  pub fn get_enum(&self, id: &DefId) -> Ref<'_, DefId, Enum> {
+    self.enums.get(id).unwrap()
   }
 }
 
@@ -122,6 +135,7 @@ impl<'a> ThirLowerer<'a> {
         self.type_table.node_type(param.hir_id).unwrap_or(InferTy::Err(param.span));
 
       params.push(Param {
+        name: param.kind.name(),
         hir_id: param.hir_id,
         def_id: param.def_id,
         ty,

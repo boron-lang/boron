@@ -1,12 +1,13 @@
-use crate::Expr;
 use crate::expr::Block;
 use crate::generics::Generics;
 use crate::ids::HirId;
 use crate::ty::Ty;
-use boron_parser::FunctionModifiers;
+use crate::Expr;
 use boron_parser::ast::items::Visibility;
+use boron_parser::FunctionModifiers;
 use boron_resolver::DefId;
 use boron_session::prelude::{Identifier, Span};
+use boron_source::ident_table::get_or_intern;
 
 #[derive(Debug, Clone)]
 pub struct Function {
@@ -38,6 +39,15 @@ pub enum ParamKind {
   SelfParam { kind: SelfKind },
   /// Variadic parameter: `...args: Type`
   Variadic { name: Identifier, ty: Ty },
+}
+
+impl ParamKind {
+  pub fn name(&self) -> Identifier {
+    match self {
+      ParamKind::Regular { name, .. } | ParamKind::Variadic { name, .. } => *name,
+      ParamKind::SelfParam { .. } => get_or_intern("self", None),
+    }
+  }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

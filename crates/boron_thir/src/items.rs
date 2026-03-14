@@ -19,6 +19,7 @@ pub struct Function {
 
 #[derive(Debug, Clone)]
 pub struct Param {
+  pub name: Identifier,
   pub hir_id: HirId,
   pub def_id: DefId,
   pub ty: InferTy,

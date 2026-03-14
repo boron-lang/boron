@@ -1,7 +1,7 @@
 use crate::dependency::Dependency;
 use crate::module_graph::ModuleGraph;
 use crate::package_graph::{PackageCycleError, PackageGraph};
-use crate::prelude::{create_dir_all, PackageType};
+use crate::prelude::{PackageType, create_dir_all};
 use crate::project_config::ProjectConfig;
 use boron_diagnostics::{DiagnosticCtx, DiagnosticWriter};
 use boron_source::prelude::Sources;

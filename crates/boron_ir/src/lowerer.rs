@@ -3,15 +3,16 @@ use crate::{
   IrFunction, IrId, IrLocal, IrParam, IrStmt, IrStmtKind, IrStruct, Projection,
   SymbolMangler,
 };
-use boron_analysis::align_of::{calculate_enum_alignment, compute_variant_discriminants};
+use boron_analysis::align_of::{
+  calculate_enum_alignment, compute_variant_discriminants_from_exprs,
+};
 use boron_analysis::size_of::{calculate_enum_payload_layout, calculate_enum_size};
 use boron_analysis::ty::SubstitutionMap;
 use boron_analysis::{BuiltinFunctionCtx, InferTy, TypeScheme, TypeTable};
-use boron_hir::item::VariantKind as HirVariantKind;
 use boron_hir::pat::PatKind;
-use boron_hir::{EnumVariant, Hir, ParamKind, Pat, SemanticTy};
+use boron_hir::{EnumVariant, Hir, Pat, SemanticTy};
 use boron_resolver::{DefId, Resolver};
-use boron_session::prelude::{Session, debug};
+use boron_session::prelude::{debug, Session};
 use boron_source::ident_table::get_or_intern;
 use boron_target::abi::layout::Layout;
 use boron_thir::{
@@ -33,10 +34,11 @@ pub struct IrLowerer<'a> {
   type_table: &'a TypeTable,
   sess: &'a Session,
   resolver: &'a Resolver,
-  pub ir: Ir,
   mangler: SymbolMangler<'a>,
-  pub current_function: IrId,
   lowering_context: Option<LoweringContext>,
+
+  pub ir: Ir,
+  pub current_function: IrId,
 }
 
 impl<'a> IrLowerer<'a> {
@@ -147,20 +149,16 @@ impl<'a> IrLowerer<'a> {
     func: &ThirFunction,
     type_args: &SubstitutionMap,
   ) -> Vec<IrParam> {
-    let hir_func = self.hir.get_function(func.def_id);
+    let hir_func = self.thir.get_function(&func.def_id);
     func
       .params
       .iter()
       .map(|p| {
         let name = hir_func
-          .as_ref()
-          .and_then(|hir_func| hir_func.params.iter().find(|hp| hp.hir_id == p.hir_id))
-          .map(|hp| match &hp.kind {
-            ParamKind::Regular { name, .. } | ParamKind::Variadic { name, .. } => {
-              name.text()
-            }
-            ParamKind::SelfParam { .. } => "self".to_owned(),
-          })
+          .params
+          .iter()
+          .find(|hp| hp.hir_id == p.hir_id)
+          .map(|hp| hp.name.to_string())
           .unwrap_or_else(|| format!("param_{}", p.def_id.index()));
 
         let substituted_ty = Self::apply_subst_by_def_id(&p.ty, type_args);
@@ -269,8 +267,8 @@ impl<'a> IrLowerer<'a> {
         let object = self.lower_expr(object);
         let field_idx = match &object.ty {
           SemanticTy::Struct { def_id, .. } => {
-            let strukt =
-              self.hir.get_struct(*def_id).expect("struct type should point to a struct");
+            let strukt = self.thir.get_struct(def_id);
+
             strukt
               .fields
               .iter()
@@ -419,22 +417,23 @@ impl<'a> IrLowerer<'a> {
     enum_: &ThirEnum,
     type_args: &SubstitutionMap,
   ) -> Vec<IrEnumVariant> {
-    let hir_enum = match self.hir.get_enum(enum_.def_id) {
-      Some(e) => e,
-      None => return vec![],
-    };
-
     let ctx = self.builtin_ctx();
-    let discriminants = compute_variant_discriminants(&ctx, &hir_enum.variants);
+    let discriminants = compute_variant_discriminants_from_exprs(
+      &ctx,
+      enum_.variants.iter().map(|variant| match &variant.kind {
+        VariantKind::Discriminant(expr) => Some(expr),
+        _ => None,
+      }),
+    );
 
-    hir_enum
+    enum_
       .variants
       .iter()
       .enumerate()
       .map(|(idx, variant)| {
         let payload = match &variant.kind {
-          HirVariantKind::Unit | HirVariantKind::Discriminant(_) => None,
-          HirVariantKind::Tuple(tys) => {
+          VariantKind::Unit | VariantKind::Discriminant(_) => None,
+          VariantKind::Tuple(tys) => {
             let types = tys
               .iter()
               .enumerate()
@@ -450,7 +449,7 @@ impl<'a> IrLowerer<'a> {
               .collect();
             Some(SemanticTy::Tuple(types))
           }
-          HirVariantKind::Struct(fields) => {
+          VariantKind::Struct(fields) => {
             let types = fields
               .iter()
               .map(|field| {
@@ -541,7 +540,7 @@ impl<'a> IrLowerer<'a> {
         }
       }
       PatKind::Struct { fields, def_id, rest: _ } => {
-        let struct_fields = self.hir.get_struct(*def_id).unwrap();
+        let struct_fields = self.thir.get_struct(def_id);
 
         for field in fields {
           let Some((field_idx, _)) =
@@ -590,11 +589,13 @@ impl<'a> IrLowerer<'a> {
 
         if let Some(enum_entry) = self.thir.enums.get(def_id) {
           let ctx = self.builtin_ctx();
-          let hir_enum = self.hir.get_enum(*def_id);
-          let discriminants = hir_enum
-            .as_ref()
-            .map(|e| compute_variant_discriminants(&ctx, &e.variants))
-            .unwrap_or_default();
+          let discriminants = compute_variant_discriminants_from_exprs(
+            &ctx,
+            enum_entry.variants.iter().map(|variant| match &variant.kind {
+              VariantKind::Discriminant(expr) => Some(expr),
+              _ => None,
+            }),
+          );
 
           let variants = enum_entry
             .variants

@@ -4,7 +4,7 @@ use crate::interpreter::values::ConstValue;
 use crate::interpreter::{Interpreter, InterpreterCache, InterpreterContext};
 use crate::{BuiltinFunctionCtx, InferTy};
 use boron_hir::item::VariantKind;
-use boron_hir::{Enum, Variant};
+use boron_hir::{Enum, Expr, Variant};
 use boron_parser::InterpreterMode;
 use boron_resolver::{DefId, DefKind};
 use boron_source::ident_table::get_or_intern;
@@ -124,6 +124,19 @@ pub fn compute_variant_discriminants(
   ctx: &BuiltinFunctionCtx<'_>,
   variants: &[Variant],
 ) -> Vec<u128> {
+  compute_variant_discriminants_from_exprs(
+    ctx,
+    variants.iter().map(|variant| match &variant.kind {
+      VariantKind::Discriminant(expr) => Some(expr),
+      _ => None,
+    }),
+  )
+}
+
+pub fn compute_variant_discriminants_from_exprs<'a>(
+  ctx: &BuiltinFunctionCtx<'_>,
+  explicit_discriminants: impl IntoIterator<Item = Option<&'a Expr>>,
+) -> Vec<u128> {
   let cache = InterpreterCache::new();
   let results = BuiltInResults::new();
   let interpreter = Interpreter::new(
@@ -137,10 +150,10 @@ pub fn compute_variant_discriminants(
   );
 
   let mut current: u128 = 0;
-  let mut discriminants = Vec::with_capacity(variants.len());
+  let mut discriminants = Vec::new();
 
-  for variant in variants {
-    if let VariantKind::Discriminant(expr) = &variant.kind {
+  for explicit_discriminant in explicit_discriminants {
+    if let Some(expr) = explicit_discriminant {
       if let ConstValue::Int(v) = interpreter.evaluate_expr(expr) {
         current = v as u128;
       }
