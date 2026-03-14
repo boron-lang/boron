@@ -71,6 +71,7 @@ impl Lexer<'_> {
       "const" => TokenType::Const,
       "mut" => TokenType::Mut,
       "package" => TokenType::Package,
+      "dep" => TokenType::Dep,
       "self" => TokenType::SelfValue,
       "super" => TokenType::Super,
       "await" => TokenType::Await,

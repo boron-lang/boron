@@ -42,6 +42,7 @@ pub enum TokenType {
   Import,    // import
   As,        // as
   Package,   // package
+  Dep,       // dep
   SelfValue, // self
   Super,     // super
   From,      // from
@@ -212,6 +213,7 @@ impl fmt::Display for TokenType {
       Self::Import => write!(f, "keyword `import`"),
       Self::As => write!(f, "keyword `as`"),
       Self::Package => write!(f, "keyword `package`"),
+      Self::Dep => write!(f, "keyword `dep`"),
       Self::SelfValue => write!(f, "keyword `self`"),
       Self::Super => write!(f, "keyword `super`"),
       Self::From => write!(f, "keyword `from`"),

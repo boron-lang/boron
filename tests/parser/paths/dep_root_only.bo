@@ -1,0 +1,2 @@
+//#error: `dep` is only allowed in root of the path
+import x from hello::dep;

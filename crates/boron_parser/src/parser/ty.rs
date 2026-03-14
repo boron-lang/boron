@@ -54,7 +54,7 @@ impl Parser<'_> {
         self.parse_array_type(start)
       }
       TokenType::Identifier(name) => self.parse_identifier_type(&name),
-      TokenType::Package | TokenType::SelfValue | TokenType::Super => {
+      TokenType::Package | TokenType::Dep | TokenType::SelfValue | TokenType::Super => {
         self.parse_path_type()
       }
       _ => {

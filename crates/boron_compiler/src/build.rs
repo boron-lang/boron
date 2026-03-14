@@ -1,9 +1,9 @@
 use crate::{
   compiler::{Compiler, CompilerKind},
-  compilers::{CompilerArgStyle, compiler_tool},
+  compilers::{compiler_tool, CompilerArgStyle},
   detect::resolve_from_kind,
 };
-use anyhow::{Context as _, Result, bail, ensure};
+use anyhow::{bail, ensure, Context as _, Result};
 use boron_session::prelude::{LibType, PackageType, Session};
 use fs_err::create_dir_all;
 use log::{debug, info};
@@ -171,7 +171,7 @@ impl<'a> CompilerBuild<'a> {
     output_name: &OsStr,
     object_files: &[Arc<OsStr>],
   ) -> Result<PathBuf> {
-    let output_path = self.get_output_path(output_name);
+    let output_path = self.get_output_path(output_name)?;
 
     let target = self.sess.target();
     let mut command = match target.archiver() {
@@ -233,7 +233,7 @@ impl<'a> CompilerBuild<'a> {
       style.push_library(command, lib.as_ref());
     }
 
-    let output_path = self.configure_output(command, output_name, &style);
+    let output_path = self.configure_output(command, output_name, &style)?;
 
     for flag in &self.linker_flags {
       command.arg(flag);
@@ -248,27 +248,26 @@ impl<'a> CompilerBuild<'a> {
     command: &mut Command,
     output_name: &OsStr,
     style: &CompilerArgStyle,
-  ) -> PathBuf {
-    match self.sess.config().package_type {
+  ) -> Result<PathBuf> {
+    let output_path = self.get_output_path(output_name)?;
+
+    Ok(match self.sess.config().package_type {
       PackageType::Library => match self.sess.config().lib_type {
         LibType::Static => {
-          let output_path = self.get_output_path(output_name);
           style.push_output(command, &output_path);
           output_path
         }
         LibType::Dynamic => {
-          let output_path = self.get_output_path(output_name);
           style.push_shared_library(command);
           style.push_output(command, &output_path);
           output_path
         }
       },
       PackageType::Binary => {
-        let output_path = self.get_output_path(output_name);
         style.push_output(command, &output_path);
         output_path
       }
-    }
+    })
   }
 
   pub fn disable_warnings(&mut self) -> &mut Self {
@@ -277,11 +276,11 @@ impl<'a> CompilerBuild<'a> {
     self
   }
 
-  fn get_output_path(&self, output_name: &OsStr) -> PathBuf {
+  fn get_output_path(&self, output_name: &OsStr) -> Result<PathBuf> {
     let target = self.sess.target();
     let name = output_name.to_string_lossy();
 
-    match self.sess.config().package_type {
+    let output_path = match self.sess.config().package_type {
       PackageType::Library => match self.sess.config().lib_type {
         LibType::Static => {
           let file_name = if name.starts_with(target.lib_prefix()) {
@@ -305,7 +304,9 @@ impl<'a> CompilerBuild<'a> {
         file_name.push_str(target.exe_suffix());
         self.build_dir().join(file_name)
       }
-    }
+    };
+    create_dir_all(output_path.parent().unwrap())?;
+    Ok(output_path)
   }
 
   fn build_dir(&self) -> PathBuf {

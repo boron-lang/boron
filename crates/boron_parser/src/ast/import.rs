@@ -66,7 +66,7 @@ impl Path {
 
   pub fn construct_file(&self, root: PathBuf, current: PathBuf) -> Option<PathBuf> {
     let mut path = match self.root {
-      Some(PathRoot::Package) => root,
+      Some(PathRoot::Package) | Some(PathRoot::Dep) => root,
       Some(PathRoot::SelfMod) | None => current.parent()?.to_path_buf(),
       Some(PathRoot::Super) => current.parent()?.parent()?.to_path_buf(),
     };
@@ -113,6 +113,8 @@ impl Display for Path {
 pub enum PathRoot {
   /// Absolute from the package root
   Package,
+  /// Absolute from dependency package namespace (resolver semantics TBD)
+  Dep,
   /// Relative from current directory
   #[strum(serialize = "self")]
   SelfMod,

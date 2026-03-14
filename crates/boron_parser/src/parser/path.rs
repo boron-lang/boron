@@ -1,7 +1,7 @@
 use crate::parser::Parser;
 use crate::parser::errors::{
-  ExpectedIdentifierInNormalPath, ExpectedSuperOrIdentPath, GenericsInImportOrMod,
-  PackageInRootOnly, SuperOnlyInModOrImport,
+  DepInRootOnly, ExpectedIdentifierInNormalPath, ExpectedSuperOrIdentPath,
+  GenericsInImportOrMod, PackageInRootOnly, SuperOnlyInModOrImport,
 };
 use crate::{NodeId, Path, PathParsingContext, PathRoot, PathSegment, TokenType};
 
@@ -12,6 +12,8 @@ impl Parser<'_> {
 
     let root = if self.eat(TokenType::Package) {
       Some(PathRoot::Package)
+    } else if self.eat(TokenType::Dep) {
+      Some(PathRoot::Dep)
     } else if self.eat(TokenType::SelfValue) {
       Some(PathRoot::SelfMod)
     } else if self.eat(TokenType::Super) {
@@ -53,6 +55,10 @@ impl Parser<'_> {
         }
         TokenType::Package => {
           self.emit(PackageInRootOnly { span: self.peek().span });
+          self.advance();
+        }
+        TokenType::Dep => {
+          self.emit(DepInRootOnly { span: self.peek().span });
           self.advance();
         }
         TokenType::Identifier(_) => {

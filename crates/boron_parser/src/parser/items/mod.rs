@@ -41,6 +41,7 @@ impl Parser<'_> {
       TokenType::Identifier(_)
         | TokenType::SelfValue
         | TokenType::Package
+        | TokenType::Dep
         | TokenType::Super
         | TokenType::StringLiteral(_) // the string is here only because we report an error later
     )

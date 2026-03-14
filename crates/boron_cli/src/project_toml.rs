@@ -12,7 +12,7 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::env::current_dir;
 use std::path::{Path, PathBuf};
-
+use fs_err::create_dir_all;
 use crate::cli::Cli;
 
 pub const PROJECT_FILE: &str = "project.toml";
@@ -188,6 +188,7 @@ fn resolve_dependency(root: &Path, alias: &str, pkg: TomlPackage) -> Result<Depe
   let dep_output =
     if dep_output.is_absolute() { dep_output } else { dep_root.join(dep_output) };
 
+  create_dir_all(&dep_output)?;
   let dep_output = canonicalize_with_strip(dep_output).with_context(|| {
     format!(
       "failed to resolve output path for dependency `{alias}` from `{PROJECT_FILE}`"
