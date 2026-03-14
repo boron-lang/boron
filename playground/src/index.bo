@@ -1,19 +1,11 @@
 mod vec;
-import * from vec;
+import std from package::std;
 
 extern "C" func puts(text: *const u8);
 
-pub enum Option<T> {
-    Some(T),
-    None,
 
-    func test(self) {
-        puts("Hello");
-    }
-}
 
 func main() {
-    var value = Option::Some("hello");
+    var value = std::Option::Some("hello");
 
-    value.test();
 }
