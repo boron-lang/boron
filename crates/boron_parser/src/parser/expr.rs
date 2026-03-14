@@ -290,9 +290,10 @@ impl Parser<'_> {
       TokenType::Continue => self.parse_continue_expr(),
       TokenType::Return => self.parse_return_expr(),
 
-      TokenType::Identifier(_) | TokenType::Package | TokenType::Dep | TokenType::Super => {
-        self.parse_path_or_struct_expr()
-      }
+      TokenType::Identifier(_)
+      | TokenType::Package
+      | TokenType::Dep
+      | TokenType::Super => self.parse_path_or_struct_expr(),
 
       _ => {
         self

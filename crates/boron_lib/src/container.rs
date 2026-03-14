@@ -2,7 +2,7 @@ use crate::library::BLibMetadata;
 use anyhow::{Context as _, Result, ensure};
 use boron_session::prelude::{ProjectConfig, Session};
 use boron_target::target::Target;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use postcard::{from_bytes, take_from_bytes, to_allocvec};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -54,7 +54,7 @@ pub fn write_container_file<P: AsRef<Path>>(path: P, sess: &Session) -> Result<(
   let mut entries = vec![];
 
   for file in sess.archive_files.read().iter() {
-    let data = fs_err::read(&file)?;
+    let data = fs_err::read(file)?;
     let entry =
       FileEntry { name: file.display().to_string(), offset, size: data.len() as u64 };
 

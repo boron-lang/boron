@@ -176,7 +176,7 @@ impl<'a> CompilerBuild<'a> {
 
     write_container_file(&output_path, self.sess)?;
 
-    Ok(output_path.to_path_buf())
+    Ok(output_path.clone())
   }
 
   fn configure_link_command(
@@ -283,7 +283,7 @@ impl<'a> CompilerBuild<'a> {
   }
 }
 
-use boron_target::target::{Archiver, Compiler as TargetCompiler};
+use boron_target::target::Compiler as TargetCompiler;
 impl From<TargetCompiler> for CompilerKind {
   fn from(value: TargetCompiler) -> Self {
     match value {

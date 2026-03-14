@@ -12,7 +12,7 @@ use boron_analysis::{BuiltinFunctionCtx, InferTy, TypeScheme, TypeTable};
 use boron_hir::pat::PatKind;
 use boron_hir::{EnumVariant, Hir, Pat, SemanticTy};
 use boron_resolver::{DefId, Resolver};
-use boron_session::prelude::{debug, Session};
+use boron_session::prelude::{Session, debug};
 use boron_source::ident_table::get_or_intern;
 use boron_target::abi::layout::Layout;
 use boron_thir::{

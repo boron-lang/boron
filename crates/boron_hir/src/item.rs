@@ -1,10 +1,10 @@
+use crate::Expr;
 use crate::expr::Block;
 use crate::generics::Generics;
 use crate::ids::HirId;
 use crate::ty::Ty;
-use crate::Expr;
-use boron_parser::ast::items::Visibility;
 use boron_parser::FunctionModifiers;
+use boron_parser::ast::items::Visibility;
 use boron_resolver::DefId;
 use boron_session::prelude::{Identifier, Span};
 use boron_source::ident_table::get_or_intern;
@@ -44,8 +44,8 @@ pub enum ParamKind {
 impl ParamKind {
   pub fn name(&self) -> Identifier {
     match self {
-      ParamKind::Regular { name, .. } | ParamKind::Variadic { name, .. } => *name,
-      ParamKind::SelfParam { .. } => get_or_intern("self", None),
+      Self::Regular { name, .. } | Self::Variadic { name, .. } => *name,
+      Self::SelfParam { .. } => get_or_intern("self", None),
     }
   }
 }

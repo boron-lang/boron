@@ -11,7 +11,7 @@ use dashmap::DashMap;
 impl<'a> ResolveVisitor<'a> {
   pub fn collect_import(&self, import: &ImportDecl) {
     if let Some(root) = import.path.root
-      && let PathRoot::Dep = root
+      && root == PathRoot::Dep
     {
       // self.resolve_external_import(import);
       warn!("not handled");

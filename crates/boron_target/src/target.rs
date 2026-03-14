@@ -1,8 +1,8 @@
 use crate::data_layout::DataLayout;
 use crate::primitive::PrimitiveKind;
+use inkwell::OptimizationLevel;
 use inkwell::targets::{CodeModel, InitializationConfig, RelocMode, TargetMachine};
 use inkwell::targets::{Target as LLVMTarget, TargetTriple};
-use inkwell::OptimizationLevel;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 

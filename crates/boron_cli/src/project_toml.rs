@@ -1,3 +1,4 @@
+use crate::cli::Cli;
 use anyhow::{Context as _, Result, anyhow};
 use boron_diagnostics::prelude::DiagnosticOutputType;
 use boron_session::dependency::Dependency;
@@ -8,12 +9,11 @@ use boron_session::prelude::canonicalize_with_strip;
 use boron_session::project_config::ProjectConfig;
 use boron_target::target::Compiler;
 use fs_err as fs;
+use fs_err::create_dir_all;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::env::current_dir;
 use std::path::{Path, PathBuf};
-use fs_err::create_dir_all;
-use crate::cli::Cli;
 
 pub const PROJECT_FILE: &str = "project.toml";
 

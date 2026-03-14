@@ -66,7 +66,7 @@ impl Path {
 
   pub fn construct_file(&self, root: PathBuf, current: PathBuf) -> Option<PathBuf> {
     let mut path = match self.root {
-      Some(PathRoot::Package) | Some(PathRoot::Dep) => root,
+      Some(PathRoot::Package | PathRoot::Dep) => root,
       Some(PathRoot::SelfMod) | None => current.parent()?.to_path_buf(),
       Some(PathRoot::Super) => current.parent()?.parent()?.to_path_buf(),
     };
