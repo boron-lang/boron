@@ -3,8 +3,17 @@ use boron_diagnostics::prelude::DiagnosticOutputType;
 use boron_session::dependency::Dependency;
 use boron_session::prelude::{LibType, Mode, PackageType};
 use boron_target::target::Compiler;
-use clap::{Parser, ValueEnum};
+use clap::{Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
+
+#[derive(Clone, Debug, Subcommand)]
+pub enum CliCommand {
+  #[command(about = "Deserialize a .blib file and print its contents")]
+  InspectBlib {
+    #[arg(value_name = "file", help = "Path to the .blib file")]
+    file: PathBuf,
+  },
+}
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum, Debug, Default)]
 pub enum CliMode {
@@ -106,6 +115,9 @@ impl From<DiagOutputType> for DiagnosticOutputType {
 #[command(bin_name = "boron")]
 #[command(styles = CLAP_STYLING)]
 pub struct Cli {
+  #[command(subcommand)]
+  pub command: Option<CliCommand>,
+
   #[arg(value_name = "entrypoint", help = "Entrypoint of the project")]
   pub entrypoint: Option<PathBuf>,
 

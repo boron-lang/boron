@@ -15,7 +15,7 @@ thiserror = "2.0.16"
 which = { workspace = true }
 yansi = { workspace = true }
 fs-err = { workspace = true }
-find-msvc-tools = "0.1.9"
+boron_lib = { workspace = true }
 
 [lints]
 workspace = true

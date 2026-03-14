@@ -1,6 +1,6 @@
-use crate::prelude::{CompilationUnit, FILE_EXTENSION, info};
-use anyhow::Result;
+use crate::prelude::{info, CompilationUnit, FILE_EXTENSION};
 use anyhow::bail;
+use anyhow::Result;
 use boron_diagnostics::DiagnosticWriter;
 use boron_session::dependency::Dependency;
 use boron_session::prelude::{ProjectConfig, Session};
@@ -25,17 +25,9 @@ pub fn compiler_entrypoint(session: &Session) -> Result<()> {
 fn dependency_config(session: &Session, package: Dependency) -> Result<ProjectConfig> {
   let main_cfg = session.config();
 
-  if let (
-    Some(package_type),
-    Some(output),
-    Some(lib_type),
-    Some(diagnostic_output_type),
-  ) = (
-    package.package_type,
-    package.output.clone(),
-    package.lib_type,
-    package.diagnostic_output_type.clone(),
-  ) {
+  if let (Some(package_type), Some(lib_type), Some(diagnostic_output_type)) =
+    (package.package_type, package.lib_type, package.diagnostic_output_type.clone())
+  {
     return Ok(ProjectConfig {
       entrypoint: package.entrypoint,
       package_type,
@@ -43,7 +35,7 @@ fn dependency_config(session: &Session, package: Dependency) -> Result<ProjectCo
       mode: main_cfg.mode,
       name: package.name,
       lib_type,
-      output,
+      output: main_cfg.output.clone(),
       root: package.root,
       compiler: package.compiler.or(main_cfg.compiler),
       diagnostic_output_type,

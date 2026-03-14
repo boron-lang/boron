@@ -1,9 +1,10 @@
 use crate::{
   compiler::{Compiler, CompilerKind},
-  compilers::{compiler_tool, CompilerArgStyle},
+  compilers::{CompilerArgStyle, compiler_tool},
   detect::resolve_from_kind,
 };
-use anyhow::{bail, ensure, Context as _, Result};
+use anyhow::{Context as _, Result, bail, ensure};
+use boron_lib::container::write_container_file;
 use boron_session::prelude::{LibType, PackageType, Session};
 use fs_err::create_dir_all;
 use log::{debug, info};
@@ -171,47 +172,11 @@ impl<'a> CompilerBuild<'a> {
     output_name: &OsStr,
     object_files: &[Arc<OsStr>],
   ) -> Result<PathBuf> {
-    let output_path = self.get_output_path(output_name)?;
+    let output_path = self.get_output_path(output_name)?.with_extension("blib");
 
-    let target = self.sess.target();
-    let mut command = match target.archiver() {
-      Archiver::MsvcLib => {
-        let mut cmd = Command::new(target.archiver_executable());
-        cmd.arg(format!("/OUT:{}", output_path.display()));
-        cmd
-      }
-      Archiver::LlvmAr => {
-        let mut cmd = Command::new(target.archiver_executable());
-        cmd.arg("rcs");
-        cmd.arg(&output_path);
-        cmd
-      }
-    };
+    write_container_file(&output_path, self.sess)?;
 
-    for obj_file in object_files {
-      command.arg(obj_file);
-    }
-
-    debug!("Executing library creation command: {command:?}");
-
-    let output = command
-      .current_dir(self.build_dir())
-      .output()
-      .context("Failed to execute library archiver")?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    if !output.status.success() {
-      if !stderr.is_empty() {
-        bail!("Library creation failed with error: {stderr}");
-      } else if !stdout.is_empty() {
-        bail!("Library creation failed with error: {stdout}");
-      } else {
-        bail!("Library creation failed with exit code: {}", output.status);
-      }
-    }
-
-    Ok(output_path)
+    Ok(output_path.to_path_buf())
   }
 
   fn configure_link_command(

@@ -1,12 +1,12 @@
+use crate::prelude::{LibType, PackageType};
 use anyhow::bail;
 use boron_diagnostics::prelude::DiagnosticOutputType;
 use boron_target::target::Compiler;
 use parking_lot::RwLock;
+use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, str::FromStr, sync::Arc};
 
-use crate::prelude::{LibType, PackageType};
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Dependency {
   pub name: String,
   pub root: PathBuf,

@@ -11,6 +11,7 @@ impl LLVMCodegen<'_> {
     fs_err::create_dir_all(&output_dir)?;
     let output_path = output_dir.join(format!("{}.ll", config.name));
     fs_err::write(&output_path, module)?;
+    self.sess.add_archive_file(output_path);
 
     self.sess.create_obj_dir();
     self
@@ -18,6 +19,8 @@ impl LLVMCodegen<'_> {
       .target()
       .target_machine
       .write_to_file(&self.module, FileType::Object, &self.sess.obj_file())
-      .map_err(|e| anyhow!("Failed to write object file {e}"))
+      .map_err(|e| anyhow!("Failed to write object file {e}"))?;
+    self.sess.add_archive_file(self.sess.obj_file());
+    Ok(())
   }
 }

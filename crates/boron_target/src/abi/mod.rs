@@ -3,7 +3,18 @@ pub mod layout;
 use std::str::FromStr as _;
 use strum::EnumString;
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, Default, EnumString)]
+#[derive(
+  Debug,
+  Clone,
+  Copy,
+  Hash,
+  PartialEq,
+  Eq,
+  Default,
+  EnumString,
+  serde::Serialize,
+  serde::Deserialize,
+)]
 pub enum Abi {
   /// The C ABI is considered the default
   #[default]

@@ -2,14 +2,22 @@ use crate::errors::{PrivateItem, UndefinedModule, UndefinedNameInModule};
 use crate::{
   DefId, DefKind, Definition, ModuleResolver, ResolveVisitor, Symbol, SymbolKind,
 };
-use boron_parser::{ImportDecl, ImportKind, ImportSpec, NodeId, Visibility};
-use boron_session::prelude::debug;
+use boron_parser::{ImportDecl, ImportKind, ImportSpec, NodeId, PathRoot, Visibility};
+use boron_session::prelude::{debug, warn};
 use boron_source::ident_table::Identifier;
 use boron_source::prelude::{SourceFileId, Span};
 use dashmap::DashMap;
 
 impl<'a> ResolveVisitor<'a> {
   pub fn collect_import(&self, import: &ImportDecl) {
+    if let Some(root) = import.path.root
+      && let PathRoot::Dep = root
+    {
+      // self.resolve_external_import(import);
+      warn!("not handled");
+      return;
+    }
+
     let current = self.sess.dcx().sources().get_unchecked(self.current_file());
     let path = import.path.construct_file(self.sess.root(), current.path().clone());
 

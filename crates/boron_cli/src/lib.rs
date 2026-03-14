@@ -4,7 +4,7 @@ pub mod logger;
 pub mod project_toml;
 
 pub use clap_styles::CLAP_STYLING;
-pub use cli::{Cli, CliLibType, CliMode, CliPackageType};
+pub use cli::{Cli, CliCommand, CliLibType, CliMode, CliPackageType};
 
 pub mod prelude {
   pub use crate::cli::*;

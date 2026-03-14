@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
 #[derive(
@@ -13,6 +13,7 @@ use strum::{Display, EnumString};
   Display,
   EnumString,
   Deserialize,
+  Serialize,
 )]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]

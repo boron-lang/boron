@@ -2,9 +2,10 @@ use crate::dependency::Dependency;
 use crate::prelude::{LibType, Mode, PackageType};
 use boron_diagnostics::prelude::DiagnosticOutputType;
 use boron_target::target::Compiler;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectConfig {
   pub entrypoint: PathBuf,
   pub package_type: PackageType,

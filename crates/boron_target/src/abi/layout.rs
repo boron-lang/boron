@@ -1,4 +1,4 @@
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Layout {
   pub size: usize,
   pub alignment: Alignment,
@@ -12,7 +12,7 @@ impl Layout {
   }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Alignment(usize);
 impl Alignment {
   pub fn new(alignment: usize) -> Self {

@@ -1,29 +1,34 @@
 use crate::data_layout::DataLayout;
 use crate::primitive::PrimitiveKind;
-use inkwell::OptimizationLevel;
 use inkwell::targets::{CodeModel, InitializationConfig, RelocMode, TargetMachine};
 use inkwell::targets::{Target as LLVMTarget, TargetTriple};
+use inkwell::OptimizationLevel;
+use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Display)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Display, Serialize, Deserialize)]
 #[strum(serialize_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
 pub enum Endian {
   Little,
   Big,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug, EnumString)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, EnumString, Serialize, Deserialize)]
 pub enum Os {
   #[strum(serialize = "windows")]
+  #[serde(rename = "windows")]
   Windows,
   #[strum(serialize = "linux")]
+  #[serde(rename = "linux")]
   Linux,
   #[strum(serialize = "macos")]
   #[expect(clippy::enum_variant_names)]
+  #[serde(rename = "macos")]
   MacOs,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug, EnumString, serde::Deserialize)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, EnumString, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Compiler {
   #[strum(serialize = "clang")]
@@ -32,33 +37,44 @@ pub enum Compiler {
   Gcc,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug, EnumString)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, EnumString, Serialize, Deserialize)]
 pub enum Archiver {
   #[strum(serialize = "llvm-ar")]
+  #[serde(rename = "llvm-ar")]
   LlvmAr,
   #[strum(serialize = "lib")]
+  #[serde(rename = "lib")]
   MsvcLib,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug, EnumString, Display)]
+#[derive(
+  Copy, Clone, PartialEq, Eq, Debug, EnumString, Display, Serialize, Deserialize,
+)]
 pub enum Arch {
   #[strum(serialize = "x86_64")]
+  #[serde(rename = "x86_64")]
   X86_64,
   #[strum(serialize = "x86")]
+  #[serde(rename = "x86")]
   X86,
   #[strum(serialize = "aarch64")]
+  #[serde(rename = "aarch64")]
   AArch64,
   #[strum(serialize = "arm")]
+  #[serde(rename = "arm")]
   Arm,
   #[strum(serialize = "riscv64")]
+  #[serde(rename = "riscv64")]
   RiscV64,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug, EnumString)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, EnumString, Serialize, Deserialize)]
 pub enum PointerWidth {
   #[strum(serialize = "32")]
+  #[serde(rename = "32")]
   Bits32,
   #[strum(serialize = "64")]
+  #[serde(rename = "64")]
   Bits64,
 }
 
@@ -71,7 +87,7 @@ impl PointerWidth {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Target {
   pub arch: Arch,
   pub os: Os,
@@ -79,9 +95,42 @@ pub struct Target {
   pub compiler: Compiler,
   pub archiver: Archiver,
   pub data_layout: DataLayout,
+  #[serde(skip_serializing)]
   pub triple: TargetTriple,
+  #[serde(skip_serializing)]
   pub target_machine: TargetMachine,
   pub is_msvc: bool,
+}
+
+#[derive(Deserialize)]
+struct TargetSerde {
+  arch: Arch,
+  os: Os,
+  pointer_width: PointerWidth,
+  compiler: Compiler,
+  archiver: Archiver,
+  data_layout: DataLayout,
+  is_msvc: bool,
+}
+
+impl<'de> Deserialize<'de> for Target {
+  fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+  where
+    D: serde::Deserializer<'de>,
+  {
+    let value = TargetSerde::deserialize(deserializer)?;
+    let mut target = Self::host();
+
+    target.arch = value.arch;
+    target.os = value.os;
+    target.pointer_width = value.pointer_width;
+    target.compiler = value.compiler;
+    target.archiver = value.archiver;
+    target.data_layout = value.data_layout;
+    target.is_msvc = value.is_msvc;
+
+    Ok(target)
+  }
 }
 
 impl Target {

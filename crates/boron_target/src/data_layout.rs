@@ -3,8 +3,9 @@ use crate::target::Endian;
 use inkwell::AddressSpace;
 use inkwell::context::Context;
 use inkwell::targets::{ByteOrdering, TargetData};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DataLayout {
   pub pointer_size: usize,
   pub pointer_align: usize,

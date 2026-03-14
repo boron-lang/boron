@@ -1,6 +1,9 @@
+use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Display, EnumString)]
+#[derive(
+  Debug, Clone, Copy, PartialEq, Eq, Hash, Display, EnumString, Serialize, Deserialize,
+)]
 #[strum(serialize_all = "lowercase")]
 pub enum PrimitiveKind {
   // Signed integers

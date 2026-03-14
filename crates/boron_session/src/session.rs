@@ -1,7 +1,7 @@
 use crate::dependency::Dependency;
 use crate::module_graph::ModuleGraph;
 use crate::package_graph::{PackageCycleError, PackageGraph};
-use crate::prelude::{PackageType, create_dir_all};
+use crate::prelude::{create_dir_all, PackageType};
 use crate::project_config::ProjectConfig;
 use boron_diagnostics::{DiagnosticCtx, DiagnosticWriter};
 use boron_source::prelude::Sources;
@@ -22,6 +22,7 @@ pub struct Session {
   compilation_mode: CompilationMode,
   sources: Arc<Sources>,
   timings: RwLock<Vec<(String, Duration)>>,
+  pub archive_files: RwLock<Vec<PathBuf>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy, Default)]
@@ -55,6 +56,7 @@ impl Session {
       compilation_mode,
       sources,
       timings: RwLock::new(Vec::new()),
+      archive_files: RwLock::new(Vec::new()),
     }
   }
 
@@ -153,5 +155,9 @@ impl Session {
     let graph = PackageGraph::from_dependencies(&self.config.packages);
     let sorted = graph.compilation_order(&self.config.packages)?;
     Ok(sorted.into_iter().cloned().collect())
+  }
+
+  pub fn add_archive_file(&self, path: PathBuf) {
+    self.archive_files.write().push(path);
   }
 }
