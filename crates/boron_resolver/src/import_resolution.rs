@@ -1,10 +1,13 @@
-use crate::errors::{PrivateItem, UndefinedModule, UndefinedNameInModule};
+use crate::errors::{
+  ExternalDependencyNotFound, PrivateItem, UndefinedModule, UndefinedNameInModule,
+};
+use crate::resolver::ImportMapping;
 use crate::{
   DefId, DefKind, Definition, ModuleResolver, ResolveVisitor, Symbol, SymbolKind,
 };
 use boron_parser::{ImportDecl, ImportKind, ImportSpec, NodeId, PathRoot, Visibility};
 use boron_session::prelude::{debug, warn};
-use boron_source::ident_table::Identifier;
+use boron_source::ident_table::{get_or_intern, Identifier};
 use boron_source::prelude::{SourceFileId, Span};
 use dashmap::DashMap;
 
@@ -13,21 +16,19 @@ impl<'a> ResolveVisitor<'a> {
     if let Some(root) = import.path.root
       && root == PathRoot::Dep
     {
-      // self.resolve_external_import(import);
-      warn!("not handled");
+      self.resolve_external_import(import);
       return;
     }
 
     let current = self.sess.dcx().sources().get_unchecked(self.current_file());
     let path = import.path.construct_file(self.sess.root(), current.path().clone());
-
     let Some(path) = path else { todo!("add proper diagnostic") };
 
     let importing_from = self.sess.dcx().sources().get_by_path(&path);
 
     if let Some(source_id) = importing_from {
       let src_id = *source_id.value();
-      self.resolver().add_path_mapping(&import.path, src_id);
+      self.resolver().add_local_import_mapping(&import.path, src_id);
       self.resolver().add_import_edge(src_id, self.current_file());
     } else {
       self
@@ -37,19 +38,38 @@ impl<'a> ResolveVisitor<'a> {
     }
   }
 
+  pub fn resolve_external_import(&self, import: &ImportDecl) {
+    let dep_name = &import.path.segments[0].identifier;
+
+    debug!(packages = ?self.sess.config.packages);
+    if let Some(dep) = self
+      .sess
+      .config
+      .packages
+      .iter()
+      .find(|dep| &get_or_intern(&dep.name, None) == dep_name)
+    {
+
+      // self.resolver().add_external_import_mapping(&import.path, dep.id, )
+    } else {
+      self.dcx().emit(ExternalDependencyNotFound { span: import.span, dep: *dep_name })
+    }
+  }
+
   pub fn resolve_import(&mut self, import: &ImportDecl) {
     let target_file = self.resolver().lookup_file_for_path(&import.path);
 
-    let Some(target_file) = target_file else {
-      debug!("skipping {import:?} because path couldn't be resolved");
-      return;
-    };
-
-    match &import.kind {
-      ImportKind::Wildcard => self.resolve_wildcard_import(target_file, import),
-      ImportKind::Items(items) => self.resolve_items_import(target_file, items, import),
-      ImportKind::Binding(name) => {
-        self.resolve_binding_import(target_file, *name, import);
+    match target_file {
+      Some(ImportMapping::Local(target_file)) => match &import.kind {
+        ImportKind::Wildcard => self.resolve_wildcard_import(target_file, import),
+        ImportKind::Items(items) => self.resolve_items_import(target_file, items, import),
+        ImportKind::Binding(name) => {
+          self.resolve_binding_import(target_file, *name, import);
+        }
+      },
+      Some(ImportMapping::External(dep, file)) => {}
+      _ => {
+        debug!("skipping {import:?} because path couldn't be resolved");
       }
     }
   }

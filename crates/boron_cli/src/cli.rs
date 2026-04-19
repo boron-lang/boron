@@ -1,6 +1,5 @@
 use crate::CLAP_STYLING;
 use boron_diagnostics::prelude::DiagnosticOutputType;
-use boron_session::dependency::Dependency;
 use boron_session::prelude::{LibType, Mode, PackageType};
 use boron_target::target::Compiler;
 use clap::{Parser, Subcommand, ValueEnum};
@@ -118,32 +117,11 @@ pub struct Cli {
   #[command(subcommand)]
   pub command: Option<CliCommand>,
 
-  #[arg(value_name = "entrypoint", help = "Entrypoint of the project")]
-  pub entrypoint: Option<PathBuf>,
+  #[arg(value_name = "project", help = "Path to project.toml")]
+  pub project: PathBuf,
 
   #[arg(value_name = "type", short = 't', long = "type", help = "Type of the project")]
   pub ty: Option<CliPackageType>,
-
-  #[arg(
-    value_name = "verbose",
-    short = 'v',
-    long = "verbose",
-    help = "Enable verbose logging: debug and trace"
-  )]
-  pub verbose: bool,
-
-  #[arg(
-    value_name = "packages",
-    short = 'd',
-    long = "packages",
-    help = "Add packages that will be resolved by the compiler. \
-        Format: name:root=entrypoint[:dep1,dep2,...] \
-        Example (no deps): -d std:./std=./std/lib.bo \
-        Example (with deps): -d http:./http=./http/lib.bo:std \
-        Inter-package dependencies declared via the optional trailing list are \
-        used to determine compilation order automatically."
-  )]
-  pub packages: Vec<Dependency>,
 
   #[arg(
     value_name = "mode",
@@ -152,27 +130,6 @@ pub struct Cli {
     help = "Compilation mode: either 'debug' or 'release'"
   )]
   pub mode: Option<CliMode>,
-
-  #[arg(value_name = "name", long = "name", help = "Name of the project")]
-  pub name: Option<String>,
-
-  #[arg(value_name = "lib-type", long = "lib", help = "Type of the library to generate")]
-  pub lib_type: Option<CliLibType>,
-
-  #[arg(
-    value_name = "compiler",
-    long = "compiler",
-    alias = "linker",
-    help = "Compiler to use (clang, gcc)"
-  )]
-  pub compiler: Option<CliCompiler>,
-
-  #[arg(
-    value_name = "diagnostic-output",
-    long = "diagnostic-output",
-    help = "Emitter for diagnostics"
-  )]
-  pub diag_output_type: Option<DiagOutputType>,
 
   #[arg(
     value_name = "output",
@@ -205,4 +162,12 @@ pub struct Cli {
     long = "timings"
   )]
   pub timings: bool,
+
+  #[arg(
+    value_name = "verbose",
+    short = 'v',
+    long = "verbose",
+    help = "Enable verbose logging: debug and trace"
+  )]
+  pub verbose: bool,
 }

@@ -9,8 +9,6 @@ description = "boron CLI support"
 [dependencies]
 anyhow = { workspace = true }
 clap = { workspace = true }
-env_logger = { workspace = true }
-log = { workspace = true }
 serde = { workspace = true }
 toml = { workspace = true }
 boron_session = { workspace = true }
@@ -18,6 +16,9 @@ boron_diagnostics = { workspace = true }
 boron_target = { workspace = true }
 yansi = { workspace = true }
 fs-err = { workspace = true }
+chrono = "0.4.44"
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 
 [lints]
 workspace = true

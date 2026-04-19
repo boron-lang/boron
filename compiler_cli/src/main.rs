@@ -1,14 +1,15 @@
 use crate::panic::setup_panic_handler;
 use anyhow::Result;
 use boron_cli::prelude::{
-  PROJECT_FILE, build_project_config, load_project_toml, setup_logger,
+  build_project_config, load_project_toml, setup_logger, PROJECT_FILE,
 };
 use boron_cli::{Cli, CliCommand};
 use boron_core::prelude::{
-  CompilationMode, DiagnosticWriter, Session, compiler_entrypoint,
+  compiler_entrypoint, debug, CompilationMode, DiagnosticWriter, Session,
 };
 use boron_lib::container::read_container_file;
 use clap::Parser as _;
+use std::env::current_dir;
 use std::path::Path;
 use std::process::exit;
 use yansi::Paint as _;
@@ -29,13 +30,13 @@ fn run() -> Result<()> {
     return run_command(command);
   }
 
-  let toml = load_project_toml(Path::new(PROJECT_FILE))?;
-  let project_config = build_project_config(cli, toml)?;
+  let project_config = build_project_config(cli)?;
   let session =
     Session::new(project_config, DiagnosticWriter::stderr(), CompilationMode::Normal);
 
   setup_panic_handler(&session);
   setup_logger(session.config.verbose, !session.config.color);
+  debug!(?session);
 
   if let Err(e) = compiler_entrypoint(&session) {
     Err(e)

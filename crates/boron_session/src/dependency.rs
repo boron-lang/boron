@@ -1,13 +1,16 @@
 use crate::prelude::{LibType, PackageType};
-use anyhow::bail;
 use boron_diagnostics::prelude::DiagnosticOutputType;
+use boron_source::new_id;
 use boron_target::target::Compiler;
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, str::FromStr, sync::Arc};
 
+new_id!(DepId);
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Dependency {
+  pub id: DepId,
   pub name: String,
   pub root: PathBuf,
   pub entrypoint: PathBuf,
@@ -22,6 +25,7 @@ pub struct Dependency {
 impl Dependency {
   pub fn new(name: String, entrypoint: PathBuf, root: PathBuf) -> Self {
     Self {
+      id: DepId::new(),
       name,
       root,
       entrypoint,
@@ -48,50 +52,6 @@ impl Dependency {
 
   pub fn depends_on(&self) -> &[String] {
     &self.depends_on
-  }
-}
-
-impl FromStr for Dependency {
-  type Err = anyhow::Error;
-
-  // Format: name:root=entrypoint[:dep1,dep2,...]
-  fn from_str(s: &str) -> anyhow::Result<Self, Self::Err> {
-    let Some((name, rest)) = s.split_once(':') else {
-      bail!(
-        "Invalid dependency format. Expected 'name:root=entrypoint[:dep1,dep2]', got '{s}'"
-      )
-    };
-
-    let Some((root, path_and_deps)) = rest.split_once('=') else {
-      bail!(
-        "Invalid dependency format. Expected 'name:root=entrypoint[:dep1,dep2]', got '{s}'"
-      )
-    };
-
-    let (entrypoint_str, depends_on) = match path_and_deps.split_once(':') {
-      Some((ep, deps_str)) => {
-        let depends_on = deps_str
-          .split(',')
-          .map(str::trim)
-          .filter(|s| !s.is_empty())
-          .map(str::to_owned)
-          .collect();
-        (ep, depends_on)
-      }
-      None => (path_and_deps, Vec::new()),
-    };
-
-    Ok(Self {
-      name: name.to_owned(),
-      root: PathBuf::from(root),
-      entrypoint: PathBuf::from(entrypoint_str),
-      depends_on,
-      package_type: None,
-      output: None,
-      lib_type: None,
-      compiler: None,
-      diagnostic_output_type: None,
-    })
   }
 }
 

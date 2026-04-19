@@ -14,6 +14,7 @@ boron_diagnostics = { workspace = true }
 boron_parser = { workspace = true }
 boron_source = { workspace = true }
 boron_session = { workspace = true }
+serde = { workspace = true }
 
 [lints]
 workspace = true

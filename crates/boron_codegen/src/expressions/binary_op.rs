@@ -17,10 +17,10 @@ impl<'ctx> LLVMCodegen<'ctx> {
       (SemanticTy::Primitive(lhs_ty), SemanticTy::Primitive(rhs_ty)) => {
         if lhs_ty.is_integer() && rhs_ty.is_integer() {
           let lhs_val = self
-            .value_to_basic(self.primitive_ty(lhs_ty), self.generate_expr(lhs)?)?
+            .value_to_basic(self.primitive_ty(lhs_ty)?, self.generate_expr(lhs)?)?
             .into_int_value();
           let rhs_val = self
-            .value_to_basic(self.primitive_ty(rhs_ty), self.generate_expr(rhs)?)?
+            .value_to_basic(self.primitive_ty(rhs_ty)?, self.generate_expr(rhs)?)?
             .into_int_value();
 
           macro_rules! int_op {
@@ -79,10 +79,10 @@ impl<'ctx> LLVMCodegen<'ctx> {
           }
         } else if lhs_ty.is_float() && rhs_ty.is_float() {
           let lhs_val = self
-            .value_to_basic(self.primitive_ty(lhs_ty), self.generate_expr(lhs)?)?
+            .value_to_basic(self.primitive_ty(lhs_ty)?, self.generate_expr(lhs)?)?
             .into_float_value();
           let rhs_val = self
-            .value_to_basic(self.primitive_ty(rhs_ty), self.generate_expr(rhs)?)?
+            .value_to_basic(self.primitive_ty(rhs_ty)?, self.generate_expr(rhs)?)?
             .into_float_value();
 
           macro_rules! float_op {

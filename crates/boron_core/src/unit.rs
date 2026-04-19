@@ -4,7 +4,7 @@ use crate::errors::{
 use crate::prelude::*;
 use boron_analysis::results::BuiltInResults;
 use boron_analysis::validator::validate_comptime;
-use boron_analysis::{InferTy, TypeTable, expand_builtins, typeck_hir};
+use boron_analysis::{expand_builtins, typeck_hir, InferTy, TypeTable};
 use boron_codegen::run_codegen;
 use boron_compiler::CompilerBuild;
 use boron_hir::hir::Hir;
@@ -13,6 +13,7 @@ use boron_ir::{Ir, IrLowerer};
 use boron_parser::module::{Module, Modules};
 use boron_parser::parser::parse;
 use boron_resolver::{DefId, ResolveVisitor, Resolver};
+use boron_source::paste::paste;
 use boron_source::source_file::SourceFileId;
 use boron_thir::{Thir, ThirLowerer};
 use std::process::exit;
@@ -29,6 +30,12 @@ pub struct CompilationUnit<'ctx> {
   pub thir: Option<Thir>,
   pub ir: Option<Ir>,
   pub main_function: Option<DefId>,
+}
+
+macro_rules! steps {
+    ($this:expr; $($name:expr => $action:expr),* $(,)?) => {
+        $(if $this.run_step($name, $action) { return; })*
+    };
 }
 
 impl<'ctx> CompilationUnit<'ctx> {
@@ -52,13 +59,7 @@ impl<'ctx> CompilationUnit<'ctx> {
       return;
     };
 
-    macro_rules! steps {
-        ($($name:expr => $action:expr),* $(,)?) => {
-          $( if self.run_step($name, $action) { return; })*
-        };
-    }
-
-    steps!(
+    steps!(self;
       "Import graph" => |this| this.resolver.build_import_graph(&this.modules),
       "Name resolution" => |this| this.resolve_names(),
       "HIR lowering" => |this| this.lower_to_hir(),

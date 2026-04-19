@@ -1,7 +1,7 @@
 use crate::cli::Cli;
-use anyhow::{Context as _, Result, anyhow};
+use anyhow::{anyhow, Context as _, Result};
 use boron_diagnostics::prelude::DiagnosticOutputType;
-use boron_session::dependency::Dependency;
+use boron_session::dependency::{DepId, Dependency};
 use boron_session::enums::lib_type::LibType;
 use boron_session::enums::mode::Mode;
 use boron_session::enums::project_type::PackageType;
@@ -12,7 +12,6 @@ use fs_err as fs;
 use fs_err::create_dir_all;
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::env::current_dir;
 use std::path::{Path, PathBuf};
 
 pub const PROJECT_FILE: &str = "project.toml";
@@ -41,11 +40,6 @@ pub struct TomlBuild {
   pub output: Option<PathBuf>,
   pub lib_type: Option<LibType>,
   pub compiler: Option<Compiler>,
-  pub verbose: Option<bool>,
-  pub check_only: Option<bool>,
-  pub no_color: Option<bool>,
-  pub no_backtrace: Option<bool>,
-  pub timings: Option<bool>,
   pub diagnostic_output: Option<DiagnosticOutputType>,
 }
 
@@ -61,6 +55,7 @@ pub struct ProjectToml {
 }
 
 pub fn load_project_toml(path: &Path) -> Result<Option<ProjectToml>> {
+  dbg!(path);
   if !path.exists() {
     return Ok(None);
   }
@@ -72,48 +67,39 @@ pub fn load_project_toml(path: &Path) -> Result<Option<ProjectToml>> {
   Ok(Some(toml))
 }
 
-pub fn build_project_config(
-  cli: Cli,
-  toml: Option<ProjectToml>,
-) -> Result<ProjectConfig> {
-  let toml = toml.unwrap_or_default();
-  let root = current_dir()?;
+pub fn build_project_config(cli: Cli) -> Result<ProjectConfig> {
+  let root = cli.project.parent().unwrap();
+  let toml = load_project_toml(&cli.project)?.unwrap_or_default();
 
-  let entrypoint = cli
-    .entrypoint
-    .or(toml.project.entrypoint)
-    .ok_or_else(|| anyhow!("entrypoint is required (provide via CLI or project.toml)"))?;
+  let entrypoint = root.join(
+    toml
+      .project
+      .entrypoint
+      .ok_or_else(|| anyhow!("entrypoint is required in project.toml"))?,
+  );
+  let name = toml
+    .project
+    .name
+    .ok_or_else(|| anyhow!("project name is required (provide via project.toml)"))?;
 
-  let name = cli.name.or(toml.project.name).ok_or_else(|| {
-    anyhow!("project name is required (provide via --name or project.toml)")
-  })?;
+  let output = {
+    let path = cli
+      .output
+      .or(toml.build.output)
+      .ok_or_else(|| anyhow!("output path is required (provide via project.toml)"))?;
 
-  let output = cli.output.or(toml.build.output).ok_or_else(|| {
-    anyhow!("output path is required (provide via --output or project.toml)")
-  })?;
+    if path.is_absolute() { path } else { root.join(path) }
+  };
 
   let package_type =
     cli.ty.map(Into::into).or(toml.project.ty).unwrap_or(PackageType::Binary);
-
   let mode = cli.mode.map(Into::into).or(toml.build.mode).unwrap_or(Mode::Debug);
+  let lib_type = toml.build.lib_type.unwrap_or(LibType::Static);
 
-  let lib_type =
-    cli.lib_type.map(Into::into).or(toml.build.lib_type).unwrap_or(LibType::Static);
+  let diagnostic_output_type =
+    toml.build.diagnostic_output.unwrap_or(DiagnosticOutputType::HumanReadable);
 
-  let compiler = cli.compiler.map(Into::into).or(toml.build.compiler);
-  let diagnostic_output_type = cli
-    .diag_output_type
-    .map(Into::into)
-    .or(toml.build.diagnostic_output)
-    .unwrap_or(DiagnosticOutputType::HumanReadable);
-
-  let verbose = cli.verbose || toml.build.verbose.unwrap_or(false);
-  let check_only = cli.check_only || toml.build.check_only.unwrap_or(false);
-  let no_color = cli.no_color || toml.build.no_color.unwrap_or(false);
-  let no_backtrace = cli.no_backtrace || toml.build.no_backtrace.unwrap_or(false);
-  let timings = cli.timings || toml.build.timings.unwrap_or(false);
-
-  let mut packages = cli.packages;
+  let mut packages: Vec<Dependency> = vec![];
   for (alias, pkg) in toml.dependencies {
     if packages.iter().any(|p| p.name == alias) {
       continue;
@@ -132,13 +118,13 @@ pub fn build_project_config(
     lib_type,
     output: canonicalize_with_strip(output)?,
     root: canonicalize_with_strip(root)?,
-    compiler,
+    compiler: toml.build.compiler,
     diagnostic_output_type,
-    color: !no_color,
-    check_only,
-    verbose,
-    no_backtrace,
-    timings,
+    color: !cli.no_color,
+    check_only: cli.check_only,
+    verbose: cli.verbose,
+    no_backtrace: cli.no_backtrace,
+    timings: cli.timings,
   })
 }
 
@@ -204,6 +190,7 @@ fn resolve_dependency(root: &Path, alias: &str, pkg: TomlPackage) -> Result<Depe
   let depends_on = dep_project.dependencies.into_keys().collect();
 
   Ok(Dependency {
+    id: DepId::new(),
     name: dep_name,
     root: dep_root,
     entrypoint: dep_entrypoint,

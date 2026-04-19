@@ -1,7 +1,7 @@
 use crate::dependency::Dependency;
 use crate::module_graph::ModuleGraph;
 use crate::package_graph::{PackageCycleError, PackageGraph};
-use crate::prelude::{PackageType, create_dir_all};
+use crate::prelude::{create_dir_all, PackageType};
 use crate::project_config::ProjectConfig;
 use boron_diagnostics::{DiagnosticCtx, DiagnosticWriter};
 use boron_source::prelude::Sources;
@@ -10,6 +10,7 @@ use parking_lot::RwLock;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
+use tracing::debug;
 use yansi::Paint as _;
 
 #[derive(Debug)]
@@ -42,7 +43,7 @@ impl Session {
     let sources = Arc::new(Sources::with_root(config.root.clone()));
     let compiler = config.compiler;
 
-    Self {
+    let session = Self {
       dcx: DiagnosticCtx::new(
         Arc::clone(&sources),
         config.color,
@@ -57,7 +58,9 @@ impl Session {
       sources,
       timings: RwLock::new(Vec::new()),
       archive_files: RwLock::new(Vec::new()),
-    }
+    };
+    debug!(name: "created new session", ?session);
+    session
   }
 
   pub fn create_output_dir(&self) -> Option<()> {

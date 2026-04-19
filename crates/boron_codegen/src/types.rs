@@ -1,16 +1,17 @@
 use crate::codegen::LLVMCodegen;
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use boron_ir::SemanticTy;
 use boron_parser::PrimitiveKind;
 use boron_resolver::DefId;
 use boron_session::prelude::warn;
-use inkwell::AddressSpace;
 use inkwell::types::{BasicType as _, BasicTypeEnum, StructType};
+use inkwell::AddressSpace;
+use std::num::NonZeroU32;
 
 impl<'ctx> LLVMCodegen<'ctx> {
-  pub fn primitive_ty(&self, prim: &PrimitiveKind) -> BasicTypeEnum<'ctx> {
+  pub fn primitive_ty(&self, prim: &PrimitiveKind) -> Result<BasicTypeEnum<'ctx>> {
     let ctx = self.context;
-    match prim {
+    Ok(match prim {
       PrimitiveKind::I8 | PrimitiveKind::U8 => ctx.i8_type().into(),
       PrimitiveKind::I16 | PrimitiveKind::U16 => ctx.i16_type().into(),
       PrimitiveKind::I32 | PrimitiveKind::U32 => ctx.i32_type().into(),
@@ -18,7 +19,10 @@ impl<'ctx> LLVMCodegen<'ctx> {
       PrimitiveKind::I128 | PrimitiveKind::U128 => ctx.i128_type().into(),
       PrimitiveKind::ISize | PrimitiveKind::USize => {
         let bits = self.sess.target().pointer_width.size_bytes() * 8;
-        ctx.custom_width_int_type(bits as u32).into()
+        ctx
+          .custom_width_int_type(NonZeroU32::new(bits as u32).unwrap())
+          .map_err(|err| anyhow!("Failed to construct usize/isize ty {err}"))?
+          .into()
       }
 
       PrimitiveKind::F32 => ctx.f32_type().into(),
@@ -27,7 +31,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
       PrimitiveKind::Bool => ctx.bool_type().into(),
       PrimitiveKind::Char => ctx.i32_type().into(),
       PrimitiveKind::Void => ctx.i8_type().into(),
-    }
+    })
   }
 
   pub fn get_struct_ty(
@@ -50,7 +54,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
 
   pub fn ty(&self, ty: &SemanticTy) -> Result<BasicTypeEnum<'ctx>> {
     match ty {
-      SemanticTy::Primitive(p) => Ok(self.primitive_ty(p)),
+      SemanticTy::Primitive(p) => self.primitive_ty(p),
 
       SemanticTy::Struct { def_id, args } => {
         Ok(self.get_struct_ty(def_id, args)?.as_basic_type_enum())

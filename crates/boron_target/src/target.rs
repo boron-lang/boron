@@ -1,8 +1,8 @@
 use crate::data_layout::DataLayout;
 use crate::primitive::PrimitiveKind;
-use inkwell::OptimizationLevel;
 use inkwell::targets::{CodeModel, InitializationConfig, RelocMode, TargetMachine};
 use inkwell::targets::{Target as LLVMTarget, TargetTriple};
+use inkwell::OptimizationLevel;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
@@ -28,10 +28,13 @@ pub enum Os {
   MacOs,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Debug, EnumString, Serialize, Deserialize)]
+#[derive(
+  Copy, Clone, PartialEq, Eq, Debug, Default, EnumString, Serialize, Deserialize,
+)]
 #[serde(rename_all = "lowercase")]
 pub enum Compiler {
   #[strum(serialize = "clang")]
+  #[default]
   Clang,
   #[strum(serialize = "gcc")]
   Gcc,

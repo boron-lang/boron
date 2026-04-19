@@ -36,9 +36,11 @@ clap = { version = "4.5.41", features = ["derive"] }
 lasso = { version = "0.7.3", features = ["multi-threaded"] }
 serde = { version = "1.0.219", features = ["derive"] }
 toml = "1.0.0+spec-1.1.0"
-inkwell = { version = "0.8.0", features = ["llvm17-0"] }
+inkwell = { version = "0.9.0", features = ["llvm17-0"] }
 indexmap = "2.13.0"
 ar = "0.9.0"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 
 boron_compiler = { path = "crates/boron_compiler" }
 boron_cli = { path = "crates/boron_cli" }

@@ -1,20 +1,21 @@
-use crate::emitters::Emitter;
 use crate::emitters::human_readable::HumanReadableEmitter;
+use crate::emitters::Emitter;
 use crate::output_type::DiagnosticOutputType;
 use crate::writer::DiagnosticWriter;
 use crate::{Diag, Diagnostic, DiagnosticId, DiagnosticLevel};
 use boron_source::prelude::Sources;
-use dashmap::DashMap;
 use dashmap::mapref::one::{Ref, RefMut};
+use dashmap::DashMap;
 use derivative::Derivative;
 use log::debug;
-use std::io::{Write as _, Write as _, stderr};
+use std::io::{stderr, Write as _};
 use std::sync::Arc;
 
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct DiagnosticCtx {
   pub diagnostics: Arc<DashMap<DiagnosticId, Diagnostic>>,
+  #[derivative(Debug = "ignore")]
   emitter: Box<dyn Emitter + Send + Sync>,
   #[derivative(Debug = "ignore")]
   pub writer: DiagnosticWriter,

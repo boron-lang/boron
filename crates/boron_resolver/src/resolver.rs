@@ -6,10 +6,11 @@ use crate::scope::{ScopeId, ScopeKind, Scopes};
 use crate::symbol::SymbolTable;
 use boron_parser::module::Modules;
 use boron_parser::{NodeId, Path};
+use boron_session::dependency::DepId;
 use boron_source::ident_table::Identifier;
 use boron_source::prelude::SourceFileId;
-use dashmap::DashMap;
 use dashmap::mapref::one::Ref;
+use dashmap::DashMap;
 use parking_lot::RwLock;
 
 #[derive(Debug)]
@@ -18,8 +19,7 @@ pub struct Resolver {
   pub symbols: SymbolTable,
   pub definitions: DashMap<DefId, Definition>,
   pub import_graph: ImportGraph,
-  /// Path to `SourceFileId` mapping
-  pub path_to_files: DashMap<NodeId, SourceFileId>,
+  pub imports_mapping: DashMap<NodeId, ImportMapping>,
 
   pub module_exports_values: DashMap<SourceFileId, DashMap<Identifier, DefId>>,
   pub module_exports_types: DashMap<SourceFileId, DashMap<Identifier, DefId>>,
@@ -30,6 +30,12 @@ pub struct Resolver {
   module_ribs: DashMap<SourceFileId, RwLock<(ScopeId, Rib)>>,
   pub comptime_using_builtins: DashMap<NodeId, BuiltInKind>,
   pub self_to_struct: DashMap<DefId, DefId>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum ImportMapping {
+  Local(SourceFileId),
+  External(DepId, SourceFileId),
 }
 
 impl Resolver {
@@ -44,7 +50,7 @@ impl Resolver {
       inline_module_exports_values: DashMap::new(),
       inline_module_exports_types: DashMap::new(),
       adt_members: DashMap::new(),
-      path_to_files: DashMap::new(),
+      imports_mapping: DashMap::new(),
       module_ribs: DashMap::new(),
       comptime_using_builtins: DashMap::new(),
       self_to_struct: DashMap::new(),
@@ -200,12 +206,21 @@ impl Resolver {
       .map(|def| *def.key())
   }
 
-  pub fn lookup_file_for_path(&self, path: &Path) -> Option<SourceFileId> {
-    self.path_to_files.get(&path.id).map(|f| *f)
+  pub fn lookup_file_for_path(&self, path: &Path) -> Option<ImportMapping> {
+    self.imports_mapping.get(&path.id).map(|f| *f)
   }
 
-  pub fn add_path_mapping(&self, path: &Path, source_file_id: SourceFileId) {
-    self.path_to_files.insert(path.id, source_file_id);
+  pub fn add_local_import_mapping(&self, path: &Path, source_file_id: SourceFileId) {
+    self.imports_mapping.insert(path.id, ImportMapping::Local(source_file_id));
+  }
+
+  pub fn add_external_import_mapping(
+    &self,
+    path: &Path,
+    dep: DepId,
+    source_file_id: SourceFileId,
+  ) {
+    self.imports_mapping.insert(path.id, ImportMapping::External(dep, source_file_id));
   }
 
   pub fn add_self_mapping(&self, self_id: DefId, struct_id: DefId) {

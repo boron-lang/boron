@@ -11,7 +11,7 @@ pub mod prelude {
   pub use crate::{package_graph::*, path::*, project_config::*, session::*};
   pub use anyhow::{Result, anyhow, bail};
   pub use fs_err as fs;
-  pub use log::{debug, error, info, warn};
+  pub use tracing::{debug, error, info, warn};
   pub use parking_lot::*;
   pub use rayon::prelude::*;
 

@@ -107,3 +107,12 @@ pub struct SelfOutsideMethod {
   #[error("invalid use here")]
   pub span: Span,
 }
+
+#[derive(Diagnostic)]
+#[error("external dependency `{dep}` not found")]
+#[code(RESOLVE_EXTERNAL_DEP_NOT_FOUND)]
+pub struct ExternalDependencyNotFound {
+  #[error("in this import declaration")]
+  pub span: Span,
+  pub dep: Identifier
+}

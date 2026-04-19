@@ -1,6 +1,6 @@
-use crate::prelude::{CompilationUnit, FILE_EXTENSION, info};
-use anyhow::Result;
+use crate::prelude::{debug, info, CompilationUnit, FILE_EXTENSION};
 use anyhow::bail;
+use anyhow::Result;
 use boron_diagnostics::DiagnosticWriter;
 use boron_session::dependency::Dependency;
 use boron_session::prelude::{ProjectConfig, Session};
@@ -11,6 +11,7 @@ pub fn compiler_entrypoint(session: &Session) -> Result<()> {
 
   for package in packages {
     let config = dependency_config(session, package)?;
+    debug!(name: "compiling package: ", config = ?config);
     let pkg_session =
       Session::new(config, DiagnosticWriter::stderr(), session.compilation_mode());
 

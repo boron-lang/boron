@@ -5,7 +5,7 @@ macro_rules! new_id {
       pub static [<LAST_ID_$name:upper>]: ::std::sync::atomic::AtomicUsize =
         ::std::sync::atomic::AtomicUsize::new(1);
 
-      #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+      #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
       pub struct $name(pub usize);
 
       impl $name {
