@@ -1,6 +1,7 @@
 pub mod dependency;
 pub mod enums;
 mod errors;
+pub mod library;
 mod module_graph;
 pub mod package_graph;
 mod path;
@@ -9,7 +10,7 @@ mod session;
 
 pub mod prelude {
   pub use crate::{package_graph::*, path::*, project_config::*, session::*};
-  pub use anyhow::{Result, anyhow, bail};
+  pub use anyhow::{anyhow, bail, Result};
   pub use fs_err as fs;
   pub use parking_lot::*;
   pub use rayon::prelude::*;

@@ -1,14 +1,14 @@
+use crate::library::BLibMetadata;
 use crate::prelude::{LibType, PackageType};
 use boron_diagnostics::prelude::DiagnosticOutputType;
 use boron_source::new_id;
 use boron_target::target::Compiler;
-use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
-use std::{path::PathBuf, sync::Arc};
+use std::path::PathBuf;
 
 new_id!(DepId);
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Dependency {
   pub id: DepId,
   pub name: String,
@@ -20,10 +20,16 @@ pub struct Dependency {
   pub lib_type: Option<LibType>,
   pub compiler: Option<Compiler>,
   pub diagnostic_output_type: Option<DiagnosticOutputType>,
+  pub blib: BLibMetadata,
 }
 
 impl Dependency {
-  pub fn new(name: String, entrypoint: PathBuf, root: PathBuf) -> Self {
+  pub fn new(
+    name: String,
+    blib: BLibMetadata,
+    entrypoint: PathBuf,
+    root: PathBuf,
+  ) -> Self {
     Self {
       id: DepId::new(),
       name,
@@ -35,6 +41,7 @@ impl Dependency {
       lib_type: None,
       compiler: None,
       diagnostic_output_type: None,
+      blib,
     }
   }
 
@@ -52,38 +59,5 @@ impl Dependency {
 
   pub fn depends_on(&self) -> &[String] {
     &self.depends_on
-  }
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct Dependencies(Arc<RwLock<Vec<Dependency>>>);
-
-impl Dependencies {
-  pub fn new(dependencies: Vec<Dependency>) -> Self {
-    Self(Arc::new(RwLock::new(dependencies)))
-  }
-
-  fn read<R>(&self, reader: impl FnOnce(&Vec<Dependency>) -> R) -> R {
-    reader(&self.0.read())
-  }
-
-  fn write<R>(&self, writer: impl FnOnce(&mut Vec<Dependency>) -> R) -> R {
-    writer(&mut self.0.write())
-  }
-
-  pub fn get(&self, name: &str) -> Option<Dependency> {
-    self.read(|deps| deps.iter().find(|dep| dep.name == name).cloned())
-  }
-
-  pub fn add(&self, dependency: Dependency) {
-    self.write(|deps| deps.push(dependency));
-  }
-
-  pub fn all(&self) -> Vec<Dependency> {
-    self.read(|deps| deps.clone())
-  }
-
-  pub fn contains(&self, dependency: &Dependency) -> bool {
-    self.read(|deps| deps.iter().any(|dep| dep.name == dependency.name))
   }
 }

@@ -7,7 +7,7 @@ use crate::{
 };
 use boron_parser::{ImportDecl, ImportKind, ImportSpec, NodeId, PathRoot, Visibility};
 use boron_session::prelude::debug;
-use boron_source::ident_table::{Identifier, get_or_intern};
+use boron_source::ident_table::{get_or_intern, Identifier};
 use boron_source::prelude::{SourceFileId, Span};
 use dashmap::DashMap;
 
@@ -42,15 +42,14 @@ impl<'a> ResolveVisitor<'a> {
     let dep_name = &import.path.segments[0].identifier;
 
     debug!(packages = ?self.sess.config.packages);
-    if let Some(_dep) = self
+    if let Some(dep) = self
       .sess
       .config
       .packages
       .iter()
       .find(|dep| &get_or_intern(&dep.name, None) == dep_name)
     {
-
-      // self.resolver().add_external_import_mapping(&import.path, dep.id, )
+      // self.resolver().add_external_import_mapping(&import.path, dep.id)
     } else {
       self.dcx().emit(ExternalDependencyNotFound { span: import.span, dep: *dep_name });
     }

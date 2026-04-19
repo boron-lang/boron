@@ -1,17 +1,17 @@
 use crate::cli::Cli;
-use anyhow::{anyhow, Context as _, Result};
+use anyhow::{anyhow, bail, Context as _, Result};
 use boron_diagnostics::prelude::DiagnosticOutputType;
+use boron_lib::container::read_container_file;
 use boron_session::dependency::{DepId, Dependency};
 use boron_session::enums::lib_type::LibType;
 use boron_session::enums::mode::Mode;
 use boron_session::enums::project_type::PackageType;
 use boron_session::prelude::{
-  canonicalize_or_create_dir, canonicalize_with_strip,
+  canonicalize_or_create_dir, canonicalize_with_strip, BoronError,
 };
 use boron_session::project_config::ProjectConfig;
 use boron_target::target::Compiler;
 use fs_err as fs;
-use fs_err::create_dir_all;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -89,7 +89,7 @@ pub fn build_project_config(cli: Cli) -> Result<ProjectConfig> {
       .or(toml.build.output)
       .ok_or_else(|| anyhow!("output path is required (provide via project.toml)"))?;
 
-    if path.is_absolute() { path } else { root.join(path) }
+    canonicalize_or_create_dir(if path.is_absolute() { path } else { root.join(path) })?
   };
 
   let package_type =
@@ -106,7 +106,7 @@ pub fn build_project_config(cli: Cli) -> Result<ProjectConfig> {
       continue;
     }
 
-    let dependency = resolve_dependency(root, &alias, pkg)?;
+    let dependency = resolve_dependency(&output, &mode, root, &alias, pkg)?;
     packages.push(dependency);
   }
 
@@ -117,7 +117,7 @@ pub fn build_project_config(cli: Cli) -> Result<ProjectConfig> {
     mode,
     name,
     lib_type,
-    output: canonicalize_or_create_dir(output)?,
+    output,
     root: canonicalize_with_strip(root)?,
     compiler: toml.build.compiler,
     diagnostic_output_type,
@@ -129,77 +129,90 @@ pub fn build_project_config(cli: Cli) -> Result<ProjectConfig> {
   })
 }
 
-fn resolve_dependency(root: &Path, alias: &str, pkg: TomlPackage) -> Result<Dependency> {
-  let dep_root = if pkg.path.is_absolute() { pkg.path } else { root.join(pkg.path) };
-
-  let dep_root = canonicalize_with_strip(dep_root)
+fn resolve_dependency(
+  main_output_dir: &Path,
+  main_mode: &Mode,
+  root: &Path,
+  alias: &str,
+  pkg: TomlPackage,
+) -> Result<Dependency> {
+  let dep_root = resolve_path(root, pkg.path)
     .with_context(|| format!("failed to resolve path for dependency `{alias}`"))?;
 
-  let dep_project_path = dep_root.join(PROJECT_FILE);
-  let dep_project = load_project_toml(&dep_project_path)
-    .with_context(|| {
-      format!(
-        "failed to load `{PROJECT_FILE}` for dependency `{alias}` from {}",
-        dep_project_path.display()
-      )
-    })?
-    .ok_or_else(|| {
-      anyhow!(
-        "dependency `{alias}` is missing `{PROJECT_FILE}` at {}",
-        dep_project_path.display()
-      )
-    })?;
+  let dep_project = load_dep_project(&dep_root, alias)?;
+  let build = dep_project.build;
+  let project = dep_project.project;
 
-  let dep_name =
-    pkg.name.or(dep_project.project.name).unwrap_or_else(|| alias.to_owned());
+  let name = pkg.name.or(project.name).unwrap_or_else(|| alias.to_owned());
+  let entrypoint =
+    resolve_entrypoint(&dep_root, alias, pkg.entrypoint.or(project.entrypoint))?;
+  let output = resolve_output(&dep_root, alias, build.output)?;
 
-  let dep_entrypoint =
-    pkg.entrypoint.or(dep_project.project.entrypoint).ok_or_else(|| {
-      anyhow!("dependency `{alias}` is missing an `entrypoint` in `{PROJECT_FILE}`")
-    })?;
+  let blib_path =
+    main_output_dir.join(main_mode.to_string()).join(alias).with_extension("blib");
 
-  let dep_entrypoint = if dep_entrypoint.is_absolute() {
-    dep_entrypoint
-  } else {
-    dep_root.join(dep_entrypoint)
-  };
-
-  let dep_entrypoint = canonicalize_with_strip(dep_entrypoint).with_context(|| {
-    format!("failed to resolve entrypoint for dependency `{alias}` from `{PROJECT_FILE}`")
-  })?;
-
-  let dep_output = dep_project.build.output.ok_or_else(|| {
-    anyhow!("dependency `{alias}` is missing `build.output` in `{PROJECT_FILE}`")
-  })?;
-
-  let dep_output =
-    if dep_output.is_absolute() { dep_output } else { dep_root.join(dep_output) };
-
-  create_dir_all(&dep_output)?;
-  let dep_output = canonicalize_with_strip(dep_output).with_context(|| {
-    format!(
-      "failed to resolve output path for dependency `{alias}` from `{PROJECT_FILE}`"
-    )
-  })?;
-
-  let package_type = dep_project.project.ty.unwrap_or(PackageType::Binary);
-  let lib_type = dep_project.build.lib_type.unwrap_or(LibType::Static);
-  let compiler = dep_project.build.compiler;
-  let diagnostic_output_type =
-    dep_project.build.diagnostic_output.unwrap_or(DiagnosticOutputType::HumanReadable);
-
-  let depends_on = dep_project.dependencies.into_keys().collect();
+  if !blib_path.exists() {
+    bail!("couldn't find .blib file for {alias}: {}", blib_path.display())
+  }
+  let blib = read_container_file(&blib_path)?;
 
   Ok(Dependency {
     id: DepId::new(),
-    name: dep_name,
+    name,
     root: dep_root,
-    entrypoint: dep_entrypoint,
-    depends_on,
-    package_type: Some(package_type),
-    output: Some(dep_output),
-    lib_type: Some(lib_type),
-    compiler,
-    diagnostic_output_type: Some(diagnostic_output_type),
+    entrypoint,
+    depends_on: dep_project.dependencies.into_keys().collect(),
+    package_type: Some(project.ty.unwrap_or(PackageType::Binary)),
+    output: Some(output),
+    lib_type: Some(build.lib_type.unwrap_or(LibType::Static)),
+    compiler: build.compiler,
+    diagnostic_output_type: Some(
+      build.diagnostic_output.unwrap_or(DiagnosticOutputType::HumanReadable),
+    ),
+    blib: blib.metadata,
+  })
+}
+
+fn resolve_path(root: &Path, path: PathBuf) -> Result<PathBuf, BoronError> {
+  let full = if path.is_absolute() { path } else { root.join(path) };
+  canonicalize_with_strip(full)
+}
+
+fn load_dep_project(dep_root: &Path, alias: &str) -> Result<ProjectToml> {
+  let path = dep_root.join(PROJECT_FILE);
+  load_project_toml(&path)
+    .with_context(|| {
+      format!(
+        "failed to load `{PROJECT_FILE}` for dependency `{alias}` from {}",
+        path.display()
+      )
+    })?
+    .ok_or_else(|| {
+      anyhow!("dependency `{alias}` is missing `{PROJECT_FILE}` at {}", path.display())
+    })
+}
+
+fn resolve_entrypoint(
+  dep_root: &Path,
+  alias: &str,
+  raw: Option<PathBuf>,
+) -> Result<PathBuf> {
+  let path = raw.ok_or_else(|| {
+    anyhow!("dependency `{alias}` is missing an `entrypoint` in `{PROJECT_FILE}`")
+  })?;
+  resolve_path(dep_root, path).with_context(|| {
+    format!("failed to resolve entrypoint for dependency `{alias}` from `{PROJECT_FILE}`")
+  })
+}
+
+fn resolve_output(dep_root: &Path, alias: &str, raw: Option<PathBuf>) -> Result<PathBuf> {
+  let path = raw.ok_or_else(|| {
+    anyhow!("dependency `{alias}` is missing `build.output` in `{PROJECT_FILE}`")
+  })?;
+  let full = if path.is_absolute() { path } else { dep_root.join(path) };
+  canonicalize_or_create_dir(full).with_context(|| {
+    format!(
+      "failed to resolve output path for dependency `{alias}` from `{PROJECT_FILE}`"
+    )
   })
 }

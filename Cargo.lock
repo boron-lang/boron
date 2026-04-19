@@ -189,6 +189,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "boron_diagnostics",
+ "boron_lib",
  "boron_session",
  "boron_target",
  "chrono",

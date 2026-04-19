@@ -19,7 +19,6 @@ pub struct Session {
   dcx: DiagnosticCtx,
   module_graph: ModuleGraph,
   target: Target,
-  compiler: Option<Compiler>,
   compilation_mode: CompilationMode,
   sources: Arc<Sources>,
   timings: RwLock<Vec<(String, Duration)>>,
@@ -41,7 +40,6 @@ impl Session {
     compilation_mode: CompilationMode,
   ) -> Self {
     let sources = Arc::new(Sources::with_root(config.root.clone()));
-    let compiler = config.compiler;
 
     let session = Self {
       dcx: DiagnosticCtx::new(
@@ -52,7 +50,6 @@ impl Session {
       config,
       module_graph: ModuleGraph::new(),
       target: Target::host(),
-      compiler,
       compilation_mode,
       sources,
       timings: RwLock::new(Vec::new()),
@@ -71,7 +68,7 @@ impl Session {
   }
 
   pub fn compiler(&self) -> Option<Compiler> {
-    self.compiler
+    self.config.compiler
   }
 
   pub fn config(&self) -> &ProjectConfig {
@@ -153,10 +150,9 @@ impl Session {
     self.config.package_type == PackageType::Binary
   }
 
-  pub fn sorted_packages(&self) -> Result<Vec<Dependency>, PackageCycleError> {
+  pub fn sorted_packages(&self) -> Result<Vec<&Dependency>, PackageCycleError> {
     let graph = PackageGraph::from_dependencies(&self.config.packages);
-    let sorted = graph.compilation_order(&self.config.packages)?;
-    Ok(sorted.into_iter().cloned().collect())
+    graph.compilation_order(&self.config.packages)
   }
 
   pub fn add_archive_file(&self, path: PathBuf) {

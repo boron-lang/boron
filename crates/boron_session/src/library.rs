@@ -1,4 +1,4 @@
-use boron_session::project_config::ProjectConfig;
+use crate::prelude::ProjectConfig;
 use boron_target::target::Target;
 use serde::{Deserialize, Serialize};
 
