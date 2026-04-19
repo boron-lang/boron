@@ -4,12 +4,12 @@ use crate::test::Test;
 use boron_core::prelude::*;
 use boron_diagnostics::{DiagnosticLevel, DiagnosticWriter};
 use itertools::Itertools;
-use std::panic::{AssertUnwindSafe, catch_unwind};
+use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use super::directives::matches_directive;
 use super::panic::{
-  PanicHookGuard, PanicRunGuard, clear_last_backtrace, install_panic_hook, panic_message,
-  take_last_backtrace,
+  clear_last_backtrace, install_panic_hook, panic_message, take_last_backtrace, PanicHookGuard,
+  PanicRunGuard,
 };
 
 pub fn run_single_test_in_process(test: &Test) -> TestResult {
@@ -49,7 +49,7 @@ pub fn run_single_test_in_process(test: &Test) -> TestResult {
 
     let result = compiler_entrypoint(&sess);
 
-    if let Ok(_) = result {
+    if result.is_ok() {
       let sources = sess.dcx().sources();
       let mut failures = vec![];
 

@@ -3,13 +3,13 @@ mod label;
 mod margins;
 mod source_groups;
 
-use crate::emitters::Emitter;
 use crate::emitters::fmt::Fmt as _;
-use crate::emitters::human_readable::chars::{Characters, ascii};
+use crate::emitters::human_readable::chars::{ascii, Characters};
 use crate::emitters::human_readable::label::{LabelInfo, LabelKind, LineLabel};
 use crate::emitters::human_readable::margins::{MarginContext, MarginLabelContext};
 use crate::emitters::human_readable::source_groups::SourceGroup;
 use crate::emitters::show::Show;
+use crate::emitters::Emitter;
 use crate::{Diag, DiagnosticLevel};
 use anyhow::Result;
 use boron_source::line::Line;
@@ -25,30 +25,20 @@ pub const TAB_WIDTH: usize = 4;
 pub const MULTILINE_ARROWS: bool = true;
 pub const CROSS_GAPS: bool = true;
 pub const UNDERLINES: bool = true;
+pub const MARGIN_COLOR: Color = Color::Fixed(44);
+pub const LINE_NUMBER_COLOR: Color = Color::Fixed(246);
+pub const NOTE_COLOR: Color = Color::Fixed(115);
+pub const HELP_COLOR: Color = Color::Fixed(51);
 
 #[derive(Debug)]
 pub struct HumanReadableEmitter {
   characters: Characters,
-  color: bool,
   sources: Arc<Sources>,
 }
 
 impl HumanReadableEmitter {
-  pub fn new(sources: Arc<Sources>, color: bool) -> Self {
-    Self { characters: ascii(), color, sources }
-  }
-
-  fn margin_color(&self) -> Color {
-    Color::Fixed(44)
-  }
-  fn line_number_color(&self) -> Color {
-    Color::Fixed(246)
-  }
-  fn note_color(&self) -> Color {
-    Color::Fixed(115)
-  }
-  fn help_color(&self) -> Color {
-    Color::Fixed(51)
+  pub fn new(sources: Arc<Sources>) -> Self {
+    Self { characters: ascii(), sources }
   }
 
   fn char_width(c: char, col: usize) -> (char, usize) {
@@ -286,19 +276,14 @@ impl<'a> HumanReadableEmitter {
       w,
       "{}{}{}{}{} {}",
       Show((' ', line_no_width + 1)),
-      draw.hbar.fg(self.margin_color()),
-      draw.hbar.fg(self.margin_color()),
-      draw.hbar.fg(self.margin_color()),
-      ">".fg(self.margin_color()),
+      draw.hbar.fg(MARGIN_COLOR),
+      draw.hbar.fg(MARGIN_COLOR),
+      draw.hbar.fg(MARGIN_COLOR),
+      ">".fg(MARGIN_COLOR),
       line_ref,
     )?;
 
-    writeln!(
-      w,
-      "{}{}",
-      Show((' ', line_no_width + 2)),
-      draw.vbar.fg(self.margin_color())
-    )?;
+    writeln!(w, "{}{}", Show((' ', line_no_width + 2)), draw.vbar.fg(MARGIN_COLOR))?;
     Ok(())
   }
 
@@ -603,7 +588,7 @@ impl<'a> HumanReadableEmitter {
         };
 
         let [c, tail] = if underline.is_some() {
-          if ExactSizeIterator::len(&vbar_ll.label.char_span) <= 1 || true {
+          if ExactSizeIterator::len(&vbar_ll.label.char_span) <= 1 {
             [draw.underbar, draw_underline]
           } else if ctx.line.offset() + col == vbar_ll.label.char_span.start {
             [draw.ltop, draw.underbar]
@@ -799,7 +784,7 @@ impl<'a> HumanReadableEmitter {
         &help_prefix,
         help_prefix_len,
         '=',
-        self.help_color(),
+        HELP_COLOR,
         multi_labels_with_message,
         src,
         line_no_width,
@@ -829,7 +814,7 @@ impl<'a> HumanReadableEmitter {
         &note_prefix,
         note_prefix_len,
         '=',
-        self.note_color(),
+        NOTE_COLOR,
         multi_labels_with_message,
         src,
         line_no_width,
@@ -881,12 +866,7 @@ impl<'a> HumanReadableEmitter {
     if is_final_group {
       writeln!(w)?;
     } else {
-      writeln!(
-        w,
-        "{}{}",
-        Show((' ', line_no_width + 2)),
-        draw.vbar.fg(self.margin_color())
-      )?;
+      writeln!(w, "{}{}", Show((' ', line_no_width + 2)), draw.vbar.fg(MARGIN_COLOR))?;
     }
     Ok(())
   }

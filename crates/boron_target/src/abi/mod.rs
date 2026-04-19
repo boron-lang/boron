@@ -23,7 +23,7 @@ pub enum Abi {
 }
 
 impl Abi {
-  pub fn parse_from_string(abi: String) -> Option<Self> {
-    Self::from_str(&abi).ok()
+  pub fn parse_from_string(abi: &String) -> Option<Self> {
+    Self::from_str(abi).ok()
   }
 }

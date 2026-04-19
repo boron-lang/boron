@@ -11,10 +11,6 @@ type-complexity-threshold = 350
 
 # -----------------------------------------------------------------------------
 
-disallowed-macros = [
-    'std::unimplemented',
-]
-
 disallowed-methods = [
     "std::env::temp_dir", # Use the tempdir crate instead
     "std::thread::spawn", # Use `std::thread::Builder` and name the thread

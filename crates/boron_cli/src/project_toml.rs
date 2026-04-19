@@ -1,5 +1,5 @@
 use crate::cli::Cli;
-use anyhow::{Context as _, Result, anyhow};
+use anyhow::{anyhow, Context as _, Result};
 use boron_diagnostics::prelude::DiagnosticOutputType;
 use boron_session::dependency::{DepId, Dependency};
 use boron_session::enums::lib_type::LibType;
@@ -55,7 +55,6 @@ pub struct ProjectToml {
 }
 
 pub fn load_project_toml(path: &Path) -> Result<Option<ProjectToml>> {
-  path;
   if !path.exists() {
     return Ok(None);
   }

@@ -1,13 +1,13 @@
 use crate::expressions::Expr;
 use crate::items::Item;
-use crate::parser::Parser;
 use crate::parser::errors::{
   ABIMustBeExplicit, ComptimeExternTogether, ConstCannotBeUninitialized,
   ConstExpectedFuncOrIdent, ConstItemsNeedTypeAnnotation, InvalidAbi, ModStringLit,
 };
+use crate::parser::Parser;
 use crate::{
-  ConstItem, FunctionModifiers, ItemKind, ModItem, NodeId, Path, PathParsingContext,
-  TokenType, Type, Visibility, log_parse_failure,
+  log_parse_failure, ConstItem, FunctionModifiers, ItemKind, NodeId, Path, PathParsingContext,
+  TokenType, Type, Visibility,
 };
 use boron_session::prelude::debug;
 use boron_source::prelude::Span;
@@ -71,16 +71,10 @@ impl Parser<'_> {
     let kind = match token {
       TokenType::Mod => {
         if self.is_identifier() && self.peek_ahead(1)?.kind == TokenType::LeftBrace {
-          let name = self.parse_identifier();
+          let _name = self.parse_identifier();
           self.expect(TokenType::LeftBrace, "to open a module declaration");
 
           todo!("mod decl not implemented");
-          Some(ItemKind::Mod(ModItem {
-            name,
-            id: NodeId::new(),
-            span: Default::default(),
-            items: vec![],
-          }))
         } else if self.is_module_discovery_beginning() {
           let path = self.parse_module_discovery();
           let path = path?;
@@ -193,7 +187,7 @@ impl Parser<'_> {
     };
 
     if let Some(abi_str) = abi {
-      let abi = Abi::parse_from_string(abi_str.clone());
+      let abi = Abi::parse_from_string(&abi_str);
       if abi.is_none() {
         self.emit(InvalidAbi { abi: abi_str, span: abi_span });
       }

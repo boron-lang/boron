@@ -16,8 +16,8 @@ impl Layout {
 pub struct Alignment(usize);
 impl Alignment {
   pub fn new(alignment: usize) -> Self {
-    assert_ne!(alignment, 0);
-    assert!(alignment.is_power_of_two());
+    assert_ne!(alignment, 0, "assignment can't be 0");
+    assert!(alignment.is_power_of_two(), "alignment has to be a power of two");
     Self(alignment)
   }
 

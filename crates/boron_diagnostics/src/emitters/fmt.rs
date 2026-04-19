@@ -19,13 +19,6 @@ pub trait Fmt: Sized {
   {
     Paint::new(self).bold()
   }
-
-  fn italic(self) -> Painted<Self>
-  where
-    Self: Display,
-  {
-    Paint::new(self).italic()
-  }
 }
 
 impl<T: Display> Fmt for T {}

@@ -1,14 +1,14 @@
-use crate::emitters::Emitter;
 use crate::emitters::human_readable::HumanReadableEmitter;
+use crate::emitters::Emitter;
 use crate::output_type::DiagnosticOutputType;
 use crate::writer::DiagnosticWriter;
 use crate::{Diag, Diagnostic, DiagnosticId, DiagnosticLevel};
 use boron_source::prelude::Sources;
-use dashmap::DashMap;
 use dashmap::mapref::one::{Ref, RefMut};
+use dashmap::DashMap;
 use derivative::Derivative;
 use log::debug;
-use std::io::{Write as _, stderr};
+use std::io::{stderr, Write as _};
 use std::sync::Arc;
 
 #[derive(Derivative)]
@@ -29,14 +29,11 @@ pub trait ToDiagnostic {
 impl DiagnosticCtx {
   pub fn new(
     sources: Arc<Sources>,
-    color: bool,
     diagnostic_output_type: &DiagnosticOutputType,
     writer: DiagnosticWriter,
   ) -> Self {
     let emitter: Box<dyn Emitter + Send + Sync> = match diagnostic_output_type {
-      DiagnosticOutputType::HumanReadable => {
-        Box::new(HumanReadableEmitter::new(sources, color))
-      }
+      DiagnosticOutputType::HumanReadable => Box::new(HumanReadableEmitter::new(sources)),
       DiagnosticOutputType::Json => {
         unimplemented!("JSON output not yet implemented")
       }

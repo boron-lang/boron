@@ -251,27 +251,23 @@ impl<'a> Interpreter<'a> {
     match op {
       Eq => ConstValue::Bool(Self::values_equal(lval, rval)),
       Ne => ConstValue::Bool(!Self::values_equal(lval, rval)),
-      Lt => match (lval, rval) {
-        (ConstValue::Int(l), ConstValue::Int(r)) => ConstValue::Bool(l < r),
-        (ConstValue::Char(l), ConstValue::Char(r)) => ConstValue::Bool(l < r),
-        _ => ConstValue::Poison,
-      },
-      Le => match (lval, rval) {
-        (ConstValue::Int(l), ConstValue::Int(r)) => ConstValue::Bool(l <= r),
-        (ConstValue::Char(l), ConstValue::Char(r)) => ConstValue::Bool(l <= r),
-        _ => ConstValue::Poison,
-      },
-      Gt => match (lval, rval) {
-        (ConstValue::Int(l), ConstValue::Int(r)) => ConstValue::Bool(l > r),
-        (ConstValue::Char(l), ConstValue::Char(r)) => ConstValue::Bool(l > r),
-        _ => ConstValue::Poison,
-      },
-      Ge => match (lval, rval) {
-        (ConstValue::Int(l), ConstValue::Int(r)) => ConstValue::Bool(l >= r),
-        (ConstValue::Char(l), ConstValue::Char(r)) => ConstValue::Bool(l >= r),
-        _ => ConstValue::Poison,
-      },
-      _ => unreachable!(),
+      _ => {
+        let cmp = match (lval, rval) {
+          (ConstValue::Int(l), ConstValue::Int(r)) => Some(l.cmp(r)),
+          (ConstValue::Char(l), ConstValue::Char(r)) => Some(l.cmp(r)),
+          _ => None,
+        };
+        match cmp {
+          None => ConstValue::Poison,
+          Some(ord) => ConstValue::Bool(match op {
+            Lt => ord.is_lt(),
+            Le => ord.is_le(),
+            Gt => ord.is_gt(),
+            Ge => ord.is_ge(),
+            _ => unreachable!(),
+          }),
+        }
+      }
     }
   }
 

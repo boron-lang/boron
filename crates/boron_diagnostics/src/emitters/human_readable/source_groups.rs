@@ -1,5 +1,5 @@
-use crate::emitters::human_readable::HumanReadableEmitter;
 use crate::emitters::human_readable::label::{LabelInfo, LabelKind};
+use crate::emitters::human_readable::HumanReadableEmitter;
 use crate::{Diag, Label};
 use boron_source::line::Line;
 use boron_source::prelude::{SourceFile, SourceFileId};
@@ -15,7 +15,7 @@ pub struct SourceGroup<'a> {
 impl HumanReadableEmitter {
   pub fn get_source_groups<'a>(&self, diag: &'a Diag) -> Vec<SourceGroup<'a>> {
     let labeled_infos = self.collect_label_infos(diag);
-    self.group_labels_by_source(labeled_infos)
+    Self::group_labels_by_source(labeled_infos)
   }
 
   fn collect_label_infos<'a>(
@@ -63,7 +63,7 @@ impl HumanReadableEmitter {
     if byte_span.start >= byte_span.end {
       let (line_obj, line_num, byte_col) = source.get_byte_line(byte_span.start)?;
       let line_text = source.get_line_text(line_obj).expect("line text should exist");
-      let char_offset = self.calculate_char_offset(&line_obj, line_text, byte_col);
+      let char_offset = Self::calculate_char_offset(&line_obj, line_text, byte_col);
       return Some((char_offset..char_offset, line_num, line_num));
     }
 
@@ -72,7 +72,7 @@ impl HumanReadableEmitter {
     let start_line_text =
       source.get_line_text(start_line_obj).expect("line text should exist");
     let start_char_offset =
-      self.calculate_char_offset(&start_line_obj, start_line_text, start_byte_col);
+      Self::calculate_char_offset(&start_line_obj, start_line_text, start_byte_col);
 
     let end_byte_pos = byte_span.end - 1;
     let (end_line_obj, end_line_num, end_byte_col) =
@@ -81,33 +81,27 @@ impl HumanReadableEmitter {
       source.get_line_text(end_line_obj).expect("line text should exist");
 
     let end_char_offset =
-      self.calculate_char_offset(&end_line_obj, end_line_text, end_byte_col + 1);
+      Self::calculate_char_offset(&end_line_obj, end_line_text, end_byte_col + 1);
 
     Some((start_char_offset..end_char_offset, start_line_num, end_line_num))
   }
 
-  fn calculate_char_offset(
-    &self,
-    line: &Line,
-    line_text: &str,
-    byte_col: usize,
-  ) -> usize {
+  fn calculate_char_offset(line: &Line, line_text: &str, byte_col: usize) -> usize {
     let safe_byte_col = byte_col.min(line_text.len());
     let chars_before_col = line_text[..safe_byte_col].chars().count();
     line.offset() + chars_before_col
   }
 
   fn group_labels_by_source<'a>(
-    &self,
     labeled_infos: Vec<(LabelInfo<'a>, SourceFileId)>,
   ) -> Vec<SourceGroup<'a>> {
     let mut groups: Vec<SourceGroup<'a>> = Vec::new();
 
     for (label, src_id) in labeled_infos {
-      if self.can_merge_with_last_group(&groups, src_id, &label) {
-        self.merge_label_into_last_group(&mut groups, label);
+      if Self::can_merge_with_last_group(&groups, src_id, &label) {
+        Self::merge_label_into_last_group(&mut groups, label);
       } else {
-        groups.push(self.create_new_group(src_id, label));
+        groups.push(Self::create_new_group(src_id, label));
       }
     }
 
@@ -115,7 +109,6 @@ impl HumanReadableEmitter {
   }
 
   fn can_merge_with_last_group(
-    &self,
     groups: &[SourceGroup<'_>],
     src_id: SourceFileId,
     label: &LabelInfo<'_>,
@@ -127,7 +120,6 @@ impl HumanReadableEmitter {
   }
 
   fn merge_label_into_last_group<'a>(
-    &self,
     groups: &mut [SourceGroup<'a>],
     label: LabelInfo<'a>,
   ) {
@@ -143,11 +135,7 @@ impl HumanReadableEmitter {
     group.labels.push(label);
   }
 
-  fn create_new_group<'a>(
-    &self,
-    src_id: SourceFileId,
-    label: LabelInfo<'a>,
-  ) -> SourceGroup<'a> {
+  fn create_new_group(src_id: SourceFileId, label: LabelInfo<'_>) -> SourceGroup<'_> {
     SourceGroup {
       src_id,
       char_span: label.char_span.clone(),

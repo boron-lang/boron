@@ -13,7 +13,7 @@ pub mod blocks;
 mod calls;
 mod literals;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum ValueKind<'ctx> {
   LValue(PointerValue<'ctx>),
   RValue(BasicValueEnum<'ctx>),
@@ -180,7 +180,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
             else_branch
               .as_ref()
               .map(|b| b.hir_id.to_string())
-              .unwrap_or("none".to_owned())
+              .unwrap_or_else(|| "none".to_owned())
           ),
         );
         let merge_bb = self.context.append_basic_block(function, "ifcont");
@@ -353,7 +353,6 @@ impl<'ctx> LLVMCodegen<'ctx> {
           }
           UnaryOp::Deref => Ok(self.value_to_basic(ty, value)?.into()),
           UnaryOp::Plus => Ok(value),
-          _ => unreachable!(),
         }
       }
 
@@ -363,9 +362,8 @@ impl<'ctx> LLVMCodegen<'ctx> {
     }
   }
 
-  pub fn build_tuple(&self, elements: &Vec<IrExpr>) -> Result<ValueKind<'ctx>> {
+  pub fn build_tuple(&self, elements: &[IrExpr]) -> Result<ValueKind<'ctx>> {
     let element_types = elements.iter().map(|e| e.ty.clone()).collect_vec();
-
     let tuple_ty = self.tuple_ty(&element_types)?.into_struct_type();
 
     let mut tuple = tuple_ty.get_undef();

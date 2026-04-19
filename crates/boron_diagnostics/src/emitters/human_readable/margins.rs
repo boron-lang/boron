@@ -1,6 +1,8 @@
 use crate::emitters::fmt::Fmt as _;
 use crate::emitters::human_readable::label::{LabelInfo, LineLabel};
-use crate::emitters::human_readable::{CROSS_GAPS, HumanReadableEmitter};
+use crate::emitters::human_readable::{
+  HumanReadableEmitter, CROSS_GAPS, LINE_NUMBER_COLOR, MARGIN_COLOR,
+};
 use boron_source::prelude::SourceFile;
 use boron_source::span::Span;
 use std::io;
@@ -71,13 +73,13 @@ impl<'a> HumanReadableEmitter {
         w,
         " {}{} {} ",
         padding,
-        line_no.fg(self.line_number_color()),
-        draw.vbar.fg(self.margin_color())
+        line_no.fg(LINE_NUMBER_COLOR),
+        draw.vbar.fg(MARGIN_COLOR)
       )
     } else {
       let padding = " ".repeat(margin.line_no_width + 1);
       let vbar = if margin.is_ellipsis { draw.vbar_gap } else { draw.vbar };
-      write!(w, " {}{} ", padding, vbar.fg(self.margin_color()))
+      write!(w, " {}{} ", padding, vbar.fg(MARGIN_COLOR))
     }
   }
 

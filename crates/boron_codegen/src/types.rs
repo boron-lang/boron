@@ -1,11 +1,11 @@
 use crate::codegen::LLVMCodegen;
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use boron_ir::SemanticTy;
 use boron_parser::PrimitiveKind;
 use boron_resolver::DefId;
 use boron_session::prelude::warn;
-use inkwell::AddressSpace;
 use inkwell::types::{BasicType as _, BasicTypeEnum, StructType};
+use inkwell::AddressSpace;
 use std::num::NonZeroU32;
 
 impl<'ctx> LLVMCodegen<'ctx> {
@@ -14,7 +14,9 @@ impl<'ctx> LLVMCodegen<'ctx> {
     Ok(match prim {
       PrimitiveKind::I8 | PrimitiveKind::U8 => ctx.i8_type().into(),
       PrimitiveKind::I16 | PrimitiveKind::U16 => ctx.i16_type().into(),
-      PrimitiveKind::I32 | PrimitiveKind::U32 => ctx.i32_type().into(),
+      PrimitiveKind::I32 | PrimitiveKind::U32 | PrimitiveKind::Char => {
+        ctx.i32_type().into()
+      }
       PrimitiveKind::I64 | PrimitiveKind::U64 => ctx.i64_type().into(),
       PrimitiveKind::I128 | PrimitiveKind::U128 => ctx.i128_type().into(),
       PrimitiveKind::ISize | PrimitiveKind::USize => {
@@ -29,7 +31,6 @@ impl<'ctx> LLVMCodegen<'ctx> {
       PrimitiveKind::F64 => ctx.f64_type().into(),
 
       PrimitiveKind::Bool => ctx.bool_type().into(),
-      PrimitiveKind::Char => ctx.i32_type().into(),
       PrimitiveKind::Void => ctx.i8_type().into(),
     })
   }
