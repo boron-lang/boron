@@ -4,7 +4,7 @@ use boron_source::new_id;
 use boron_target::target::Compiler;
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
-use std::{path::PathBuf, str::FromStr, sync::Arc};
+use std::{path::PathBuf, sync::Arc};
 
 new_id!(DepId);
 

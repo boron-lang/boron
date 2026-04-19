@@ -5,15 +5,15 @@ use boron_resolver::DefId;
 pub enum SemanticTy {
   Primitive(PrimitiveKind),
 
-  Struct { def_id: DefId, args: Vec<SemanticTy> },
-  Enum { def_id: DefId, args: Vec<SemanticTy>, variants: Vec<EnumVariant> },
+  Struct { def_id: DefId, args: Vec<Self> },
+  Enum { def_id: DefId, args: Vec<Self>, variants: Vec<EnumVariant> },
 
-  Ptr { mutability: Mutability, inner: Box<SemanticTy> },
-  Optional(Box<SemanticTy>),
-  Array { elem: Box<SemanticTy>, len: usize },
-  Slice(Box<SemanticTy>),
-  Tuple(Vec<SemanticTy>),
-  Fn { params: Vec<SemanticTy>, ret: Box<SemanticTy> },
+  Ptr { mutability: Mutability, inner: Box<Self> },
+  Optional(Box<Self>),
+  Array { elem: Box<Self>, len: usize },
+  Slice(Box<Self>),
+  Tuple(Vec<Self>),
+  Fn { params: Vec<Self>, ret: Box<Self> },
 
   Unit,
   Never,

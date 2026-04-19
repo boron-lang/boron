@@ -105,7 +105,7 @@ impl TyChecker<'_> {
   fn resolve_callee_metadata(
     &mut self,
     callee: &Expr,
-    env: &mut TypeEnv,
+    _env: &mut TypeEnv,
   ) -> (Option<DefId>, Vec<InferTy>, Identifier) {
     if let ExprKind::Path(path) = &callee.kind {
       let args = path
@@ -311,10 +311,10 @@ impl TyChecker<'_> {
     subst: &mut SubstitutionMap,
   ) {
     match (scheme_ty, resolved_ty) {
-      (InferTy::Param(param), resolved) => {
-        if vars.iter().any(|v| v.def_id == param.def_id) {
-          subst.add(*param, resolved.clone());
-        }
+      (InferTy::Param(param), resolved)
+        if vars.iter().any(|v| v.def_id == param.def_id) =>
+      {
+        subst.add(*param, resolved.clone());
       }
       (InferTy::Ptr { ty: s_ty, .. }, InferTy::Ptr { ty: r_ty, .. })
       | (InferTy::Optional(s_ty, _), InferTy::Optional(r_ty, _))

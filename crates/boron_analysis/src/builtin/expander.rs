@@ -76,7 +76,7 @@ impl<'a> BuiltInExpander<'a> {
         }
       }
 
-      ExprKind::Comptime { callee, args } => {
+      ExprKind::Comptime { callee, args: _ } => {
         if let Some(ty) = self.bctx.ty_table.node_type(expr.hir_id)
           && let InferTy::Err(_) = ty
         {

@@ -1,6 +1,6 @@
-use crate::prelude::{debug, info, CompilationUnit, FILE_EXTENSION};
-use anyhow::bail;
+use crate::prelude::{CompilationUnit, FILE_EXTENSION, debug, info};
 use anyhow::Result;
+use anyhow::bail;
 use boron_diagnostics::DiagnosticWriter;
 use boron_session::dependency::Dependency;
 use boron_session::prelude::{ProjectConfig, Session};

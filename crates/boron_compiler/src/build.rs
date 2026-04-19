@@ -170,7 +170,7 @@ impl<'a> CompilerBuild<'a> {
   fn create_static_library(
     &self,
     output_name: &OsStr,
-    object_files: &[Arc<OsStr>],
+    _object_files: &[Arc<OsStr>],
   ) -> Result<PathBuf> {
     let output_path = self.get_output_path(output_name)?.with_extension("blib");
 

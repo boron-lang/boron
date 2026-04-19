@@ -241,7 +241,7 @@ impl<'a> Interpreter<'a> {
 
   fn eval_comparison(
     &self,
-    expr: &Expr,
+    _expr: &Expr,
     op: &BinaryOp,
     lval: &ConstValue,
     rval: &ConstValue,
@@ -277,7 +277,7 @@ impl<'a> Interpreter<'a> {
 
   fn eval_logical(
     &self,
-    expr: &Expr,
+    _expr: &Expr,
     op: &BinaryOp,
     lval: &ConstValue,
     rval: &ConstValue,

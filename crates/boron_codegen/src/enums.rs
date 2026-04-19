@@ -66,7 +66,7 @@ impl<'a> LLVMCodegen<'a> {
       disc_ty.into_int_type().const_int(variant.discriminant as u64, false),
     )?;
 
-    if let Some(payload_ty) = &variant.payload {
+    if let Some(_payload_ty) = &variant.payload {
       let payload_ptr = self.builder.build_struct_gep(enum_ty, alloca, 1, "payload")?;
       let payload_cast = self.builder.build_pointer_cast(
         payload_ptr,

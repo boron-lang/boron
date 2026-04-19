@@ -4,11 +4,11 @@ use tracing::field::Field;
 use tracing::span::Record;
 use tracing::{Event, Level};
 use tracing_subscriber::registry::LookupSpan;
-use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::util::SubscriberInitExt as _;
 use tracing_subscriber::{
-  fmt::{self as tracing_fmt, format::Writer, FormatEvent, FormatFields},
-  layer::SubscriberExt,
   EnvFilter,
+  fmt::{self as tracing_fmt, FormatEvent, FormatFields, format::Writer},
+  layer::SubscriberExt as _,
 };
 use yansi::Paint as _;
 
@@ -23,17 +23,17 @@ struct FieldVisitor<'a> {
   result: fmt::Result,
 }
 
-impl<'a> Visit for FieldVisitor<'a> {
+impl Visit for FieldVisitor<'_> {
   fn record_str(&mut self, field: &Field, value: &str) {
     self.write_field(field.name(), value);
   }
 
   fn record_debug(&mut self, field: &Field, value: &dyn fmt::Debug) {
-    self.write_field(field.name(), &format!("{:?}", value));
+    self.write_field(field.name(), &format!("{value:?}"));
   }
 }
 
-impl<'a> FieldVisitor<'a> {
+impl FieldVisitor<'_> {
   fn write_field(&mut self, key: &str, value: &str) {
     if self.result.is_err() {
       return;
@@ -42,7 +42,7 @@ impl<'a> FieldVisitor<'a> {
     self.is_first = false;
 
     if key == "message" {
-      self.result = write!(self.writer, "{}", value);
+      self.result = write!(self.writer, "{value}");
     } else if !key.starts_with("log.") {
       self.result =
         write!(self.writer, "{}{}={}", sep, key.dim(), value.white().underline());
@@ -79,7 +79,7 @@ pub fn setup_logger(verbose: bool, no_color: bool) {
   }
 
   let level = if verbose { "debug" } else { "info" };
-  let filter = EnvFilter::new(format!("{},serenity=warn", level));
+  let filter = EnvFilter::new(format!("{level},serenity=warn"));
 
   let fmt_layer = tracing_fmt::layer()
     .fmt_fields(CustomFields)

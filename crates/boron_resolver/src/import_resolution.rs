@@ -6,8 +6,8 @@ use crate::{
   DefId, DefKind, Definition, ModuleResolver, ResolveVisitor, Symbol, SymbolKind,
 };
 use boron_parser::{ImportDecl, ImportKind, ImportSpec, NodeId, PathRoot, Visibility};
-use boron_session::prelude::{debug, warn};
-use boron_source::ident_table::{get_or_intern, Identifier};
+use boron_session::prelude::debug;
+use boron_source::ident_table::{Identifier, get_or_intern};
 use boron_source::prelude::{SourceFileId, Span};
 use dashmap::DashMap;
 
@@ -42,7 +42,7 @@ impl<'a> ResolveVisitor<'a> {
     let dep_name = &import.path.segments[0].identifier;
 
     debug!(packages = ?self.sess.config.packages);
-    if let Some(dep) = self
+    if let Some(_dep) = self
       .sess
       .config
       .packages
@@ -52,7 +52,7 @@ impl<'a> ResolveVisitor<'a> {
 
       // self.resolver().add_external_import_mapping(&import.path, dep.id, )
     } else {
-      self.dcx().emit(ExternalDependencyNotFound { span: import.span, dep: *dep_name })
+      self.dcx().emit(ExternalDependencyNotFound { span: import.span, dep: *dep_name });
     }
   }
 
@@ -67,7 +67,7 @@ impl<'a> ResolveVisitor<'a> {
           self.resolve_binding_import(target_file, *name, import);
         }
       },
-      Some(ImportMapping::External(dep, file)) => {}
+      Some(ImportMapping::External(_dep, _file)) => {}
       _ => {
         debug!("skipping {import:?} because path couldn't be resolved");
       }

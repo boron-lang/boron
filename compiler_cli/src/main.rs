@@ -1,16 +1,12 @@
 use crate::panic::setup_panic_handler;
 use anyhow::Result;
-use boron_cli::prelude::{
-  build_project_config, load_project_toml, setup_logger, PROJECT_FILE,
-};
+use boron_cli::prelude::{build_project_config, setup_logger};
 use boron_cli::{Cli, CliCommand};
 use boron_core::prelude::{
-  compiler_entrypoint, debug, CompilationMode, DiagnosticWriter, Session,
+  CompilationMode, DiagnosticWriter, Session, compiler_entrypoint, debug,
 };
 use boron_lib::container::read_container_file;
 use clap::Parser as _;
-use std::env::current_dir;
-use std::path::Path;
 use std::process::exit;
 use yansi::Paint as _;
 

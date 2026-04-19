@@ -114,5 +114,5 @@ pub struct SelfOutsideMethod {
 pub struct ExternalDependencyNotFound {
   #[error("in this import declaration")]
   pub span: Span,
-  pub dep: Identifier
+  pub dep: Identifier,
 }

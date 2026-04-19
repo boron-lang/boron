@@ -1,5 +1,5 @@
 use crate::cli::Cli;
-use anyhow::{anyhow, Context as _, Result};
+use anyhow::{Context as _, Result, anyhow};
 use boron_diagnostics::prelude::DiagnosticOutputType;
 use boron_session::dependency::{DepId, Dependency};
 use boron_session::enums::lib_type::LibType;
@@ -55,7 +55,7 @@ pub struct ProjectToml {
 }
 
 pub fn load_project_toml(path: &Path) -> Result<Option<ProjectToml>> {
-  dbg!(path);
+  path;
   if !path.exists() {
     return Ok(None);
   }
@@ -105,7 +105,7 @@ pub fn build_project_config(cli: Cli) -> Result<ProjectConfig> {
       continue;
     }
 
-    let dependency = resolve_dependency(&root, &alias, pkg)?;
+    let dependency = resolve_dependency(root, &alias, pkg)?;
     packages.push(dependency);
   }
 

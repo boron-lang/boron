@@ -230,11 +230,8 @@ impl<'a> HumanReadableEmitter {
     w: &mut dyn Write,
   ) -> Result<()> {
     let SourceGroup { src_id, char_span, labels, .. } = group;
-    let src_name = self
-      .sources
-      .display(*src_id)
-      .map(|d| d.to_string())
-      .unwrap_or_else(|| "<unknown>".to_owned());
+    let src_name =
+      self.sources.display(*src_id).unwrap_or_else(|| "<unknown>".to_owned());
 
     let Some(src) = self.sources.get(*src_id) else {
       eprintln!("Unable to fetch source {src_id:?}");
@@ -273,7 +270,7 @@ impl<'a> HumanReadableEmitter {
 
   fn write_file_reference(
     &self,
-    group_idx: usize,
+    _group_idx: usize,
     labels: &[LabelInfo<'a>],
     src: &SourceFile,
     src_name: &str,

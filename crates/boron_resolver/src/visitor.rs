@@ -242,14 +242,14 @@ impl<'a> ResolveVisitor<'a> {
           self.resolve_pattern(p);
         }
       }
-      PatternKind::Struct { path, fields, rest } => {
+      PatternKind::Struct { path, fields, rest: _ } => {
         self.resolve_path(path);
 
         for field in fields {
           self.resolve_pattern(&field.pat);
         }
       }
-      PatternKind::TupleStruct { path, patterns, rest } => {
+      PatternKind::TupleStruct { path, patterns, rest: _ } => {
         self.resolve_path(path);
         for p in patterns {
           self.resolve_pattern(p);

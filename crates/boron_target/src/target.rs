@@ -1,8 +1,8 @@
 use crate::data_layout::DataLayout;
 use crate::primitive::PrimitiveKind;
+use inkwell::OptimizationLevel;
 use inkwell::targets::{CodeModel, InitializationConfig, RelocMode, TargetMachine};
 use inkwell::targets::{Target as LLVMTarget, TargetTriple};
-use inkwell::OptimizationLevel;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
@@ -288,7 +288,7 @@ impl Target {
     Compiler::Gcc
   }
 
-  fn default_archiver_for_triple(triple: &TargetTriple) -> Archiver {
+  fn default_archiver_for_triple(_triple: &TargetTriple) -> Archiver {
     // let triple_str = triple.as_str().to_string_lossy().to_ascii_lowercase();
     // let is_windows = triple_str.contains("windows");
     // let is_msvc = triple_str.contains("msvc");

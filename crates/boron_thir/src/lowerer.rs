@@ -299,10 +299,10 @@ impl<'a> ThirLowerer<'a> {
 
   fn lower_literal(&self, lit: &Literal, span: Span) -> ExprKind {
     let full_lit = match lit {
-      Literal::Int { base, value, suffix } => {
+      Literal::Int { base, value, suffix: _ } => {
         FullLiteral::Int(construct_i128(self.dcx, *base, value, span))
       }
-      Literal::Float { value, suffix } => {
+      Literal::Float { value, suffix: _ } => {
         FullLiteral::Float(construct_float(self.dcx, value, span))
       }
       Literal::Bool(b) => FullLiteral::Bool(*b),
