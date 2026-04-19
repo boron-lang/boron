@@ -7,7 +7,7 @@ mod structs;
 mod types;
 
 use crate::codegen::LLVMCodegen;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use boron_ir::Ir;
 use boron_resolver::DefId;
 use boron_session::prelude::Session;
@@ -37,5 +37,7 @@ pub fn run_codegen(sess: &Session, ir: &Ir, main_function: Option<DefId>) -> Res
     ir,
   };
 
-  codegen.generate(ir, &main_function)
+  codegen
+    .generate(ir, &main_function)
+    .map_err(|err| anyhow!("failed to run LLVM codegen: {err}"))
 }

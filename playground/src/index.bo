@@ -1,8 +1,11 @@
 mod vec;
+mod math;
 import std from dep::std;
+import math from math;
 
 extern "C" func puts(text: *const u8);
 
 func main() {
     var value = std::Option::Some("hello");
+    var x = math::add(10, 20);
 }

@@ -4,6 +4,7 @@ use crate::package_graph::{PackageCycleError, PackageGraph};
 use crate::prelude::{create_dir_all, PackageType};
 use crate::project_config::ProjectConfig;
 use boron_diagnostics::{DiagnosticCtx, DiagnosticWriter};
+use boron_source::ident_table::{get_or_intern, Identifier};
 use boron_source::prelude::Sources;
 use boron_target::target::{Compiler, Target};
 use parking_lot::RwLock;
@@ -157,5 +158,9 @@ impl Session {
 
   pub fn add_archive_file(&self, path: PathBuf) {
     self.archive_files.write().push(path);
+  }
+
+  pub fn find_dependency(&self, name: &Identifier) -> Option<&Dependency> {
+    self.config.packages.iter().find(|dep| &get_or_intern(&dep.name, None) == name)
   }
 }

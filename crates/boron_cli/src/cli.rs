@@ -5,8 +5,68 @@ use boron_target::target::Compiler;
 use clap::{Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 
+#[derive(Clone, Debug, Parser)]
+pub struct CliBuild {
+  #[arg(value_name = "project", help = "Path to project.toml")]
+  pub project: PathBuf,
+
+  #[arg(value_name = "type", short = 't', long = "type", help = "Type of the project")]
+  pub ty: Option<CliPackageType>,
+
+  #[arg(
+    value_name = "mode",
+    short = 'm',
+    long = "mode",
+    help = "Compilation mode: either 'debug' or 'release'"
+  )]
+  pub mode: Option<CliMode>,
+
+  #[arg(
+    value_name = "output",
+    help = "Path where the codegen should be saved to",
+    long = "output",
+    short = 'o'
+  )]
+  pub output: Option<PathBuf>,
+
+  #[arg(
+    value_name = "check-only",
+    help = "Do not output codegen or compile the code, only check for errors",
+    long = "check-only"
+  )]
+  pub check_only: bool,
+
+  #[arg(value_name = "no-color", help = "No color in the output", long = "no-color")]
+  pub no_color: bool,
+
+  #[arg(
+    value_name = "no-backtrace",
+    help = "No backtrace in panics",
+    long = "no-backtrace"
+  )]
+  pub no_backtrace: bool,
+
+  #[arg(
+    value_name = "timings",
+    help = "Show timings for each compilation step",
+    long = "timings"
+  )]
+  pub timings: bool,
+
+  #[arg(
+    value_name = "verbose",
+    short = 'v',
+    long = "verbose",
+    help = "Enable verbose logging: debug and trace"
+  )]
+  pub verbose: bool,
+}
+
 #[derive(Clone, Debug, Subcommand)]
 pub enum CliCommand {
+  #[command(about = "Build a Boron project")]
+  Build(CliBuild),
+
   #[command(about = "Deserialize a .blib file and print its contents")]
   InspectBlib {
     #[arg(value_name = "file", help = "Path to the .blib file")]
@@ -109,65 +169,11 @@ impl From<DiagOutputType> for DiagnosticOutputType {
   }
 }
 
-#[derive(Parser, Default)]
+#[derive(Parser)]
 #[command(name = "boron")]
 #[command(bin_name = "boron")]
 #[command(styles = CLAP_STYLING)]
 pub struct Cli {
   #[command(subcommand)]
-  pub command: Option<CliCommand>,
-
-  #[arg(value_name = "project", help = "Path to project.toml")]
-  pub project: PathBuf,
-
-  #[arg(value_name = "type", short = 't', long = "type", help = "Type of the project")]
-  pub ty: Option<CliPackageType>,
-
-  #[arg(
-    value_name = "mode",
-    short = 'm',
-    long = "mode",
-    help = "Compilation mode: either 'debug' or 'release'"
-  )]
-  pub mode: Option<CliMode>,
-
-  #[arg(
-    value_name = "output",
-    help = "Path where the codegen should be saved to",
-    long = "output",
-    short = 'o'
-  )]
-  pub output: Option<PathBuf>,
-
-  #[arg(
-    value_name = "check-only",
-    help = "Do not output codegen or compile the code, only check for errors",
-    long = "check-only"
-  )]
-  pub check_only: bool,
-
-  #[arg(value_name = "no-color", help = "No color in the output", long = "no-color")]
-  pub no_color: bool,
-
-  #[arg(
-    value_name = "no-backtrace",
-    help = "No backtrace in panics",
-    long = "no-backtrace"
-  )]
-  pub no_backtrace: bool,
-
-  #[arg(
-    value_name = "timings",
-    help = "Show timings for each compilation step",
-    long = "timings"
-  )]
-  pub timings: bool,
-
-  #[arg(
-    value_name = "verbose",
-    short = 'v',
-    long = "verbose",
-    help = "Enable verbose logging: debug and trace"
-  )]
-  pub verbose: bool,
+  pub command: CliCommand,
 }

@@ -20,13 +20,13 @@ pub struct Dependency {
   pub lib_type: Option<LibType>,
   pub compiler: Option<Compiler>,
   pub diagnostic_output_type: Option<DiagnosticOutputType>,
-  pub blib: BLibMetadata,
+  pub blib: Option<BLibMetadata>,
 }
 
 impl Dependency {
   pub fn new(
     name: String,
-    blib: BLibMetadata,
+    blib: Option<BLibMetadata>,
     entrypoint: PathBuf,
     root: PathBuf,
   ) -> Self {

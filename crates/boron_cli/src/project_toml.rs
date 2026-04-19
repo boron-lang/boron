@@ -1,5 +1,5 @@
-use crate::cli::Cli;
-use anyhow::{anyhow, bail, Context as _, Result};
+use crate::cli::CliBuild;
+use anyhow::{Context as _, Result, anyhow, bail};
 use boron_diagnostics::prelude::DiagnosticOutputType;
 use boron_lib::container::read_container_file;
 use boron_session::dependency::{DepId, Dependency};
@@ -7,7 +7,7 @@ use boron_session::enums::lib_type::LibType;
 use boron_session::enums::mode::Mode;
 use boron_session::enums::project_type::PackageType;
 use boron_session::prelude::{
-  canonicalize_or_create_dir, canonicalize_with_strip, BoronError,
+  BoronError, canonicalize_or_create_dir, canonicalize_with_strip,
 };
 use boron_session::project_config::ProjectConfig;
 use boron_target::target::Compiler;
@@ -68,7 +68,9 @@ pub fn load_project_toml(path: &Path) -> Result<Option<ProjectToml>> {
   Ok(Some(toml))
 }
 
-pub fn build_project_config(cli: Cli) -> Result<ProjectConfig> {
+pub fn build_project_config(
+  cli: CliBuild,
+) -> Result<(ProjectConfig, HashMap<String, TomlPackage>)> {
   let root = cli.project.parent().unwrap();
   let toml = load_project_toml(&cli.project)?.unwrap_or_default();
 
@@ -101,60 +103,72 @@ pub fn build_project_config(cli: Cli) -> Result<ProjectConfig> {
     toml.build.diagnostic_output.unwrap_or(DiagnosticOutputType::HumanReadable);
 
   let mut packages: Vec<Dependency> = vec![];
-  for (alias, pkg) in toml.dependencies {
-    if packages.iter().any(|p| p.name == alias) {
+  for (alias, pkg) in &toml.dependencies {
+    if packages.iter().any(|p| &p.name == alias) {
       continue;
     }
 
-    let dependency = resolve_dependency(&output, &mode, root, &alias, pkg)?;
+    let dependency = resolve_dependency(&output, &mode, &root, &alias, pkg, false)?;
     packages.push(dependency);
   }
 
-  Ok(ProjectConfig {
-    entrypoint: canonicalize_with_strip(entrypoint)?,
-    package_type,
-    packages,
-    mode,
-    name,
-    lib_type,
-    output,
-    root: canonicalize_with_strip(root)?,
-    compiler: toml.build.compiler,
-    diagnostic_output_type,
-    color: !cli.no_color,
-    check_only: cli.check_only,
-    verbose: cli.verbose,
-    no_backtrace: cli.no_backtrace,
-    timings: cli.timings,
-  })
+  Ok((
+    ProjectConfig {
+      entrypoint: canonicalize_with_strip(entrypoint)?,
+      package_type,
+      packages,
+      mode,
+      name,
+      lib_type,
+      output,
+      root: canonicalize_with_strip(root)?,
+      compiler: toml.build.compiler,
+      diagnostic_output_type,
+      color: !cli.no_color,
+      check_only: cli.check_only,
+      verbose: cli.verbose,
+      no_backtrace: cli.no_backtrace,
+      timings: cli.timings,
+    },
+    toml.dependencies,
+  ))
 }
 
-fn resolve_dependency(
+pub fn resolve_dependency(
   main_output_dir: &Path,
   main_mode: &Mode,
   root: &Path,
   alias: &str,
-  pkg: TomlPackage,
+  pkg: &TomlPackage,
+  fetch_blib: bool,
 ) -> Result<Dependency> {
-  let dep_root = resolve_path(root, pkg.path)
+  let dep_root = resolve_path(root, &pkg.path)
     .with_context(|| format!("failed to resolve path for dependency `{alias}`"))?;
 
   let dep_project = load_dep_project(&dep_root, alias)?;
   let build = dep_project.build;
   let project = dep_project.project;
 
-  let name = pkg.name.or(project.name).unwrap_or_else(|| alias.to_owned());
-  let entrypoint =
-    resolve_entrypoint(&dep_root, alias, pkg.entrypoint.or(project.entrypoint))?;
+  let name = pkg.name.clone().or(project.name).unwrap_or_else(|| alias.to_string());
+  let entrypoint = resolve_entrypoint(
+    &dep_root,
+    alias,
+    pkg.entrypoint.as_ref().or(project.entrypoint.as_ref()),
+  )?;
   let output = resolve_output(&dep_root, alias, build.output)?;
 
-  let blib_path =
-    main_output_dir.join(main_mode.to_string()).join(alias).with_extension("blib");
+  let blib = if fetch_blib {
+    let blib_path =
+      main_output_dir.join(main_mode.to_string()).join(alias).with_extension("blib");
 
-  if !blib_path.exists() {
-    bail!("couldn't find .blib file for {alias}: {}", blib_path.display())
-  }
-  let blib = read_container_file(&blib_path)?;
+    if !blib_path.exists() {
+      bail!("couldn't find .blib file for {alias}: {}", blib_path.display())
+    }
+    let blib = read_container_file(&blib_path)?;
+    Some(blib.metadata)
+  } else {
+    None
+  };
 
   Ok(Dependency {
     id: DepId::new(),
@@ -169,12 +183,12 @@ fn resolve_dependency(
     diagnostic_output_type: Some(
       build.diagnostic_output.unwrap_or(DiagnosticOutputType::HumanReadable),
     ),
-    blib: blib.metadata,
+    blib,
   })
 }
 
-fn resolve_path(root: &Path, path: PathBuf) -> Result<PathBuf, BoronError> {
-  let full = if path.is_absolute() { path } else { root.join(path) };
+fn resolve_path(root: &Path, path: &PathBuf) -> Result<PathBuf, BoronError> {
+  let full = if path.is_absolute() { path } else { &root.join(path) };
   canonicalize_with_strip(full)
 }
 
@@ -195,7 +209,7 @@ fn load_dep_project(dep_root: &Path, alias: &str) -> Result<ProjectToml> {
 fn resolve_entrypoint(
   dep_root: &Path,
   alias: &str,
-  raw: Option<PathBuf>,
+  raw: Option<&PathBuf>,
 ) -> Result<PathBuf> {
   let path = raw.ok_or_else(|| {
     anyhow!("dependency `{alias}` is missing an `entrypoint` in `{PROJECT_FILE}`")

@@ -1,9 +1,9 @@
+use crate::builder::build_blib_metadata;
 use anyhow::{ensure, Context as _, Result};
 use boron_session::library::BLibMetadata;
-use boron_session::prelude::{ProjectConfig, Session};
-use boron_target::target::Target;
+use boron_session::prelude::Session;
 use itertools::Itertools as _;
-use postcard::{from_bytes, take_from_bytes, to_allocvec};
+use postcard::{take_from_bytes, to_allocvec};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
@@ -35,18 +35,6 @@ pub struct ContainerFileEntry {
 pub struct BLibContainer {
   pub metadata: BLibMetadata,
   pub files: Vec<ContainerFileEntry>,
-}
-
-#[derive(Serialize)]
-struct BLibMetadataRef<'a> {
-  config: &'a ProjectConfig,
-  target: &'a Target,
-}
-
-fn build_blib_metadata(sess: &Session) -> Result<BLibMetadata> {
-  let metadata_ref = BLibMetadataRef { config: sess.config(), target: sess.target() };
-  let bytes = to_allocvec(&metadata_ref)?;
-  from_bytes(&bytes).map_err(Into::into)
 }
 
 pub fn write_container_file<P: AsRef<Path>>(path: P, sess: &Session) -> Result<()> {

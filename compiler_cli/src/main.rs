@@ -1,5 +1,6 @@
 use crate::panic::setup_panic_handler;
 use anyhow::Result;
+use boron_cli::prelude::CliBuild;
 use boron_cli::prelude::{build_project_config, setup_logger};
 use boron_cli::{Cli, CliCommand};
 use boron_core::prelude::{
@@ -22,43 +23,40 @@ fn main() {
 fn run() -> Result<()> {
   let cli = Cli::parse();
 
-  if let Some(command) = &cli.command {
-    return run_command(command);
+  match cli.command {
+    CliCommand::Build(build_args) => run_build(build_args),
+    CliCommand::InspectBlib { file } => run_inspect_blib(file),
   }
+}
 
-  let project_config = build_project_config(cli)?;
-  let session =
+fn run_build(build_args: CliBuild) -> Result<()> {
+  let (project_config, dependencies) = build_project_config(build_args)?;
+  let mut session =
     Session::new(project_config, DiagnosticWriter::stderr(), CompilationMode::Normal);
 
   setup_panic_handler(&session);
   setup_logger(session.config.verbose, !session.config.color);
   debug!(?session);
 
-  if let Err(e) = compiler_entrypoint(&session) {
-    Err(e)
-  } else {
-    if session.config.timings {
-      session.print_timings();
-    }
+  compiler_entrypoint(&mut session, dependencies)?;
 
-    Ok(())
+  if session.config.timings {
+    session.print_timings();
   }
+
+  Ok(())
 }
 
-fn run_command(command: &CliCommand) -> Result<()> {
-  match command {
-    CliCommand::InspectBlib { file } => {
-      let container = read_container_file(file)?;
+fn run_inspect_blib(file: std::path::PathBuf) -> Result<()> {
+  let container = read_container_file(file)?;
 
-      println!("Metadata:\n{:#?}", container.metadata);
-      println!("Files: {}", container.files.len());
+  println!("Metadata:\n{:#?}", container.metadata);
+  println!("Files: {}", container.files.len());
 
-      for file in container.files {
-        println!("\n{} ({} bytes)", file.name.bold().dim(), file.data.len());
-        println!("{}", String::from_utf8_lossy(&file.data));
-      }
-
-      Ok(())
-    }
+  for file in container.files {
+    println!("\n{} ({} bytes)", file.name.bold().dim(), file.data.len());
+    println!("{}", String::from_utf8_lossy(&file.data));
   }
+
+  Ok(())
 }

@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use crate::prelude::{debug, info, CompilationUnit, FILE_EXTENSION};
 use anyhow::bail;
 use anyhow::Result;
@@ -5,8 +6,12 @@ use boron_diagnostics::DiagnosticWriter;
 use boron_session::dependency::Dependency;
 use boron_session::prelude::{ProjectConfig, Session};
 use yansi::Paint as _;
+use boron_cli::prelude::{resolve_dependency, TomlPackage};
 
-pub fn compiler_entrypoint(session: &Session) -> Result<()> {
+pub fn compiler_entrypoint(
+  session: &mut Session,
+  dependencies: HashMap<String, TomlPackage>,
+) -> Result<()> {
   let packages = session.sorted_packages()?;
 
   for package in packages {
@@ -17,6 +22,18 @@ pub fn compiler_entrypoint(session: &Session) -> Result<()> {
 
     compile_single(&pkg_session)?;
   }
+
+  let mut packages: Vec<Dependency> = vec![];
+  for (alias, pkg) in dependencies {
+    if packages.iter().any(|p| p.name == alias) {
+      continue;
+    }
+
+    let dependency = resolve_dependency(&session.config.output, &session.config.mode, &session.config.root, &alias, &pkg, true)?;
+    packages.push(dependency);
+  }
+  
+  session.config.packages = packages;
 
   compile_single(session)?;
 

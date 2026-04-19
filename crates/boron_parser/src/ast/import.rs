@@ -1,6 +1,6 @@
-use crate::Type;
 use crate::ast::program::NodeId;
-use boron_session::prelude::{Identifier, Span};
+use crate::Type;
+use boron_session::prelude::{debug, Identifier, Span};
 use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 
@@ -85,7 +85,13 @@ impl Path {
       }
     }
 
-    Some(path.with_extension("bo"))
+    let path = if path.is_dir() {
+      Some(path.join("index").with_extension("bo"))
+    } else {
+      Some(path.with_extension("bo"))
+    };
+    debug!("constructed path = {:?}", path);
+    path
   }
 }
 
@@ -113,7 +119,7 @@ impl Display for Path {
 pub enum PathRoot {
   /// Absolute from the package root
   Package,
-  /// Absolute from dependency package namespace (resolver semantics TBD)
+  /// Absolute from dependency package namespace
   Dep,
   /// Relative from current directory
   #[strum(serialize = "self")]

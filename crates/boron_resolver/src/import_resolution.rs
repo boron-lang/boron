@@ -42,13 +42,8 @@ impl<'a> ResolveVisitor<'a> {
     let dep_name = &import.path.segments[0].identifier;
 
     debug!(packages = ?self.sess.config.packages);
-    if let Some(dep) = self
-      .sess
-      .config
-      .packages
-      .iter()
-      .find(|dep| &get_or_intern(&dep.name, None) == dep_name)
-    {
+    if let Some(dep) = self.sess.find_dependency(dep_name) {
+
       // self.resolver().add_external_import_mapping(&import.path, dep.id)
     } else {
       self.dcx().emit(ExternalDependencyNotFound { span: import.span, dep: *dep_name });
