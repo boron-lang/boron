@@ -5,7 +5,9 @@ use boron_session::dependency::{DepId, Dependency};
 use boron_session::enums::lib_type::LibType;
 use boron_session::enums::mode::Mode;
 use boron_session::enums::project_type::PackageType;
-use boron_session::prelude::canonicalize_with_strip;
+use boron_session::prelude::{
+  canonicalize_or_create_dir, canonicalize_with_strip,
+};
 use boron_session::project_config::ProjectConfig;
 use boron_target::target::Compiler;
 use fs_err as fs;
@@ -115,7 +117,7 @@ pub fn build_project_config(cli: Cli) -> Result<ProjectConfig> {
     mode,
     name,
     lib_type,
-    output: canonicalize_with_strip(output)?,
+    output: canonicalize_or_create_dir(output)?,
     root: canonicalize_with_strip(root)?,
     compiler: toml.build.compiler,
     diagnostic_output_type,
