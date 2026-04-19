@@ -1,10 +1,12 @@
 use crate::codegen::LLVMCodegen;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use boron_ir::{IrExpr, IrExprKind, SemanticTy};
 use boron_parser::UnaryOp;
 use inkwell::llvm_sys::prelude::LLVMValueRef;
 use inkwell::types::BasicTypeEnum;
-use inkwell::values::{AnyValue, AsValueRef, BasicValue, BasicValueEnum, PointerValue};
+use inkwell::values::{
+  AnyValue, AsValueRef, BasicValue, BasicValueEnum, FunctionValue, PointerValue,
+};
 use itertools::Itertools as _;
 use std::fmt::Debug;
 
@@ -64,6 +66,14 @@ impl<'ctx> LLVMCodegen<'ctx> {
       }
       ValueKind::LValue(ptr) => Ok(self.builder.build_load(ty, ptr, "lval.load.tmp")?),
     }
+  }
+
+  pub fn get_insert_block_parent(&self) -> Result<FunctionValue<'ctx>> {
+    self
+      .builder
+      .get_insert_block()
+      .and_then(|b| b.get_parent())
+      .ok_or_else(|| anyhow!("no insert block or parent found"))
   }
 
   pub fn generate_expr(&self, expr: &IrExpr) -> Result<ValueKind<'ctx>> {
@@ -166,7 +176,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
         }
       }
       IrExprKind::If { condition, then_block, else_branch } => {
-        let function = self.builder.get_insert_block().unwrap().get_parent().unwrap();
+        let function = self.get_insert_block_parent()?;
         let cond_val =
           self.value_to_basic(self.ty(&condition.ty)?, self.generate_expr(condition)?);
 
@@ -235,7 +245,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
         }
       }
       IrExprKind::Loop { body } => {
-        let function = self.builder.get_insert_block().unwrap().get_parent().unwrap();
+        let function = self.get_insert_block_parent()?;
         let loop_bb = self.context.append_basic_block(function, "loop");
         let exit_bb = self.context.append_basic_block(function, "loopexit");
 
@@ -265,7 +275,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
         let exit_bb =
           *self.loop_exit_blocks.borrow().last().expect("break outside of loop");
         self.require_llvm(self.builder.build_unconditional_branch(exit_bb), "break")?;
-        let function = self.builder.get_insert_block().unwrap().get_parent().unwrap();
+        let function = self.get_insert_block_parent()?;
         let dead_bb = self.context.append_basic_block(function, "after.break");
         self.builder.position_at_end(dead_bb);
         Ok(self.context.bool_type().const_int(0, false).as_basic_value_enum().into())
@@ -275,7 +285,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
           *self.loop_header_blocks.borrow().last().expect("continue outside of loop");
         self
           .require_llvm(self.builder.build_unconditional_branch(header_bb), "continue")?;
-        let function = self.builder.get_insert_block().unwrap().get_parent().unwrap();
+        let function = self.get_insert_block_parent()?;
         let dead_bb = self.context.append_basic_block(function, "after.continue");
         self.builder.position_at_end(dead_bb);
         Ok(self.context.bool_type().const_int(0, false).as_basic_value_enum().into())
@@ -290,7 +300,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
         } else {
           let _ = self.builder.build_return(None);
         }
-        let function = self.builder.get_insert_block().unwrap().get_parent().unwrap();
+        let function = self.get_insert_block_parent()?;
         let dead_bb = self.context.append_basic_block(function, "after.return");
         self.builder.position_at_end(dead_bb);
         Ok(self.context.bool_type().const_int(0, false).as_basic_value_enum().into())
