@@ -4,13 +4,13 @@ use crate::results::BuiltInResults;
 use crate::size_of::size_of_ty;
 use crate::{BuiltinFunctionCtx, InferTy, TypeTable};
 use boron_diagnostics::DiagnosticCtx;
-use boron_hir::expr::{ElseBranch, IfExpr};
-use boron_hir::{
-  Block, ComptimeCallee, Expr, ExprKind, Function, Hir, ParamKind, StmtKind,
-};
-use boron_resolver::Resolver;
 use boron_resolver::prelude::BuiltInKind;
-use boron_session::prelude::{Session, debug};
+use boron_resolver::Resolver;
+use boron_session::prelude::{debug, Session};
+use boron_types::hir::{
+  Block, ComptimeCallee, ElseBranch, Expr, ExprKind, Function, Hir, IfExpr, ParamKind,
+  StmtKind,
+};
 
 pub struct BuiltInExpander<'a> {
   pub bctx: BuiltinFunctionCtx<'a>,

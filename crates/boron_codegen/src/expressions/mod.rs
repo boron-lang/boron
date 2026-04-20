@@ -1,7 +1,8 @@
 use crate::codegen::LLVMCodegen;
 use anyhow::{anyhow, Result};
-use boron_ir::{IrExpr, IrExprKind, SemanticTy};
-use boron_parser::UnaryOp;
+use boron_ir::{IrExpr, IrExprKind};
+use boron_types::ast::UnaryOp;
+use boron_types::hir::SemanticTy;
 use inkwell::llvm_sys::prelude::LLVMValueRef;
 use inkwell::types::BasicTypeEnum;
 use inkwell::values::{

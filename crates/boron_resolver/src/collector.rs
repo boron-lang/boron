@@ -4,14 +4,14 @@ use crate::{
   DefId, DefKind, Definition, ResolveVisitor, Resolver, ScopeId, ScopeKind, Symbol,
   SymbolKind,
 };
-use boron_parser::module::Modules;
-use boron_parser::{
+use boron_session::prelude::Session;
+use boron_source::ident_table::{get_or_intern, Identifier};
+use boron_source::prelude::Span;
+use boron_types::ast::module::Modules;
+use boron_types::ast::{
   ConstItem, EnumItem, EnumMember, FunctionItem, Item, ItemKind, ModItem, NodeId, Param,
   ProgramNode, StructItem, StructMember, Visibility,
 };
-use boron_session::prelude::Session;
-use boron_source::ident_table::{Identifier, get_or_intern};
-use boron_source::prelude::Span;
 
 impl<'a> ResolveVisitor<'a> {
   pub fn resolve_modules(resolver: &'a Resolver, modules: &Modules, sess: &'a Session) {

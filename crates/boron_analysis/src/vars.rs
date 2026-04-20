@@ -1,7 +1,7 @@
+use boron_target::primitive::PrimitiveKind;
 use crate::monomorphizations::MonomorphizationEntry;
-use crate::ty::SubstitutionMap;
 use crate::{InferTy, TyChecker, TyVar, TyVarKind};
-use boron_parser::PrimitiveKind;
+use boron_types::infer_ty::SubstitutionMap;
 
 impl TyChecker<'_> {
   pub fn finalize_types(&self) {

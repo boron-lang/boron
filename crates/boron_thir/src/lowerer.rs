@@ -1,30 +1,28 @@
-use crate::exprs::{Block, Expr, ExprKind, FieldInit, Local, MatchArm, Stmt, StmtKind};
-use crate::items::{Field, Function, Struct};
-use crate::{Enum, Param};
 use boron_analysis::float::construct_float;
 use boron_analysis::int::construct_i128;
 use boron_analysis::interpreter::values::ConstValue;
 use boron_analysis::interpreter::{Interpreter, InterpreterCache, InterpreterContext};
-use boron_analysis::literal_table::FullLiteral;
 use boron_analysis::results::BuiltInResults;
-use boron_analysis::ty::SubstitutionMap;
 use boron_analysis::{InferTy, TypeTable};
 use boron_diagnostics::DiagnosticCtx;
-use boron_hir::expr::{
-  Argument, ElseBranch, FieldInit as HirFieldInit, IfExpr, PathExpr as HirPathExpr,
-};
-use boron_hir::hir::AdtEntry;
-use boron_hir::{
-  Block as HirBlock, Enum as HirEnum, Expr as HirExpr, ExprKind as HirExprKind,
-  Function as HirFunction, Hir, HirId, Literal, Local as HirLocal,
-  MatchArm as HirMatchArm, Stmt as HirStmt, StmtKind as HirStmtKind, Struct as HirStruct,
-};
-use boron_parser::{BinaryOp, InterpreterMode, UnaryOp};
 use boron_resolver::{DefId, DefKind, Resolver};
 use boron_source::ident_table::Identifier;
 use boron_source::span::Span;
-use dashmap::DashMap;
+use boron_types::ast::{BinaryOp, InterpreterMode, UnaryOp};
+use boron_types::hir::{
+  AdtEntry, Argument, Block as HirBlock, ElseBranch, Enum as HirEnum, Expr as HirExpr,
+  ExprKind as HirExprKind, FieldInit as HirFieldInit, Function as HirFunction, Hir,
+  HirId, IfExpr, Literal, Local as HirLocal, MatchArm as HirMatchArm,
+  PathExpr as HirPathExpr, Stmt as HirStmt, StmtKind as HirStmtKind, Struct as HirStruct,
+};
+use boron_types::infer_ty::SubstitutionMap;
+use boron_types::literal_table::FullLiteral;
+use boron_types::thir::{
+  Block, Enum, Expr, ExprKind, Field, FieldInit, Function, Local, MatchArm, Param, Stmt,
+  StmtKind, Struct,
+};
 use dashmap::mapref::one::Ref;
+use dashmap::DashMap;
 
 #[derive(Debug, Default)]
 pub struct Thir {

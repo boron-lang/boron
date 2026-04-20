@@ -6,9 +6,9 @@ pub mod results;
 use crate::TypeTable;
 use crate::builtin::expander::BuiltInExpander;
 use crate::results::BuiltInResults;
-use boron_hir::Hir;
 use boron_resolver::Resolver;
 use boron_session::prelude::Session;
+use boron_types::hir::Hir;
 
 pub struct BuiltinFunctionCtx<'a> {
   pub sess: &'a Session,

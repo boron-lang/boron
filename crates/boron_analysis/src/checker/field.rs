@@ -1,7 +1,7 @@
 use crate::checker::TyChecker;
 use crate::errors::NoFieldForTy;
-use crate::ty::InferTy;
 use boron_source::ident_table::Identifier;
+use boron_types::infer_ty::InferTy;
 
 impl TyChecker<'_> {
   pub(crate) fn check_field_access(

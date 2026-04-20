@@ -1,9 +1,9 @@
 // TODO:
-// - `for` loops → `loop` + iterator protocol
-// - `while` loops → `loop` + `if` + `break`
-// - `?` operator → `match` with early return
-// - Method calls → function calls with self
-// - Operator overloading → trait method calls
+// - `for` loops -> `loop` + iterator protocol
+// - `while` loops -> `loop` + `if` + `break`
+// - `?` operator -> `match` with early return
+// - Method calls -> function calls with self
+// - Operator overloading -> trait method calls
 
 mod context;
 mod expr;
@@ -13,10 +13,10 @@ mod ty;
 
 pub use context::LoweringContext;
 
-use crate::hir::Hir;
 use boron_diagnostics::DiagnosticCtx;
-use boron_parser::module::Modules;
 use boron_resolver::Resolver;
+use boron_types::ast::module::Modules;
+use boron_types::hir::Hir;
 
 pub fn lower_to_hir(resolver: &Resolver, modules: &Modules, _dcx: &DiagnosticCtx) -> Hir {
   let hir = Hir::new();

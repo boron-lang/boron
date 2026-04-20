@@ -1,10 +1,11 @@
-use crate::parser::Parser;
 use crate::parser::errors::{ExpectedPattern, InvalidFieldPattern};
-use crate::{
-  BoolLit, Expr, ExprKind, FieldPat, Literal, NodeId, Path, PathParsingContext, Pattern,
-  PatternKind, RangeExpr, TokenType,
-};
+use crate::parser::Parser;
 use boron_source::prelude::Span;
+use boron_types::ast::{
+  BoolLit, Expr, ExprKind, FieldPat, Literal, NodeId, Path, PathParsingContext, Pattern,
+  PatternKind, RangeExpr,
+};
+use boron_types::tokens::TokenType;
 
 impl Parser<'_> {
   pub fn parse_pattern(&mut self) -> Pattern {

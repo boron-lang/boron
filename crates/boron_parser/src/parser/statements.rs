@@ -1,6 +1,7 @@
-use crate::parser::Parser;
 use crate::parser::errors::{AllVarsInitialized, UseVarNotConst};
-use crate::{Block, ExprStmt, NodeId, Statement, TokenType, VarDecl};
+use crate::parser::Parser;
+use boron_types::ast::{Block, ExprStmt, NodeId, Statement, VarDecl};
+use boron_types::tokens::TokenType;
 
 impl Parser<'_> {
   pub fn parse_block(&mut self) -> Block {

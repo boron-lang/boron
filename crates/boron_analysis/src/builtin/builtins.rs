@@ -1,7 +1,8 @@
 use crate::InferTy;
-use boron_parser::{Mutability, PrimitiveKind};
 use boron_resolver::prelude::BuiltInKind;
 use boron_session::prelude::Span;
+use boron_target::primitive::PrimitiveKind;
+use boron_types::ast::Mutability;
 use std::collections::HashMap;
 
 #[derive(Debug)]

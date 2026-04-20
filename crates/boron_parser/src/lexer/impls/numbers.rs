@@ -1,6 +1,6 @@
 use crate::lexer::lexer::Lexer;
 use crate::lexer::lexer_errors::{LexError, LexErrorKind, LexResult};
-use crate::lexer::tokens::{IntBase, Token, TokenType};
+use boron_types::tokens::{IntBase, Token, TokenType};
 
 impl Lexer<'_> {
   pub(crate) fn lex_number(&mut self) -> LexResult<Token> {

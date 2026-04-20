@@ -1,4 +1,4 @@
-use boron_hir::SemanticTy;
+use boron_types::hir::SemanticTy;
 use rustc_apfloat::ieee::{DoubleS, IeeeFloat};
 use std::fmt;
 

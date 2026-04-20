@@ -7,18 +7,18 @@ use boron_analysis::align_of::{
   calculate_enum_alignment, compute_variant_discriminants_from_exprs,
 };
 use boron_analysis::size_of::{calculate_enum_payload_layout, calculate_enum_size};
-use boron_analysis::ty::SubstitutionMap;
 use boron_analysis::{BuiltinFunctionCtx, InferTy, TypeScheme, TypeTable};
-use boron_hir::pat::PatKind;
-use boron_hir::{EnumVariant, Hir, Pat, SemanticTy};
 use boron_resolver::{DefId, Resolver};
-use boron_session::prelude::{Session, debug};
+use boron_session::prelude::{debug, Session};
 use boron_source::ident_table::get_or_intern;
 use boron_target::abi::layout::Layout;
-use boron_thir::{
+use boron_thir::Thir;
+use boron_types::hir::{EnumVariant, Hir, Pat, PatKind, SemanticTy};
+use boron_types::infer_ty::SubstitutionMap;
+use boron_types::thir::{
   Block as ThirBlock, Enum as ThirEnum, Expr as ThirExpr, ExprKind as ThirExprKind,
   FieldInit as ThirFieldInit, Function as ThirFunction, StmtKind, Struct as ThirStruct,
-  Thir, VariantKind,
+  VariantKind,
 };
 use itertools::Itertools as _;
 
@@ -421,7 +421,8 @@ impl<'a> IrLowerer<'a> {
     let discriminants = compute_variant_discriminants_from_exprs(
       &ctx,
       enum_.variants.iter().map(|variant| match &variant.kind {
-        VariantKind::Discriminant(expr) => Some(expr),
+        // TODO: fix
+        // VariantKind::Discriminant(expr) => Some(expr),
         _ => None,
       }),
     );
@@ -546,7 +547,7 @@ impl<'a> IrLowerer<'a> {
           let Some((field_idx, _)) =
             struct_fields.fields.iter().find_position(|f| f.name == field.name)
           else {
-            unreachable!("checked befores")
+            unreachable!("checked before")
           };
 
           let def_id = if let PatKind::Binding { def_id, .. } = &field.pat.kind {
@@ -592,7 +593,8 @@ impl<'a> IrLowerer<'a> {
           let discriminants = compute_variant_discriminants_from_exprs(
             &ctx,
             enum_entry.variants.iter().map(|variant| match &variant.kind {
-              VariantKind::Discriminant(expr) => Some(expr),
+              // TODO: fix
+              // VariantKind::Discriminant(expr) => Some(expr),
               _ => None,
             }),
           );

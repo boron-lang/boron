@@ -1,6 +1,6 @@
-use crate::ty::ArrayLength;
+use boron_types::ast::Mutability;
 use crate::{InferTy, TyChecker, TyVar, TyVarKind};
-use boron_parser::Mutability;
+use boron_types::infer_ty::ArrayLength;
 
 impl TyChecker<'_> {
   #[must_use = "the caller should handle the result"]

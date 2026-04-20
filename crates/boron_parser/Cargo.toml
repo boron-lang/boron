@@ -13,11 +13,9 @@ boron_diagnostics = { workspace = true }
 boron_diagnostic_macro = { workspace = true }
 boron_source = { workspace = true }
 stringcase = "0.4.0"
-dashmap = { workspace = true }
 boron_target = { workspace = true }
-strum = { workspace = true }
 indexmap = { workspace = true }
-serde = { workspace = true }
+boron_types = { workspace = true }
 
 [lints]
 workspace = true

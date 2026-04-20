@@ -1,7 +1,7 @@
-use crate::items::Item;
-use crate::parser::Parser;
 use crate::parser::items::ITEM_TOKENS;
-use crate::{NodeId, ProgramNode, TokenType};
+use crate::parser::Parser;
+use boron_types::ast::{Item, NodeId, ProgramNode};
+use boron_types::tokens::TokenType;
 
 impl Parser<'_> {
   pub fn parse_program(&mut self) -> ProgramNode {

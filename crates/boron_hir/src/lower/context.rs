@@ -1,8 +1,7 @@
-use crate::hir::Hir;
-use crate::ids::{HirId, LocalId};
-use boron_parser::NodeId;
 use boron_resolver::{DefId, Resolver};
 use boron_source::prelude::SourceFileId;
+use boron_types::ast::NodeId;
+use boron_types::hir::{Hir, HirId, LocalId};
 
 pub struct LoweringContext<'a> {
   pub resolver: &'a Resolver,

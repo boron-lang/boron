@@ -1,10 +1,10 @@
 use crate::functions::FinalComptimeArg;
 use crate::monomorphizations::MonomorphizationEntry;
-use crate::ty::{InferTy, SubstitutionMap, TyVar, TyVarKind, TypeScheme};
-use boron_hir::HirId;
 use boron_resolver::DefId;
 use boron_session::prelude::Span;
 use boron_source::ident_table::Identifier;
+use boron_types::hir::HirId;
+use boron_types::infer_ty::{InferTy, SubstitutionMap, TyVar, TyVarKind, TypeScheme};
 use dashmap::DashMap;
 use std::collections::{HashMap, HashSet};
 

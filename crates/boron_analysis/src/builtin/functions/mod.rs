@@ -1,6 +1,7 @@
 mod os;
+
 use crate::InferTy;
-use boron_hir::Expr;
+use boron_types::hir::Expr;
 
 #[derive(Debug)]
 pub enum FinalComptimeArg {

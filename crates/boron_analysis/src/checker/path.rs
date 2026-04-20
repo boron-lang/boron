@@ -1,9 +1,9 @@
 use crate::checker::TyChecker;
 use crate::interpreter::InterpreterContext;
 use crate::table::TypeEnv;
-use crate::ty::{InferTy, SubstitutionMap, TypeScheme};
-use boron_parser::InterpreterMode;
 use boron_resolver::{DefId, DefKind};
+use boron_types::ast::InterpreterMode;
+use boron_types::infer_ty::{InferTy, SubstitutionMap, TypeScheme};
 
 impl TyChecker<'_> {
   pub(crate) fn check_path(

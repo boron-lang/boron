@@ -1,9 +1,9 @@
-use crate::def::DefId;
-use crate::resolver::Resolver;
-use crate::ribs::{Rib, RibKind};
-use crate::scope::{ScopeId, ScopeKind};
 use boron_session::prelude::Identifier;
 use boron_source::prelude::SourceFileId;
+use boron_types::resolver::def::DefId;
+use boron_types::resolver::resolver::Resolver;
+use boron_types::resolver::ribs::{Rib, RibKind};
+use boron_types::resolver::scope::{ScopeId, ScopeKind};
 
 pub struct ModuleResolver<'a> {
   pub resolver: &'a Resolver,

@@ -1,10 +1,9 @@
-use crate::Path;
-use crate::import::ImportDecl;
 use crate::lexer::{Token, TokenType};
 use crate::parser::errors::{ExpectedIdentifier, ExpectedTokens, UnexpectedToken};
 use boron_diagnostics::DiagnosticCtx;
 use boron_diagnostics::ToDiagnostic;
 use boron_session::prelude::{Identifier, Span};
+use boron_types::ast::{ImportDecl, Path};
 
 pub struct Parser<'dcx> {
   tokens: Vec<Token>,

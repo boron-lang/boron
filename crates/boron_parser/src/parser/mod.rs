@@ -11,9 +11,9 @@ mod ty;
 
 pub use parser::Parser;
 
-use crate::ast::ProgramNode;
-use crate::lexer::Token;
 use boron_diagnostics::DiagnosticCtx;
+use boron_types::ast::ProgramNode;
+use boron_types::tokens::Token;
 
 pub fn parse(tokens: Vec<Token>, dcx: &DiagnosticCtx) -> ProgramNode {
   let mut parser = Parser::new(tokens, dcx);

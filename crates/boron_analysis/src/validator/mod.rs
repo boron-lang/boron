@@ -2,10 +2,11 @@ mod errors;
 mod types;
 
 use crate::validator::errors::ComptimeNoGenerics;
-use boron_hir::expr::{ElseBranch, IfExpr};
-use boron_hir::{Block, Expr, ExprKind, Function, Hir, Stmt, StmtKind};
 use boron_resolver::{DefId, Resolver};
-use boron_session::prelude::{DiagnosticCtx, debug};
+use boron_session::prelude::{debug, DiagnosticCtx};
+use boron_types::hir::{
+  Block, ElseBranch, Expr, ExprKind, Function, Hir, IfExpr, Stmt, StmtKind,
+};
 
 pub struct ComptimeValidator<'a> {
   pub hir: &'a Hir,

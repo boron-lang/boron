@@ -58,6 +58,7 @@ boron_ir = { path = "crates/boron_ir" }
 boron_codegen = { path = "crates/boron_codegen" }
 boron_thir = { path = "crates/boron_thir" }
 boron_lib = { path = "crates/boron_lib" }
+boron_types = { path = "crates/boron_types" }
 
 [workspace.lints.rust]
 elided_lifetimes_in_paths = "warn"

@@ -1,6 +1,6 @@
 use boron_diagnostic_macro::Diagnostic;
-use boron_parser::Path;
 use boron_source::prelude::Span;
+use boron_types::ast::Path;
 
 #[derive(Diagnostic)]
 #[error("couldn't find main function for binary entrypoint in package `{pkg}`")]

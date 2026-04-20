@@ -1,12 +1,12 @@
-use crate::checker::TyChecker;
 use crate::checker::pattern::{ExpectedPattern, PatternContext};
+use crate::checker::TyChecker;
 use crate::errors::VarInitMismatch;
 use crate::table::TypeEnv;
-use crate::ty::InferTy;
 use crate::unify::Expectation;
 use crate::unify::{UnifyError, UnifyResult};
-use boron_hir::{Block, ExprKind, Local, Stmt, StmtKind};
 use boron_source::span::Span;
+use boron_types::hir::{Block, ExprKind, Local, Stmt, StmtKind};
+use boron_types::infer_ty::InferTy;
 
 impl TyChecker<'_> {
   pub(crate) fn check_block(

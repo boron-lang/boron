@@ -1,9 +1,9 @@
 use crate::codegen::LLVMCodegen;
 use anyhow::{anyhow, Result};
-use boron_ir::SemanticTy;
-use boron_parser::PrimitiveKind;
 use boron_resolver::DefId;
 use boron_session::prelude::warn;
+use boron_target::primitive::PrimitiveKind;
+use boron_types::hir::SemanticTy;
 use inkwell::types::{BasicType as _, BasicTypeEnum, StructType};
 use inkwell::AddressSpace;
 use std::num::NonZeroU32;

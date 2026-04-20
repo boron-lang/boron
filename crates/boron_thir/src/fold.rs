@@ -1,8 +1,8 @@
 use crate::ThirLowerer;
 use boron_analysis::interpreter::values::ConstValue;
-use boron_analysis::literal_table::FullLiteral;
-use boron_hir::{expr::Expr as HirExpr, expr::ExprKind as HirExprKind};
-use boron_parser::{InterpreterMode, UnaryOp};
+use boron_types::ast::{InterpreterMode, UnaryOp};
+use boron_types::hir::{expr::Expr as HirExpr, expr::ExprKind as HirExprKind};
+use boron_types::literal_table::FullLiteral;
 
 impl<'a> ThirLowerer<'a> {
   pub fn can_const_fold(&self, expr: &HirExpr) -> bool {

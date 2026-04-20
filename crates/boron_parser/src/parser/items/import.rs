@@ -1,7 +1,9 @@
-use crate::import::ImportDecl;
-use crate::parser::Parser;
 use crate::parser::errors::{AliasingABinding, ImportNotAPath, UnexpectedImportKind};
-use crate::{ImportKind, ImportSpec, NodeId, Path, PathParsingContext, TokenType};
+use crate::parser::Parser;
+use boron_types::ast::{
+  ImportDecl, ImportKind, ImportSpec, NodeId, Path, PathParsingContext,
+};
+use boron_types::tokens::TokenType;
 
 impl Parser<'_> {
   pub(crate) fn parse_import(&mut self) -> Option<ImportDecl> {

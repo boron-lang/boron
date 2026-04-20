@@ -1,14 +1,13 @@
-use crate::TyChecker;
 use crate::builtin::results::BuiltInResults;
 use crate::interpreter::values::ConstValue;
 use crate::interpreter::{Interpreter, InterpreterCache, InterpreterContext};
+use crate::TyChecker;
 use crate::{BuiltinFunctionCtx, InferTy};
-use boron_hir::item::VariantKind;
-use boron_hir::{Enum, Expr, Variant};
-use boron_parser::InterpreterMode;
 use boron_resolver::{DefId, DefKind};
 use boron_source::ident_table::get_or_intern;
 use boron_target::abi::layout::Alignment;
+use boron_types::ast::InterpreterMode;
+use boron_types::hir::{Enum, Expr, Variant, VariantKind};
 
 pub fn align_of_ty(sz: &BuiltinFunctionCtx<'_>, ty: &InferTy) -> Alignment {
   let target = sz.sess.target();

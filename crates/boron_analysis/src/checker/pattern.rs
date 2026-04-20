@@ -1,12 +1,12 @@
 use crate::checker::TyChecker;
 use crate::errors::{NotAllFieldsCovered, RefutablePatternInLocalBinding};
 use crate::table::TypeEnv;
-use crate::ty::{ArrayLength, InferTy, SubstitutionMap};
 use crate::unify::Expectation;
-use boron_hir::{Literal, Pat, PatKind};
 use boron_resolver::{DefId, DefKind};
 use boron_source::span::Span;
+use boron_types::infer_ty::{ArrayLength, InferTy, SubstitutionMap};
 use itertools::Itertools as _;
+use boron_types::hir::{Literal, Pat, PatKind};
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum ExpectedPattern {

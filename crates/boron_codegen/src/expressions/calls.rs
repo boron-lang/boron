@@ -1,9 +1,10 @@
 use crate::codegen::LLVMCodegen;
 use crate::expressions::ValueKind;
 use anyhow::Result;
-use boron_ir::{IrExpr, SemanticTy};
+use boron_ir::IrExpr;
 use boron_resolver::DefId;
 use boron_session::prelude::Identifier;
+use boron_types::hir::SemanticTy;
 use inkwell::values::{BasicMetadataValueEnum, BasicValue as _, BasicValueEnum};
 
 impl<'ctx> LLVMCodegen<'ctx> {

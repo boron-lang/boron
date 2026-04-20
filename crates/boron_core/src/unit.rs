@@ -7,16 +7,16 @@ use boron_analysis::validator::validate_comptime;
 use boron_analysis::{expand_builtins, typeck_hir, InferTy, TypeTable};
 use boron_codegen::run_codegen;
 use boron_compiler::CompilerBuild;
-use boron_hir::hir::Hir;
 use boron_hir::lower::lower_to_hir;
 use boron_ir::{Ir, IrLowerer};
-use boron_parser::module::{Module, Modules};
 use boron_parser::parser::parse;
 use boron_resolver::{DefId, ResolveVisitor, Resolver};
 use boron_source::source_file::SourceFileId;
 use boron_thir::{Thir, ThirLowerer};
+use boron_types::ast::module::{Module, Modules};
 use std::process::exit;
 use std::time::Instant;
+use boron_types::hir::Hir;
 
 pub struct CompilationUnit<'ctx> {
   pub entry_point: SourceFileId,

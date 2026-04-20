@@ -9,14 +9,13 @@ mod literals;
 mod monomorphizations;
 pub mod size_of;
 mod table;
-pub mod ty;
 mod ty_lower;
 mod unify;
 pub mod validator;
 mod vars;
 
+pub use boron_types::infer_ty::{InferTy, TyVar, TyVarKind, TypeScheme};
 pub use builtin::*;
-pub use checker::{TyChecker, typeck_hir};
+pub use checker::{typeck_hir, TyChecker};
 pub use literals::*;
 pub use table::{InferCtx, TypeEnv, TypeTable};
-pub use ty::{InferTy, TyVar, TyVarKind, TypeScheme};

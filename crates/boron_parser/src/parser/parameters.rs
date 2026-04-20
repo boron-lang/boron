@@ -1,8 +1,9 @@
-use crate::parser::Parser;
 use crate::parser::errors::{ExpectedIdentOrDots, VariadicNoDefault};
-use crate::{
-  NodeId, Param, RegularParam, SelfKind, SelfParam, TokenType, Type, VariadicParam,
+use crate::parser::Parser;
+use boron_types::ast::{
+  NodeId, Param, RegularParam, SelfKind, SelfParam, Type, VariadicParam,
 };
+use boron_types::tokens::TokenType;
 
 impl Parser<'_> {
   pub fn parse_function_parameters(&mut self) -> Vec<Param> {

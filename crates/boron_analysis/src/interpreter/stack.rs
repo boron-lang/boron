@@ -1,5 +1,5 @@
 use crate::interpreter::values::ConstValue;
-use boron_hir::LocalId;
+use boron_types::hir::LocalId;
 use dashmap::DashMap;
 
 #[derive(Debug)]

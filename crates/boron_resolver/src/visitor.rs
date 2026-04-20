@@ -1,27 +1,16 @@
-use crate::builtin_kind::BuiltInKind;
-use crate::def::{DefKind, Definition};
 use crate::errors::{
   InvalidPathRoot, NoMethodFound, PrivateItem, SelfOutsideMethod, UndefinedName,
   UndefinedNameInModule,
 };
 use crate::module_resolver::ModuleResolver;
-use crate::resolver::Resolver;
-use crate::scope::ScopeKind;
 use boron_diagnostics::DiagnosticCtx;
-use boron_parser::ast::ProgramNode;
-use boron_parser::ast::expressions::{Expr, ExprKind};
-use boron_parser::ast::items::{
-  EnumItem, FunctionItem, Item, ItemKind, ModItem, StructItem, Visibility,
-};
-use boron_parser::ast::params::Param;
-use boron_parser::ast::statements::{Block, Statement};
-use boron_parser::ast::types::Type;
-use boron_parser::{
-  ComptimeArg, ElseBranch, EnumMember, GenericParams, IfExpr, Path, Pattern, PatternKind,
-  StructMember, VariantPayload,
-};
-use boron_session::prelude::{Session, get_or_intern};
+use boron_session::prelude::{get_or_intern, Session};
 use boron_source::prelude::{SourceFileId, Span};
+use boron_types::ast::{Block, ComptimeArg, ElseBranch, EnumItem, EnumMember, Expr, ExprKind, FunctionItem, GenericParams, IfExpr, Item, ItemKind, ModItem, Param, Path, Pattern, PatternKind, ProgramNode, Statement, StructItem, StructMember, Type, VariantPayload, Visibility};
+use boron_types::resolver::builtin_kind::BuiltInKind;
+use boron_types::resolver::def::{DefKind, Definition};
+use boron_types::resolver::resolver::Resolver;
+use boron_types::resolver::scope::ScopeKind;
 
 #[derive(Clone, Debug, Copy, Hash, PartialEq, Eq)]
 pub enum Namespace {

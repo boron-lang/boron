@@ -14,15 +14,14 @@ use crate::interpreter::Interpreter;
 use crate::interpreter::{InterpreterCache, InterpreterContext};
 use crate::results::BuiltInResults;
 use crate::table::{InferCtx, TypeEnv, TypeTable};
-use crate::ty::InferTy;
 use crate::unify::Expectation;
 use crate::unify::{UnifyError, UnifyResult};
 use boron_diagnostics::DiagnosticCtx;
-use boron_hir::item::SelfKind;
-use boron_hir::{Const, Function, Hir, ParamKind};
-use boron_parser::{InterpreterMode, Mutability};
 use boron_resolver::{DefId, Resolver};
 use boron_session::prelude::{Session, Span};
+use boron_types::ast::{InterpreterMode, Mutability};
+use boron_types::hir::{Const, Function, Hir, ParamKind, SelfKind};
+use boron_types::infer_ty::InferTy;
 
 pub fn typeck_hir(hir: &Hir, sess: &Session, resolver: &Resolver) -> TypeTable {
   let mut checker = TyChecker::new(hir, sess, resolver);

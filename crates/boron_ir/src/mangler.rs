@@ -1,6 +1,7 @@
-use boron_hir::{Hir, SemanticTy};
-use boron_parser::{Mutability, PrimitiveKind};
 use boron_resolver::DefId;
+use boron_target::primitive::PrimitiveKind;
+use boron_types::ast::Mutability;
+use boron_types::hir::{Hir, SemanticTy};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

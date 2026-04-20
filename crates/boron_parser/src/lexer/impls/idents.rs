@@ -1,7 +1,7 @@
 use crate::lexer::lexer::Lexer;
 use crate::lexer::lexer_errors::{LexError, LexErrorKind, LexResult};
 use crate::lexer::nfc::{is_xid_continue, is_xid_start, normalize_nfc};
-use crate::lexer::tokens::{Token, TokenType};
+use boron_types::tokens::{Token, TokenType};
 
 impl Lexer<'_> {
   pub(crate) fn lex_identifier(&mut self) -> LexResult<Token> {

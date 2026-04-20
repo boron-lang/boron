@@ -1,11 +1,11 @@
-use crate::parser::Parser;
 use crate::parser::errors::InvalidVariantStart;
 use crate::parser::items::ADT_ITEM_TOKENS;
-use crate::{
-  EnumItem, EnumMember, EnumVariantStructField, NodeId, TokenType, Variant,
-  VariantPayload,
-};
+use crate::parser::Parser;
 use boron_source::span::Span;
+use boron_types::ast::{
+  EnumItem, EnumMember, EnumVariantStructField, NodeId, Variant, VariantPayload,
+};
+use boron_types::tokens::TokenType;
 
 impl Parser<'_> {
   pub fn parse_enum(&mut self, span_start: Span) -> Option<EnumItem> {

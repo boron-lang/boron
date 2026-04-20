@@ -1,5 +1,5 @@
-use crate::ty::SubstitutionMap;
 use boron_resolver::DefId;
+use boron_types::infer_ty::SubstitutionMap;
 
 #[derive(Debug, Clone)]
 pub struct MonomorphizationEntry {

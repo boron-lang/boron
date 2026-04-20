@@ -3,13 +3,12 @@ use crate::errors::{
   AssignTypeMismatch, IndexTypeMismatch, InvalidBinaryOp, TypeMismatch,
 };
 use crate::table::TypeEnv;
-use crate::ty::{ArrayLength, InferTy};
 use crate::unify::{Expectation, UnifyError, UnifyResult};
-use boron_hir::expr::{ElseBranch, IfExpr};
-use boron_hir::{Block, Expr, ExprKind, Literal};
-use boron_parser::ast::types::PrimitiveKind;
-use boron_parser::{BinaryOp, Mutability};
-use boron_session::prelude::{Span, warn};
+use boron_session::prelude::{warn, Span};
+use boron_target::primitive::PrimitiveKind;
+use boron_types::ast::{BinaryOp, Mutability};
+use boron_types::hir::{Block, ElseBranch, Expr, ExprKind, IfExpr, Literal};
+use boron_types::infer_ty::{ArrayLength, InferTy};
 
 impl TyChecker<'_> {
   pub(crate) fn check_expr(

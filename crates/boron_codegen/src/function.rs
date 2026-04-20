@@ -1,9 +1,9 @@
 use crate::codegen::LLVMCodegen;
 use crate::expressions::ValueKind;
 use anyhow::Result;
-use boron_hir::HirId;
-use boron_ir::{IrFunction, IrId, Projection, SemanticTy};
+use boron_ir::{IrFunction, IrId, Projection};
 use boron_resolver::DefId;
+use boron_types::hir::{HirId, SemanticTy};
 use inkwell::module::Linkage;
 use inkwell::types::{
   BasicMetadataTypeEnum, BasicType as _, BasicTypeEnum, FunctionType,

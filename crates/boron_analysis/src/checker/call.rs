@@ -1,4 +1,3 @@
-use crate::TypeScheme;
 use crate::checker::TyChecker;
 use crate::errors::{
   ArityMismatch, AssociatedFunctionCallUsingMethodCall, CannotCall,
@@ -6,14 +5,13 @@ use crate::errors::{
   NoValuePassedForParameter,
 };
 use crate::table::TypeEnv;
-use crate::ty::{InferTy, SubstitutionMap, TyParam};
 use crate::unify::{Expectation, UnifyError, UnifyResult};
-use boron_hir::expr::Argument;
-use boron_hir::item::VariantKind;
-use boron_hir::{Expr, ExprKind, HirId, ParamKind};
+use crate::TypeScheme;
 use boron_resolver::DefId;
-use boron_session::prelude::{Span, debug};
+use boron_session::prelude::{debug, Span};
 use boron_source::ident_table::Identifier;
+use boron_types::hir::{Argument, Expr, ExprKind, HirId, ParamKind, VariantKind};
+use boron_types::infer_ty::{InferTy, SubstitutionMap, TyParam};
 use itertools::Itertools as _;
 use std::collections::HashSet;
 

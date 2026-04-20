@@ -1,0 +1,239 @@
+use crate::ast::module::Modules;
+use crate::ast::{NodeId, Path};
+use crate::resolver::builtin_kind::BuiltInKind;
+use crate::resolver::def::{DefId, Definition};
+use crate::resolver::import_order::ImportGraph;
+use crate::resolver::ribs::Rib;
+use crate::resolver::scope::{ScopeId, ScopeKind, Scopes};
+use crate::resolver::symbol::SymbolTable;
+use crate::DepId;
+use boron_source::ident_table::Identifier;
+use boron_source::prelude::SourceFileId;
+use dashmap::mapref::one::Ref;
+use dashmap::DashMap;
+use parking_lot::RwLock;
+
+#[derive(Debug)]
+pub struct Resolver {
+  pub scopes: Scopes,
+  pub symbols: SymbolTable,
+  pub definitions: DashMap<DefId, Definition>,
+  pub import_graph: ImportGraph,
+  pub imports_mapping: DashMap<NodeId, ImportMapping>,
+
+  pub module_exports_values: DashMap<SourceFileId, DashMap<Identifier, DefId>>,
+  pub module_exports_types: DashMap<SourceFileId, DashMap<Identifier, DefId>>,
+  pub inline_module_exports_values: DashMap<DefId, DashMap<Identifier, DefId>>,
+  pub inline_module_exports_types: DashMap<DefId, DashMap<Identifier, DefId>>,
+
+  pub adt_members: DashMap<DefId, DashMap<Identifier, DefId>>,
+  module_ribs: DashMap<SourceFileId, RwLock<(ScopeId, Rib)>>,
+  pub comptime_using_builtins: DashMap<NodeId, BuiltInKind>,
+  pub self_to_struct: DashMap<DefId, DefId>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum ImportMapping {
+  Local(SourceFileId),
+  External(DepId, SourceFileId),
+}
+
+impl Resolver {
+  pub fn new() -> Self {
+    Self {
+      scopes: Scopes::new(),
+      symbols: SymbolTable::new(),
+      definitions: DashMap::new(),
+      import_graph: ImportGraph::new(),
+      module_exports_values: DashMap::new(),
+      module_exports_types: DashMap::new(),
+      inline_module_exports_values: DashMap::new(),
+      inline_module_exports_types: DashMap::new(),
+      adt_members: DashMap::new(),
+      imports_mapping: DashMap::new(),
+      module_ribs: DashMap::new(),
+      comptime_using_builtins: DashMap::new(),
+      self_to_struct: DashMap::new(),
+    }
+  }
+
+  pub fn build_import_graph(&self, modules: &Modules) {
+    for module_ref in modules.all() {
+      let source_file = module_ref.source_file_id;
+      self.import_graph.add_module(source_file);
+
+      self.module_exports_values.entry(source_file).or_insert_with(DashMap::new);
+      self.module_exports_types.entry(source_file).or_insert_with(DashMap::new);
+    }
+  }
+
+  pub fn record_comptime_builtin(&self, node: NodeId, kind: BuiltInKind) {
+    self.comptime_using_builtins.insert(node, kind);
+  }
+
+  pub fn get_recorded_comptime_builtin(&self, node: NodeId) -> Option<BuiltInKind> {
+    self.comptime_using_builtins.get(&node).map(|b| b.clone())
+  }
+
+  pub fn add_import_edge(&self, from: SourceFileId, to: SourceFileId) {
+    self.import_graph.add_import(from, to);
+  }
+
+  pub fn add_definition(&self, def: Definition) -> DefId {
+    let id = def.id;
+    self.definitions.insert(id, def);
+    id
+  }
+
+  pub fn get_definition(&self, id: DefId) -> Option<Definition> {
+    self.definitions.get(&id).map(|r| r.clone())
+  }
+
+  pub fn create_scope(
+    &self,
+    parent: Option<ScopeId>,
+    kind: ScopeKind,
+    source_file: SourceFileId,
+    owner: Option<DefId>,
+  ) -> ScopeId {
+    self.scopes.create(parent, kind, source_file, owner)
+  }
+
+  pub fn create_module_scope(&self, source_file: SourceFileId) -> ScopeId {
+    self.scopes.create_module_scope(source_file)
+  }
+
+  pub fn parent_scope(&self, id: ScopeId) -> Option<ScopeId> {
+    self.scopes.parent(id)
+  }
+
+  pub fn save_module_rib(&self, file: SourceFileId, scope_id: ScopeId, rib: Rib) {
+    self.module_ribs.insert(file, RwLock::new((scope_id, rib)));
+  }
+
+  pub fn get_module_rib(&self, file: SourceFileId) -> Option<(ScopeId, Rib)> {
+    self.module_ribs.get(&file).map(|entry| entry.read().clone())
+  }
+
+  pub fn export_value(&self, module: SourceFileId, name: Identifier, def_id: DefId) {
+    self
+      .module_exports_values
+      .entry(module)
+      .or_insert_with(DashMap::new)
+      .insert(name, def_id);
+  }
+
+  pub fn export_type(&self, module: SourceFileId, name: Identifier, def_id: DefId) {
+    self
+      .module_exports_types
+      .entry(module)
+      .or_insert_with(DashMap::new)
+      .insert(name, def_id);
+  }
+
+  pub fn lookup_module_value(
+    &self,
+    module: SourceFileId,
+    name: &Identifier,
+  ) -> Option<DefId> {
+    let exports = self.module_exports_values.get(&module)?;
+    exports.get(name).map(|r| *r)
+  }
+
+  pub fn lookup_module_type(
+    &self,
+    module: SourceFileId,
+    name: &Identifier,
+  ) -> Option<DefId> {
+    let exports = self.module_exports_types.get(&module)?;
+    exports.get(name).map(|r| *r)
+  }
+
+  pub fn export_inline_value(&self, module_def: DefId, name: Identifier, def_id: DefId) {
+    self
+      .inline_module_exports_values
+      .entry(module_def)
+      .or_insert_with(DashMap::new)
+      .insert(name, def_id);
+  }
+
+  pub fn export_inline_type(&self, module_def: DefId, name: Identifier, def_id: DefId) {
+    self
+      .inline_module_exports_types
+      .entry(module_def)
+      .or_insert_with(DashMap::new)
+      .insert(name, def_id);
+  }
+
+  pub fn lookup_inline_module_value(
+    &self,
+    module_def: DefId,
+    name: &Identifier,
+  ) -> Option<DefId> {
+    let exports = self.inline_module_exports_values.get(&module_def)?;
+    exports.get(name).map(|r| *r)
+  }
+
+  pub fn lookup_inline_module_type(
+    &self,
+    module_def: DefId,
+    name: &Identifier,
+  ) -> Option<DefId> {
+    let exports = self.inline_module_exports_types.get(&module_def)?;
+    exports.get(name).map(|r| *r)
+  }
+
+  pub fn lookup_inline(&self, module_def: DefId, name: &Identifier) -> Option<DefId> {
+    self
+      .lookup_inline_module_value(module_def, name)
+      .or_else(|| self.lookup_inline_module_type(module_def, name))
+  }
+
+  pub fn add_adt_member(&self, struct_def: DefId, name: Identifier, def_id: DefId) {
+    self.adt_members.entry(struct_def).or_insert_with(DashMap::new).insert(name, def_id);
+  }
+
+  pub fn lookup_adt_member(&self, struct_def: DefId, name: &Identifier) -> Option<DefId> {
+    let members = self.adt_members.get(&struct_def)?;
+    members.get(name).map(|r| *r)
+  }
+
+  pub fn find_parent(&self, child_id: DefId) -> Option<DefId> {
+    self
+      .adt_members
+      .iter()
+      .find(|members| members.iter().any(|member| *member == child_id))
+      .map(|def| *def.key())
+  }
+
+  pub fn lookup_file_for_path(&self, path: &Path) -> Option<ImportMapping> {
+    self.imports_mapping.get(&path.id).map(|f| *f)
+  }
+
+  pub fn add_local_import_mapping(&self, path: &Path, source_file_id: SourceFileId) {
+    self.imports_mapping.insert(path.id, ImportMapping::Local(source_file_id));
+  }
+
+  pub fn add_external_import_mapping(
+    &self,
+    path: &Path,
+    dep: DepId,
+    source_file_id: SourceFileId,
+  ) {
+    self.imports_mapping.insert(path.id, ImportMapping::External(dep, source_file_id));
+  }
+
+  pub fn add_self_mapping(&self, self_id: DefId, struct_id: DefId) {
+    self.self_to_struct.insert(self_id, struct_id);
+  }
+
+  pub fn get_self_mapping(&'_ self, self_id: DefId) -> Option<Ref<'_, DefId, DefId>> {
+    self.self_to_struct.get(&self_id)
+  }
+}
+
+impl Default for Resolver {
+  fn default() -> Self {
+    Self::new()
+  }
+}

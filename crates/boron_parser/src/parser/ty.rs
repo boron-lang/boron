@@ -1,14 +1,15 @@
-use crate::parser::Parser;
 use crate::parser::errors::{
   ConstAloneInType, ExpectedIdentifierInGeneric, ExpectedType, ExpectedTypePathForBound,
   TrailingPlusInTypeBound,
 };
-use crate::{
-  ArrayType, FunctionType, GenericParam, GenericParams, Mutability, NodeId, OptionalType,
-  PathParsingContext, PointerType, PrimitiveKind, PrimitiveType, TokenType, TupleType,
-  Type, TypeBound, UnitType,
-};
+use crate::parser::Parser;
 use boron_source::span::Span;
+use boron_target::primitive::PrimitiveKind;
+use boron_types::ast::{
+  ArrayType, FunctionType, GenericParam, GenericParams, Mutability, NodeId, OptionalType,
+  PathParsingContext, PointerType, PrimitiveType, TupleType, Type, TypeBound, UnitType,
+};
+use boron_types::tokens::TokenType;
 
 impl Parser<'_> {
   pub fn parse_type(&mut self) -> Type {

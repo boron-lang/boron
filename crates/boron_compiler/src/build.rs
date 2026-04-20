@@ -173,7 +173,6 @@ impl<'a> CompilerBuild<'a> {
     _object_files: &[Arc<OsStr>],
   ) -> Result<PathBuf> {
     let output_path = self.get_output_path(output_name)?.with_extension("blib");
-
     write_container_file(&output_path, self.sess)?;
 
     Ok(output_path.clone())

@@ -1,13 +1,31 @@
 use crate::errors::ArrayLenNotANumber;
 use crate::interpreter::InterpreterContext;
 use crate::interpreter::values::ConstValue;
-use crate::ty::{ArrayLength, TyParam};
+use boron_types::infer_ty::{ArrayLength, TyParam, TyVarKind};
 use crate::{InferTy, TyChecker, TypeEnv};
-use boron_hir::ty::ArrayLen;
-use boron_hir::{Expr, GenericParamKind, Generics, Ty, TyKind};
-use boron_parser::InterpreterMode;
 use boron_resolver::DefKind;
+use boron_types::ast::InterpreterMode;
+use boron_types::hir::{ArrayLen, Expr, GenericParamKind, Generics, Ty, TyKind};
 
+impl TyChecker<'_> {
+  pub fn is_numeric(&self, ty: &InferTy) -> bool {
+    ty.is_numeric()
+      || if let InferTy::Var(var, _) = ty {
+      self.infcx.var_kind(*var) != TyVarKind::General
+    } else {
+      false
+    }
+  }
+
+  pub fn is_int(&self, ty: &InferTy) -> bool {
+    ty.is_integer()
+      || if let InferTy::Var(var, _) = ty {
+      self.infcx.var_kind(*var) == TyVarKind::Integer
+    } else {
+      false
+    }
+  }
+}
 impl TyChecker<'_> {
   pub fn lower_hir_ty(&self, ty: &Ty) -> InferTy {
     match &ty.kind {

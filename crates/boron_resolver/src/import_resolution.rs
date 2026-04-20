@@ -1,15 +1,15 @@
 use crate::errors::{
   ExternalDependencyNotFound, PrivateItem, UndefinedModule, UndefinedNameInModule,
 };
-use crate::resolver::ImportMapping;
 use crate::{
   DefId, DefKind, Definition, ModuleResolver, ResolveVisitor, Symbol, SymbolKind,
 };
-use boron_parser::{ImportDecl, ImportKind, ImportSpec, NodeId, PathRoot, Visibility};
 use boron_session::prelude::debug;
 use boron_source::ident_table::{get_or_intern, Identifier};
 use boron_source::prelude::{SourceFileId, Span};
+use boron_types::resolver::resolver::ImportMapping;
 use dashmap::DashMap;
+use boron_types::ast::{ImportDecl, ImportKind, ImportSpec, NodeId, PathRoot, Visibility};
 
 impl<'a> ResolveVisitor<'a> {
   pub fn collect_import(&self, import: &ImportDecl) {

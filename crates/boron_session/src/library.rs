@@ -9,6 +9,8 @@ pub struct BLibMetadata {
   #[serde(default = "default_metadata_version")]
   pub metadata_version: u16,
   #[serde(default)]
+  pub thir_debug: Option<String>,
+  #[serde(default)]
   pub package: BLibPackageIdentity,
   #[serde(default)]
   pub abi_fingerprint: String,
@@ -123,7 +125,6 @@ pub struct BLibSignature {
   pub abi_hash: Option<String>,
 }
 
-/// A named parameter rather than a bare type ID.
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq, Eq)]
 pub struct BLibParam {
   pub name: Option<String>,
@@ -165,6 +166,7 @@ impl BLibMetadata {
       config,
       target,
       metadata_version: default_metadata_version(),
+      thir_debug: None,
       package: BLibPackageIdentity::default(),
       abi_fingerprint: String::new(),
       modules: Vec::new(),

@@ -1,9 +1,10 @@
-use crate::parser::Parser;
 use crate::parser::errors::{
   DepInRootOnly, ExpectedIdentifierInNormalPath, ExpectedSuperOrIdentPath,
   GenericsInImportOrMod, PackageInRootOnly, SuperOnlyInModOrImport,
 };
-use crate::{NodeId, Path, PathParsingContext, PathRoot, PathSegment, TokenType};
+use crate::parser::Parser;
+use boron_types::ast::{NodeId, Path, PathParsingContext, PathRoot, PathSegment};
+use boron_types::tokens::TokenType;
 
 impl Parser<'_> {
   pub fn parse_path(&mut self, ctx: PathParsingContext) -> Path {

@@ -1,6 +1,6 @@
 use crate::lexer::lexer::Lexer;
 use crate::lexer::lexer_errors::{LexError, LexErrorKind};
-use crate::lexer::tokens::{Token, TokenType};
+use boron_types::tokens::{Token, TokenType};
 
 impl Lexer<'_> {
   pub(crate) fn skip_line_comment(&mut self) {

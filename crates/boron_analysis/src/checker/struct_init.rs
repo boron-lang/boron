@@ -1,11 +1,10 @@
 use crate::checker::TyChecker;
 use crate::errors::{FieldInitMismatch, InvalidStructInit, NoFieldForStructInit};
 use crate::table::TypeEnv;
-use crate::ty::InferTy;
 use crate::unify::{Expectation, UnifyError, UnifyResult};
-use boron_hir::Expr;
-use boron_hir::expr::FieldInit;
 use boron_resolver::{DefId, DefKind};
+use boron_types::hir::{Expr, FieldInit};
+use boron_types::infer_ty::InferTy;
 
 impl TyChecker<'_> {
   pub(crate) fn check_struct_init(

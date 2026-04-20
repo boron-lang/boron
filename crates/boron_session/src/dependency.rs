@@ -1,12 +1,10 @@
 use crate::library::BLibMetadata;
 use crate::prelude::{LibType, PackageType};
 use boron_diagnostics::prelude::DiagnosticOutputType;
-use boron_source::new_id;
 use boron_target::target::Compiler;
+pub use boron_types::DepId;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-
-new_id!(DepId);
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Dependency {

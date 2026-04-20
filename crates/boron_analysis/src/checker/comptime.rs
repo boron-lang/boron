@@ -1,10 +1,9 @@
+use boron_types::hir::{ComptimeArg, ComptimeCallee, Expr};
 use crate::builtins::{BuiltInFunction, BuiltInParam, get_builtin};
 use crate::errors::{ArityMismatch, FuncArgMismatch};
 use crate::functions::FinalComptimeArg;
 use crate::unify::{Expectation, UnifyError, UnifyResult};
 use crate::{InferTy, TyChecker, TypeEnv};
-use boron_hir::expr::ComptimeArg;
-use boron_hir::{ComptimeCallee, Expr};
 
 impl TyChecker<'_> {
   pub fn check_comptime(

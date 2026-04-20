@@ -1,9 +1,7 @@
 use crate::{InferTy, TyChecker, TypeScheme};
-use boron_hir::hir::AdtEntry;
-use boron_hir::item::VariantKind;
-use boron_hir::{Function, Generics, Param, ParamKind};
 use boron_source::ident_table::get_or_intern;
 use boron_source::span::Span;
+use boron_types::hir::{AdtEntry, Function, Generics, Param, ParamKind, VariantKind};
 
 impl TyChecker<'_> {
   fn function_signature(&self, func: &Function) -> TypeScheme {

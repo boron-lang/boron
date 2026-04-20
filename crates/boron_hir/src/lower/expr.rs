@@ -1,18 +1,16 @@
-use crate::expr::{
+use crate::lower::context::LoweringContext;
+use boron_session::prelude::{debug, Identifier};
+use boron_source::prelude::Span;
+use boron_types::ast::{
+  expressions, statements, AssignOp,
+  ComptimeArg as AstComptimeArg, ElseBranch as AstElseBranch, ExprKind as AstExprKind, IfExpr as AstIfExpr, IntSuffix,
+  InterpreterMode,
+};
+use boron_types::hir::{
   Argument, Block, ComptimeArg, ComptimeCallee, ElseBranch, Expr, ExprKind, FieldInit,
   IfExpr, Literal, Local, MatchArm, PathExpr, PathSegment, Stmt, StmtKind,
 };
-use crate::lower::context::LoweringContext;
-use boron_parser::ast::expressions::{
-  self, ComptimeArg as AstComptimeArg, ExprKind as AstExprKind,
-};
-use boron_parser::ast::statements;
-use boron_parser::{
-  AssignOp, ElseBranch as AstElseBranch, IfExpr as AstIfExpr, IntBase, IntSuffix,
-  InterpreterMode,
-};
-use boron_session::prelude::{Identifier, debug};
-use boron_source::prelude::Span;
+use boron_types::tokens::IntBase;
 use expressions::Literal as AstLiteral;
 use itertools::Itertools as _;
 

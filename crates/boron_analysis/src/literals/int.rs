@@ -1,8 +1,8 @@
 use boron_diagnostic_macro::Diagnostic;
 use boron_diagnostics::DiagnosticCtx;
-use boron_parser::IntBase;
 use boron_source::span::Span;
 use std::num::ParseIntError;
+use boron_types::tokens::IntBase;
 
 pub fn construct_i128(
   dcx: &DiagnosticCtx,
