@@ -1,10 +1,12 @@
 use crate::ast::{BinaryOp, UnaryOp};
 use crate::hir::{Generics, HirId, ItemId, Pat};
 use crate::infer_ty::InferTy;
+use crate::literal_table::FullLiteral;
 use crate::resolver::def::DefId;
 use boron_source::ident_table::Identifier;
 use boron_source::prelude::Span;
-use crate::literal_table::FullLiteral;
+use dashmap::mapref::one::Ref;
+use dashmap::DashMap;
 
 #[derive(Debug, Clone)]
 pub struct Function {
@@ -228,4 +230,29 @@ pub struct MatchArm {
   pub guard: Option<Expr>,
   pub body: Expr,
   pub span: Span,
+}
+
+#[derive(Debug, Default)]
+pub struct Thir {
+  pub functions: DashMap<DefId, Function>,
+  pub structs: DashMap<DefId, Struct>,
+  pub enums: DashMap<DefId, Enum>,
+}
+
+impl Thir {
+  pub fn new() -> Self {
+    Self::default()
+  }
+
+  pub fn get_struct(&self, id: &DefId) -> Ref<'_, DefId, Struct> {
+    self.structs.get(id).unwrap()
+  }
+
+  pub fn get_function(&self, id: &DefId) -> Ref<'_, DefId, Function> {
+    self.functions.get(id).unwrap()
+  }
+
+  pub fn get_enum(&self, id: &DefId) -> Ref<'_, DefId, Enum> {
+    self.enums.get(id).unwrap()
+  }
 }

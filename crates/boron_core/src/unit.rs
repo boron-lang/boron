@@ -7,27 +7,25 @@ use boron_analysis::validator::validate_comptime;
 use boron_analysis::{expand_builtins, typeck_hir, InferTy, TypeTable};
 use boron_codegen::run_codegen;
 use boron_compiler::CompilerBuild;
+use boron_context::BCtx;
 use boron_hir::lower::lower_to_hir;
-use boron_ir::{Ir, IrLowerer};
+use boron_ir::IrLowerer;
 use boron_parser::parser::parse;
 use boron_resolver::{DefId, ResolveVisitor, Resolver};
 use boron_source::source_file::SourceFileId;
-use boron_thir::{Thir, ThirLowerer};
+use boron_thir::ThirLowerer;
 use boron_types::ast::module::{Module, Modules};
+use boron_types::hir::Hir;
 use std::process::exit;
 use std::time::Instant;
-use boron_types::hir::Hir;
 
 pub struct CompilationUnit<'ctx> {
   pub entry_point: SourceFileId,
   pub sess: &'ctx Session,
-  pub modules: Modules,
+  pub ctx: BCtx<'ctx>,
   pub resolver: Resolver,
-  pub hir: Option<Hir>,
   pub typeck: Option<TypeTable>,
   pub builtin_results: Option<BuiltInResults>,
-  pub thir: Option<Thir>,
-  pub ir: Option<Ir>,
   pub main_function: Option<DefId>,
 }
 
@@ -42,13 +40,10 @@ impl<'ctx> CompilationUnit<'ctx> {
     Self {
       entry_point,
       sess,
-      modules: Modules::new(),
       resolver: Resolver::new(),
-      hir: None,
+      ctx: BCtx::new(),
       typeck: None,
       builtin_results: None,
-      thir: None,
-      ir: None,
       main_function: None,
     }
   }
@@ -188,7 +183,7 @@ impl<'ctx> CompilationUnit<'ctx> {
   }
 
   fn resolve_names(&self) {
-    ResolveVisitor::resolve_modules(&self.resolver, &self.modules, self.sess);
+    ResolveVisitor::resolve_modules(&self.ctx, self.sess);
   }
 
   fn lower_to_hir(&mut self) {

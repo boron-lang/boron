@@ -24,6 +24,7 @@ boron_thir = { workspace = true }
 yansi = { workspace = true }
 boron_cli = { workspace = true }
 boron_types = { workspace = true }
+boron_context = { workspace = true }
 
 [lints]
 workspace = true

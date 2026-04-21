@@ -1,3 +1,4 @@
+use boron_context::BCtx;
 use boron_session::prelude::Identifier;
 use boron_source::prelude::SourceFileId;
 use boron_types::resolver::def::DefId;
@@ -6,29 +7,28 @@ use boron_types::resolver::ribs::{Rib, RibKind};
 use boron_types::resolver::scope::{ScopeId, ScopeKind};
 
 pub struct ModuleResolver<'a> {
-  pub resolver: &'a Resolver,
+  pub ctx: &'a BCtx<'a>,
   pub current_file: SourceFileId,
   rib_stack: Vec<Rib>,
   current_scope: Option<ScopeId>,
 }
 
 impl<'a> ModuleResolver<'a> {
-  pub fn new(resolver: &'a Resolver, source_file: SourceFileId) -> Self {
-    Self {
-      resolver,
-      current_file: source_file,
-      rib_stack: Vec::new(),
-      current_scope: None,
-    }
+  pub fn new(ctx: &'a BCtx<'a>, source_file: SourceFileId) -> Self {
+    Self { ctx, current_file: source_file, rib_stack: Vec::new(), current_scope: None }
+  }
+
+  fn resolver(&self) -> &'a Resolver {
+    self.ctx.resolver()
   }
 
   pub fn enter_scope(&mut self, kind: ScopeKind, owner: Option<DefId>) -> ScopeId {
     let parent = self.current_scope;
 
     let scope_id = if kind == ScopeKind::Module && parent.is_none() {
-      self.resolver.create_module_scope(self.current_file)
+      self.resolver().create_module_scope(self.current_file)
     } else {
-      self.resolver.create_scope(parent, kind, self.current_file, owner)
+      self.resolver().create_scope(parent, kind, self.current_file, owner)
     };
 
     self.current_scope = Some(scope_id);
@@ -47,7 +47,7 @@ impl<'a> ModuleResolver<'a> {
 
   pub fn leave_scope(&mut self) {
     if let Some(current) = self.current_scope {
-      self.current_scope = self.resolver.parent_scope(current);
+      self.current_scope = self.resolver().parent_scope(current);
       self.rib_stack.pop();
     }
   }
@@ -102,14 +102,14 @@ impl<'a> ModuleResolver<'a> {
     if let Some(rib) = self.rib_stack.first() {
       if rib.kind == RibKind::Module {
         if let Some(scope_id) = self.current_scope {
-          self.resolver.save_module_rib(self.current_file, scope_id, rib.clone());
+          self.resolver().save_module_rib(self.current_file, scope_id, rib.clone());
         }
       }
     }
   }
 
   pub fn restore_module_rib(&mut self) -> bool {
-    if let Some((scope_id, rib)) = self.resolver.get_module_rib(self.current_file) {
+    if let Some((scope_id, rib)) = self.resolver().get_module_rib(self.current_file) {
       self.current_scope = Some(scope_id);
       self.rib_stack.push(rib);
       true
@@ -119,10 +119,10 @@ impl<'a> ModuleResolver<'a> {
   }
 
   pub fn export_value(&self, name: Identifier, def_id: DefId) {
-    self.resolver.export_value(self.current_file, name, def_id);
+    self.resolver().export_value(self.current_file, name, def_id);
   }
 
   pub fn export_type(&self, name: Identifier, def_id: DefId) {
-    self.resolver.export_type(self.current_file, name, def_id);
+    self.resolver().export_type(self.current_file, name, def_id);
   }
 }

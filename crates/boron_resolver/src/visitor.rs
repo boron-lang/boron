@@ -3,10 +3,15 @@ use crate::errors::{
   UndefinedNameInModule,
 };
 use crate::module_resolver::ModuleResolver;
+use boron_context::BCtx;
 use boron_diagnostics::DiagnosticCtx;
-use boron_session::prelude::{get_or_intern, Session};
+use boron_session::prelude::{Session, get_or_intern};
 use boron_source::prelude::{SourceFileId, Span};
-use boron_types::ast::{Block, ComptimeArg, ElseBranch, EnumItem, EnumMember, Expr, ExprKind, FunctionItem, GenericParams, IfExpr, Item, ItemKind, ModItem, Param, Path, Pattern, PatternKind, ProgramNode, Statement, StructItem, StructMember, Type, VariantPayload, Visibility};
+use boron_types::ast::{
+  Block, ComptimeArg, ElseBranch, EnumItem, EnumMember, Expr, ExprKind, FunctionItem,
+  GenericParams, IfExpr, Item, ItemKind, ModItem, Param, Path, Pattern, PatternKind,
+  ProgramNode, Statement, StructItem, StructMember, Type, VariantPayload, Visibility,
+};
 use boron_types::resolver::builtin_kind::BuiltInKind;
 use boron_types::resolver::def::{DefKind, Definition};
 use boron_types::resolver::resolver::Resolver;
@@ -20,16 +25,13 @@ pub enum Namespace {
 
 pub struct ResolveVisitor<'a> {
   pub module_resolver: ModuleResolver<'a>,
+  pub ctx: &'a BCtx<'a>,
   pub sess: &'a Session,
 }
 
 impl<'a> ResolveVisitor<'a> {
-  pub fn new(
-    resolver: &'a Resolver,
-    sess: &'a Session,
-    current_file: SourceFileId,
-  ) -> Self {
-    Self { module_resolver: ModuleResolver::new(resolver, current_file), sess }
+  pub fn new(ctx: &'a BCtx<'a>, sess: &'a Session, current_file: SourceFileId) -> Self {
+    Self { module_resolver: ModuleResolver::new(ctx, current_file), sess, ctx }
   }
 
   pub fn current_file(&self) -> SourceFileId {
@@ -38,6 +40,10 @@ impl<'a> ResolveVisitor<'a> {
 
   pub fn dcx(&self) -> &DiagnosticCtx {
     self.sess.dcx()
+  }
+
+  pub fn resolver(&self) -> &'a Resolver {
+    self.ctx.resolver()
   }
 
   pub fn resolve_module(&mut self, node: &ProgramNode) {
@@ -305,7 +311,7 @@ impl<'a> ResolveVisitor<'a> {
 
     for segment in &path.segments[1..] {
       let seg_name = segment.identifier;
-      let Some(def) = self.resolver().get_definition(current_def) else {
+      let Some(def) = self.ctx.get_definition(current_def) else {
         return;
       };
 

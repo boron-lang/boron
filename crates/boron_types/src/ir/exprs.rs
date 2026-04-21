@@ -1,9 +1,9 @@
-use boron_resolver::DefId;
-use boron_session::prelude::Span;
+use crate::ast::{BinaryOp, UnaryOp};
+use crate::hir::{HirId, SemanticTy};
+use crate::literal_table::FullLiteral;
+use crate::resolver::def::DefId;
 use boron_source::ident_table::Identifier;
-use boron_types::ast::{BinaryOp, UnaryOp};
-use boron_types::hir::{HirId, SemanticTy};
-use boron_types::literal_table::FullLiteral;
+use boron_source::prelude::Span;
 
 #[derive(Debug, Clone)]
 pub struct IrExpr {

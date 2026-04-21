@@ -5,11 +5,13 @@ use crate::{
   DefId, DefKind, Definition, ModuleResolver, ResolveVisitor, Symbol, SymbolKind,
 };
 use boron_session::prelude::debug;
-use boron_source::ident_table::{get_or_intern, Identifier};
+use boron_source::ident_table::{Identifier, get_or_intern};
 use boron_source::prelude::{SourceFileId, Span};
+use boron_types::ast::{
+  ImportDecl, ImportKind, ImportSpec, NodeId, PathRoot, Visibility,
+};
 use boron_types::resolver::resolver::ImportMapping;
 use dashmap::DashMap;
-use boron_types::ast::{ImportDecl, ImportKind, ImportSpec, NodeId, PathRoot, Visibility};
 
 impl<'a> ResolveVisitor<'a> {
   pub fn collect_import(&self, import: &ImportDecl) {
@@ -130,7 +132,7 @@ impl<'a> ResolveVisitor<'a> {
       }
 
       if let Some(def_id) = last_def {
-        let def = self.resolver().get_definition(def_id).expect("should exist");
+        let def = self.ctx.get_definition(def_id).expect("should exist");
 
         if def.visibility.is_private() {
           self.sess.dcx().emit(PrivateItem { name: def.name, span: spec.span });
@@ -169,7 +171,7 @@ impl<'a> ResolveVisitor<'a> {
     for entry in exports {
       let name = *entry.key();
       let def_id = *entry.value();
-      let def = self.resolver().get_definition(def_id).expect("should be known");
+      let def = self.ctx.get_definition(def_id).expect("should be known");
 
       if !def.visibility.is_private() {
         define(&mut self.module_resolver, name, def_id);

@@ -1,0 +1,15 @@
+[package]
+name = "boron_context"
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
+
+[dependencies]
+boron_types = { workspace = true }
+dashmap = { workspace = true }
+paste = { workspace = true }
+boron_source = { workspace = true }
+
+[lints]
+workspace = true

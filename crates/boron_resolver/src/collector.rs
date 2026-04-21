@@ -4,8 +4,9 @@ use crate::{
   DefId, DefKind, Definition, ResolveVisitor, Resolver, ScopeId, ScopeKind, Symbol,
   SymbolKind,
 };
+use boron_context::BCtx;
 use boron_session::prelude::Session;
-use boron_source::ident_table::{get_or_intern, Identifier};
+use boron_source::ident_table::{Identifier, get_or_intern};
 use boron_source::prelude::Span;
 use boron_types::ast::module::Modules;
 use boron_types::ast::{
@@ -14,14 +15,14 @@ use boron_types::ast::{
 };
 
 impl<'a> ResolveVisitor<'a> {
-  pub fn resolve_modules(resolver: &'a Resolver, modules: &Modules, sess: &'a Session) {
+  pub fn resolve_modules(ctx: &'a BCtx<'a>, sess: &'a Session) {
     // collect all top-level definitions
-    for module in modules.all() {
-      let mut visitor = ResolveVisitor::new(resolver, sess, module.source_file_id);
+    for module in ctx.modules().all() {
+      let mut visitor = ResolveVisitor::new(ctx, sess, module.source_file_id);
       visitor.collect_definitions(&module.node);
     }
 
-    let order = match resolver.import_graph.resolution_order() {
+    let order = match ctx.import_graph().resolution_order() {
       Ok(order) => order,
       Err(err) => {
         sess.dcx().emit(err);
@@ -31,11 +32,11 @@ impl<'a> ResolveVisitor<'a> {
 
     // resolve all references
     for file_id in &order {
-      let Some(module) = modules.get(*file_id) else {
+      let Some(module) = ctx.modules().get(*file_id) else {
         continue;
       };
 
-      let mut visitor = ResolveVisitor::new(resolver, sess, *file_id);
+      let mut visitor = ResolveVisitor::new(ctx, sess, *file_id);
       visitor.resolve_module(&module.node);
     }
   }
@@ -74,10 +75,6 @@ impl<'a> ResolveVisitor<'a> {
     }
   }
 
-  pub fn resolver(&self) -> &Resolver {
-    self.module_resolver.resolver
-  }
-
   fn define_item(
     &mut self,
     name: Identifier,
@@ -93,7 +90,7 @@ impl<'a> ResolveVisitor<'a> {
     };
 
     if let Some(existing) = existing {
-      if let Some(def) = self.resolver().get_definition(existing) {
+      if let Some(def) = self.ctx.get_definition(existing) {
         self.sess.dcx().emit(DuplicateDefinition { name, span, previous: def.span });
         return None;
       }

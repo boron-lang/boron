@@ -1,9 +1,12 @@
-use crate::items::IrFunction;
-use crate::{IrEnum, IrLocal, IrStruct};
-use boron_resolver::DefId;
 use boron_source::new_id;
 use dashmap::DashMap;
-use boron_types::hir::SemanticTy;
+use crate::hir::SemanticTy;
+use crate::ir::exprs::IrLocal;
+use crate::ir::items::{IrEnum, IrFunction, IrStruct};
+use crate::resolver::def::DefId;
+
+pub mod exprs;
+pub mod items;
 
 new_id!(IrId);
 

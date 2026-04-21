@@ -238,6 +238,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "boron_context"
+version = "0.1.0"
+dependencies = [
+ "boron_source",
+ "boron_types",
+ "dashmap 7.0.0-rc2",
+ "paste",
+]
+
+[[package]]
 name = "boron_core"
 version = "0.1.0"
 dependencies = [
@@ -246,6 +256,7 @@ dependencies = [
  "boron_cli",
  "boron_codegen",
  "boron_compiler",
+ "boron_context",
  "boron_diagnostic_macro",
  "boron_diagnostics",
  "boron_hir",
@@ -353,6 +364,7 @@ dependencies = [
 name = "boron_resolver"
 version = "0.1.0"
 dependencies = [
+ "boron_context",
  "boron_diagnostic_macro",
  "boron_diagnostics",
  "boron_parser",

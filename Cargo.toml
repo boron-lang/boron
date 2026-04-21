@@ -41,6 +41,7 @@ indexmap = "2.13.0"
 ar = "0.9.0"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+paste = "1.0.15"
 
 boron_compiler = { path = "crates/boron_compiler" }
 boron_cli = { path = "crates/boron_cli" }
@@ -59,6 +60,7 @@ boron_codegen = { path = "crates/boron_codegen" }
 boron_thir = { path = "crates/boron_thir" }
 boron_lib = { path = "crates/boron_lib" }
 boron_types = { path = "crates/boron_types" }
+boron_context = { path = "crates/boron_context" }
 
 [workspace.lints.rust]
 elided_lifetimes_in_paths = "warn"

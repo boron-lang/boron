@@ -1,7 +1,6 @@
 use crate::{
-  Ir, IrBlock, IrBody, IrEnum, IrEnumVariant, IrExpr, IrExprKind, IrFieldInit,
-  IrFunction, IrId, IrLocal, IrParam, IrStmt, IrStmtKind, IrStruct, Projection,
-  SymbolMangler,
+  IrBlock, IrBody, IrEnum, IrEnumVariant, IrExpr, IrExprKind, IrFieldInit, IrFunction,
+  IrLocal, IrParam, IrStmt, IrStmtKind, IrStruct, Projection, SymbolMangler,
 };
 use boron_analysis::align_of::{
   calculate_enum_alignment, compute_variant_discriminants_from_exprs,
@@ -12,13 +11,13 @@ use boron_resolver::{DefId, Resolver};
 use boron_session::prelude::{debug, Session};
 use boron_source::ident_table::get_or_intern;
 use boron_target::abi::layout::Layout;
-use boron_thir::Thir;
 use boron_types::hir::{EnumVariant, Hir, Pat, PatKind, SemanticTy};
 use boron_types::infer_ty::SubstitutionMap;
+use boron_types::ir::{Ir, IrId};
 use boron_types::thir::{
   Block as ThirBlock, Enum as ThirEnum, Expr as ThirExpr, ExprKind as ThirExprKind,
   FieldInit as ThirFieldInit, Function as ThirFunction, StmtKind, Struct as ThirStruct,
-  VariantKind,
+  Thir, VariantKind,
 };
 use itertools::Itertools as _;
 

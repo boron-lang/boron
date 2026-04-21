@@ -1,11 +1,7 @@
-mod exprs;
-mod ir;
-mod items;
 mod lowerer;
 mod mangler;
 
-pub use exprs::*;
-pub use ir::*;
-pub use items::*;
+pub use boron_types::ir::exprs::*;
+pub use boron_types::ir::items::*;
 pub use lowerer::*;
 pub use mangler::*;

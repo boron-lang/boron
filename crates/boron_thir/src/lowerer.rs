@@ -21,33 +21,6 @@ use boron_types::thir::{
   Block, Enum, Expr, ExprKind, Field, FieldInit, Function, Local, MatchArm, Param, Stmt,
   StmtKind, Struct,
 };
-use dashmap::mapref::one::Ref;
-use dashmap::DashMap;
-
-#[derive(Debug, Default)]
-pub struct Thir {
-  pub functions: DashMap<DefId, Function>,
-  pub structs: DashMap<DefId, Struct>,
-  pub enums: DashMap<DefId, Enum>,
-}
-
-impl Thir {
-  pub fn new() -> Self {
-    Self::default()
-  }
-
-  pub fn get_struct(&self, id: &DefId) -> Ref<'_, DefId, Struct> {
-    self.structs.get(id).unwrap()
-  }
-
-  pub fn get_function(&self, id: &DefId) -> Ref<'_, DefId, Function> {
-    self.functions.get(id).unwrap()
-  }
-
-  pub fn get_enum(&self, id: &DefId) -> Ref<'_, DefId, Enum> {
-    self.enums.get(id).unwrap()
-  }
-}
 
 #[derive(Debug)]
 pub struct ThirLowerer<'a> {
