@@ -1,3 +1,2 @@
-mod provider;
+pub(crate) mod provider;
 pub mod queries;
-pub mod query_macro;

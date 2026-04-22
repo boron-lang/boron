@@ -14,8 +14,8 @@ impl TyChecker<'_> {
 
     match resolved.clone() {
       InferTy::Adt { def_id, args, .. } => {
-        if let Some(field_ty) = self.table.field_type(def_id, *field) {
-          let substituted = if let Some(scheme) = self.table.def_type(def_id) {
+        if let Some(field_ty) = self.ctx.field_type(def_id, *field) {
+          let substituted = if let Some(scheme) = self.ctx.def_type(def_id) {
             Self::substitute_with_scheme(&field_ty, args, scheme)
           } else {
             field_ty

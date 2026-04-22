@@ -4,9 +4,9 @@ use crate::align_of::{
 };
 pub(crate) use crate::{BuiltinFunctionCtx, InferTy};
 use boron_resolver::{DefId, DefKind};
-use boron_target::abi::layout::{Layout, align_up};
+use boron_target::abi::layout::{align_up, Layout};
 
-pub fn size_of_ty(ctx: &BuiltinFunctionCtx<'_>, ty: &InferTy) -> usize {
+pub fn size_of_ty<'a>(ctx: &BuiltinFunctionCtx<'a, 'a>, ty: &InferTy) -> usize {
   let target = ctx.sess.target();
 
   match ty {
@@ -14,7 +14,7 @@ pub fn size_of_ty(ctx: &BuiltinFunctionCtx<'_>, ty: &InferTy) -> usize {
     InferTy::Ptr { .. } => target.pointer_width.size_bytes(),
     InferTy::Array { ty, len, .. } => size_of_ty(ctx, ty) * len.len(),
     InferTy::Adt { def_id, args, .. } => {
-      let def = ctx.resolver.get_definition(*def_id).unwrap();
+      let def = ctx.ctx.get_definition(*def_id).unwrap();
 
       match def.kind {
         DefKind::Struct => calculate_struct_size(ctx, def_id, args),
@@ -27,8 +27,8 @@ pub fn size_of_ty(ctx: &BuiltinFunctionCtx<'_>, ty: &InferTy) -> usize {
   }
 }
 
-pub fn calculate_struct_size(
-  ctx: &BuiltinFunctionCtx<'_>,
+pub fn calculate_struct_size<'a>(
+  ctx: &BuiltinFunctionCtx<'a, 'a>,
   def_id: &DefId,
   args: &Vec<InferTy>,
 ) -> usize {
@@ -44,8 +44,8 @@ pub fn calculate_struct_size(
   align_up(offset, struct_alignment.get())
 }
 
-fn enum_payload_metrics(
-  ctx: &BuiltinFunctionCtx<'_>,
+fn enum_payload_metrics<'a>(
+  ctx: &BuiltinFunctionCtx<'a, 'a>,
   variant_field_tys: &[Vec<InferTy>],
 ) -> (usize, usize) {
   let max_payload_size = variant_field_tys
@@ -69,12 +69,12 @@ fn enum_payload_metrics(
   (max_payload_size, payload_align)
 }
 
-pub fn calculate_enum_size(
-  ctx: &BuiltinFunctionCtx<'_>,
+pub fn calculate_enum_size<'a>(
+  ctx: &BuiltinFunctionCtx<'a, 'a>,
   def_id: &DefId,
   args: &Vec<InferTy>,
 ) -> usize {
-  let e = ctx.hir.get_enum(*def_id).unwrap();
+  let e = ctx.ctx.hir_enum(*def_id).unwrap();
   let tag_size = compute_discriminant_tag_size(ctx, &e.variants);
   let variant_field_tys = substituted_enum_variant_field_tys(ctx, def_id, &e, args);
   let (max_payload_size, payload_align) = enum_payload_metrics(ctx, &variant_field_tys);
@@ -88,12 +88,12 @@ pub fn calculate_enum_size(
   align_up(total, enum_align)
 }
 
-pub fn calculate_enum_payload_layout(
-  ctx: &BuiltinFunctionCtx<'_>,
+pub fn calculate_enum_payload_layout<'a>(
+  ctx: &BuiltinFunctionCtx<'a, 'a>,
   def_id: &DefId,
   args: &Vec<InferTy>,
 ) -> Layout {
-  let e = ctx.hir.get_enum(*def_id).unwrap();
+  let e = ctx.ctx.hir_enum(*def_id).unwrap();
   let variant_field_tys = substituted_enum_variant_field_tys(ctx, def_id, &e, args);
   let (max_payload_size, payload_align) = enum_payload_metrics(ctx, &variant_field_tys);
 

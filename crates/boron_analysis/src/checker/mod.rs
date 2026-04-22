@@ -13,54 +13,50 @@ use crate::errors::{ConstInitMismatch, ReturnTypeMismatch};
 use crate::interpreter::Interpreter;
 use crate::interpreter::{InterpreterCache, InterpreterContext};
 use crate::results::BuiltInResults;
-use crate::table::{InferCtx, TypeEnv, TypeTable};
+use crate::table::{InferCtx, TypeEnv};
 use crate::unify::Expectation;
 use crate::unify::{UnifyError, UnifyResult};
+use boron_context::BCtx;
 use boron_diagnostics::DiagnosticCtx;
-use boron_resolver::{DefId, Resolver};
+use boron_resolver::DefId;
 use boron_session::prelude::{Session, Span};
 use boron_types::ast::{InterpreterMode, Mutability};
 use boron_types::hir::{Const, Function, Hir, ParamKind, SelfKind};
 use boron_types::infer_ty::InferTy;
 
-pub fn typeck_hir(hir: &Hir, sess: &Session, resolver: &Resolver) -> TypeTable {
-  let mut checker = TyChecker::new(hir, sess, resolver);
+pub fn typeck_hir<'a>(sess: &'a Session, ctx: &'a BCtx<'a>) {
+  let mut checker = TyChecker::new(sess, ctx);
 
   checker.collect_signatures();
 
-  for entry in &hir.functions {
+  for entry in &ctx.hir().functions {
     let def_id = *entry.key();
     let func = entry.value();
     checker.typeck_function(def_id, func);
   }
 
-  for entry in &hir.consts {
+  for entry in &ctx.hir().consts {
     let def_id = *entry.key();
     let konst = entry.value();
     checker.typeck_const(def_id, konst);
   }
 
   checker.finalize_types();
-  checker.table
 }
 
 pub struct TyChecker<'a> {
-  pub hir: &'a Hir,
   pub sess: &'a Session,
-  pub resolver: &'a Resolver,
-  pub table: TypeTable,
+  pub ctx: &'a BCtx<'a>,
   pub infcx: InferCtx,
   pub interpreter_cache: InterpreterCache,
   pub built_in_results: BuiltInResults,
 }
 
 impl<'a> TyChecker<'a> {
-  pub fn new(hir: &'a Hir, sess: &'a Session, resolver: &'a Resolver) -> Self {
+  pub fn new(sess: &'a Session, ctx: &'a BCtx<'a>) -> Self {
     Self {
-      hir,
       sess,
-      resolver,
-      table: TypeTable::new(),
+      ctx,
       infcx: InferCtx::new(),
       interpreter_cache: InterpreterCache::new(),
       built_in_results: BuiltInResults::new(),
@@ -68,23 +64,22 @@ impl<'a> TyChecker<'a> {
   }
 
   pub fn hir(&self) -> &'a Hir {
-    self.hir
+    self.ctx.hir()
   }
 
   pub fn dcx(&self) -> &'a DiagnosticCtx {
     self.sess.dcx()
   }
 
-  pub fn new_interpreter(
-    &'a self,
+  pub fn new_interpreter<'b>(
+    &'b self,
     mode: InterpreterMode,
     ctx: InterpreterContext,
-  ) -> Interpreter<'a> {
+  ) -> Interpreter<'b, 'a> {
     Interpreter::new(
       self.dcx(),
+      self.ctx,
       &self.interpreter_cache,
-      self.resolver,
-      self.hir,
       &self.built_in_results,
       mode,
       ctx,
@@ -155,8 +150,8 @@ impl<'a> TyChecker<'a> {
           param_ty
         }
         ParamKind::SelfParam { kind } => {
-          if let Some(parent) = self.hir.find_adt_parent(&_def_id) {
-            let ty = self.table.def_type(parent).expect("type scheme should exist").ty;
+          if let Some(parent) = self.ctx.adt_parent(_def_id) {
+            let ty = self.ctx.def_type(parent).expect("type scheme should exist").ty;
 
             match kind {
               SelfKind::Value => ty,
@@ -178,7 +173,7 @@ impl<'a> TyChecker<'a> {
         }
       };
 
-      self.table.record_node_type(param.hir_id, ty);
+      self.ctx.record_node_type(param.hir_id, ty);
     }
 
     if let Some(body) = &func.body {

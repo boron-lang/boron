@@ -5,14 +5,14 @@ use boron_resolver::{DefId, DefKind};
 use boron_types::ast::InterpreterMode;
 use boron_types::infer_ty::{InferTy, SubstitutionMap, TypeScheme};
 
-impl TyChecker<'_> {
+impl<'a> TyChecker<'a> {
   pub(crate) fn check_path(
     &self,
     id: DefId,
     env: &TypeEnv,
     explicit_args: Option<&[InferTy]>,
   ) -> InferTy {
-    if let Some(cnst) = self.hir.get_const(id) {
+    if let Some(cnst) = self.ctx.hir_const(id) {
       let _ = self
         .new_interpreter(InterpreterMode::Const, InterpreterContext::Const)
         .evaluate_const(&cnst);
@@ -21,10 +21,10 @@ impl TyChecker<'_> {
     if let Some(ty) = env.lookup(id) {
       return ty.clone();
     }
-    let id = if let Some(self_id) = self.resolver.get_self_mapping(id) {
-      *self_id
-    } else if let Some(parent) = self.hir.find_adt_parent(&id)
-      && let Some(def) = self.resolver.get_definition(id)
+    let id = if let Some(self_id) = self.ctx.self_mapping(id) {
+      self_id
+    } else if let Some(parent) = self.ctx.adt_parent(id)
+      && let Some(def) = self.ctx.get_definition(id)
       && matches!(def.kind, DefKind::Variant)
     {
       parent
@@ -32,7 +32,7 @@ impl TyChecker<'_> {
       id
     };
 
-    if let Some(scheme) = self.table.def_type(id) {
+    if let Some(scheme) = self.ctx.def_type(id) {
       if let Some(args) = explicit_args {
         if !args.is_empty() && args.len() == scheme.vars.len() {
           return Self::instantiate_with_args(&scheme, args).0;

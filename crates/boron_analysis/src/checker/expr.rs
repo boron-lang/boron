@@ -258,8 +258,7 @@ impl TyChecker<'_> {
       }
     };
 
-    self.table.record_node_type(expr.hir_id, ty.clone());
-    ty
+    self.ctx.record_node_type(expr.hir_id, ty)
   }
 
   pub fn check_if(
@@ -301,8 +300,7 @@ impl TyChecker<'_> {
             }
           }
 
-          self.table.record_node_type(block.hir_id, then_ty.clone());
-          then_ty
+          self.ctx.record_node_type(block.hir_id, then_ty)
         }
         ElseBranch::If(expr) => {
           let ty = self.check_if(
@@ -312,8 +310,7 @@ impl TyChecker<'_> {
             env,
             expect,
           );
-          self.table.record_node_type(expr.id, ty.clone());
-          ty
+          self.ctx.record_node_type(expr.id, ty)
         }
       }
     } else {

@@ -8,7 +8,7 @@ mod types;
 
 use crate::codegen::LLVMCodegen;
 use anyhow::{anyhow, Result};
-use boron_ir::Ir;
+use boron_types::ir::Ir;
 use boron_resolver::DefId;
 use boron_session::prelude::Session;
 use dashmap::DashMap;

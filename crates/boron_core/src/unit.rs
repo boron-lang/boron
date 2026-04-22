@@ -4,18 +4,18 @@ use crate::errors::{
 use crate::prelude::*;
 use boron_analysis::results::BuiltInResults;
 use boron_analysis::validator::validate_comptime;
-use boron_analysis::{expand_builtins, typeck_hir, InferTy, TypeTable};
+use boron_analysis::{expand_builtins, typeck_hir};
 use boron_codegen::run_codegen;
 use boron_compiler::CompilerBuild;
 use boron_context::BCtx;
 use boron_hir::lower::lower_to_hir;
 use boron_ir::IrLowerer;
-use boron_parser::parser::parse;
-use boron_resolver::{DefId, ResolveVisitor, Resolver};
+use boron_parser::{parser::parse, Lexer};
+use boron_resolver::{DefId, ResolveVisitor};
 use boron_source::source_file::SourceFileId;
 use boron_thir::ThirLowerer;
-use boron_types::ast::module::{Module, Modules};
-use boron_types::hir::Hir;
+use boron_types::ast::module::Module;
+use boron_types::hir::TyKind;
 use std::process::exit;
 use std::time::Instant;
 
@@ -23,8 +23,6 @@ pub struct CompilationUnit<'ctx> {
   pub entry_point: SourceFileId,
   pub sess: &'ctx Session,
   pub ctx: BCtx<'ctx>,
-  pub resolver: Resolver,
-  pub typeck: Option<TypeTable>,
   pub builtin_results: Option<BuiltInResults>,
   pub main_function: Option<DefId>,
 }
@@ -36,13 +34,15 @@ macro_rules! steps {
 }
 
 impl<'ctx> CompilationUnit<'ctx> {
+  fn ctx_ref(&self) -> &'ctx BCtx<'ctx> {
+    unsafe { &*(&self.ctx as *const BCtx<'ctx>) }
+  }
+
   pub fn new(entry_point: SourceFileId, sess: &'ctx Session) -> Self {
     Self {
       entry_point,
       sess,
-      resolver: Resolver::new(),
       ctx: BCtx::new(),
-      typeck: None,
       builtin_results: None,
       main_function: None,
     }
@@ -54,8 +54,12 @@ impl<'ctx> CompilationUnit<'ctx> {
     };
 
     steps!(self;
-      "Import graph" => |this| this.resolver.build_import_graph(&this.modules),
-      "Name resolution" => |this| this.resolve_names(),
+      "Import graph" => |this| this.build_import_graph(),
+      "Name resolution" => |this| {
+        if !ResolveVisitor::resolve_modules(this.entry_point, this.ctx_ref(), self.sess) {
+          return;
+        }
+      },
       "HIR lowering" => |this| this.lower_to_hir(),
       "Comptime Validation" => |this|  this.validate_comptime(),
       "Type inference and checking" => |this| this.typeck(),
@@ -66,15 +70,18 @@ impl<'ctx> CompilationUnit<'ctx> {
     );
   }
 
+  fn build_import_graph(&self) {
+    let ctx = self.ctx_ref();
+    ctx.resolver().build_import_graph(ctx.modules());
+  }
+
   fn find_main_function(&mut self) {
     if self.sess.is_lib() {
       return;
     }
-    let Some(thir) = &self.thir else {
-      return;
-    };
 
-    let main = thir.functions.iter().find(|func| func.name.text() == "main");
+    let ctx = self.ctx_ref();
+    let main = ctx.hir().functions.iter().find(|func| func.name.text() == "main");
 
     if let Some(main) = main {
       if !main.generics.is_empty() {
@@ -90,8 +97,8 @@ impl<'ctx> CompilationUnit<'ctx> {
         self.sess.dcx().emit(MainNoParams { span });
       }
 
-      if !matches!(main.return_type, InferTy::Unit(_)) {
-        self.sess.dcx().emit(MainRetNotAUnit { span: main.return_type.span() });
+      if !matches!(main.return_type.kind, TyKind::Unit) {
+        self.sess.dcx().emit(MainRetNotAUnit { span: main.return_type.span });
       }
 
       self.main_function = Some(main.def_id);
@@ -106,12 +113,10 @@ impl<'ctx> CompilationUnit<'ctx> {
       self.sess().dcx().bug("failed to create output directory");
     }
 
-    let Some(ir) = &self.ir else {
-      return Ok(());
-    };
+    let ir = IrLowerer::new(self.sess, self.ctx_ref()).lower();
 
     let start = Instant::now();
-    if let Err(err) = run_codegen(self.sess, ir, self.main_function) {
+    if let Err(err) = run_codegen(self.sess, &ir, self.main_function) {
       self.emit_errors();
       return Err(err);
     }
@@ -135,61 +140,32 @@ impl<'ctx> CompilationUnit<'ctx> {
   }
 
   fn lower_to_thir(&mut self) {
-    let Some(hir) = &self.hir else { return };
-    let Some(typeck) = &self.typeck else {
-      return;
-    };
     let Some(builtin_results) = &self.builtin_results else {
       return;
     };
 
-    self.thir = Some(
-      ThirLowerer::new(hir, &self.resolver, self.sess.dcx(), typeck, builtin_results)
-        .lower(),
-    );
+    ThirLowerer::new(self.ctx_ref(), self.sess.dcx(), builtin_results).lower();
   }
 
-  fn lower_to_ir(&mut self) {
-    let Some(hir) = &self.hir else { return };
-    let Some(thir) = &self.thir else { return };
-    let Some(typeck) = &self.typeck else {
-      return;
-    };
-
-    self.ir = Some(IrLowerer::new(hir, thir, typeck, self.sess, &self.resolver).lower());
-  }
+  fn lower_to_ir(&mut self) {}
 
   fn expand_builtins(&mut self) {
-    let Some(hir) = &self.hir else { return };
-    let Some(typeck) = &self.typeck else {
-      return;
-    };
-
-    self.builtin_results = Some(expand_builtins(self.sess, &self.resolver, typeck, hir));
+    self.builtin_results = Some(expand_builtins(self.sess, self.ctx_ref()));
   }
 
   fn validate_comptime(&self) {
-    let Some(hir) = &self.hir else { return };
     let dcx = self.sess.dcx();
 
-    validate_comptime(hir, dcx, &self.resolver);
+    validate_comptime(dcx, self.ctx_ref());
   }
 
   fn typeck(&mut self) {
-    let Some(hir) = &self.hir else { return };
-    let table = typeck_hir(hir, self.sess, &self.resolver);
-
-    self.typeck = Some(table);
-  }
-
-  fn resolve_names(&self) {
-    ResolveVisitor::resolve_modules(&self.ctx, self.sess);
+    typeck_hir(self.sess, self.ctx_ref());
   }
 
   fn lower_to_hir(&mut self) {
     let dcx = self.sess.dcx();
-    let hir = lower_to_hir(&self.resolver, &self.modules, dcx);
-    self.hir = Some(hir);
+    lower_to_hir(self.ctx_ref(), dcx);
   }
 
   pub fn sess(&self) -> &Session {
@@ -232,10 +208,10 @@ impl<'ctx> CompilationUnit<'ctx> {
     }
 
     let module = Module::new(id, node);
-    self.modules.add(module);
+    self.ctx_ref().modules().add(module);
 
     let files_to_process: Vec<_> = {
-      let this = self.modules.get_unchecked(id);
+      let this = self.ctx_ref().modules().get_unchecked(id);
       let dcx = self.sess.dcx();
       let mut files = Vec::new();
 

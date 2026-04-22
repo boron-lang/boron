@@ -18,6 +18,7 @@ boron_source = { workspace = true }
 boron_target = { workspace = true }
 serde = { workspace = true }
 boron_types = { workspace = true }
+boron_context = { workspace = true }
 
 [lints]
 workspace = true

@@ -6,6 +6,7 @@ repository.workspace = true
 edition.workspace = true
 
 [dependencies]
+boron_context = { workspace = true }
 boron_diagnostics = { workspace = true }
 boron_parser = { workspace = true }
 boron_resolver = { workspace = true }

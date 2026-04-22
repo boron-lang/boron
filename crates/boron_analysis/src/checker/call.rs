@@ -46,14 +46,14 @@ impl TyChecker<'_> {
       }
 
       InferTy::Adt { def_id, .. } => {
-        let enum_ = self.hir.get_enum(*def_id).expect("should exist");
+        let enum_ = self.ctx.hir_enum(*def_id).expect("should exist");
         let variant = enum_
           .variants
           .iter()
           .find(|variant| variant.name == last_segment)
           .expect("checked in resolver");
 
-        let scheme = self.table.def_type(*def_id).unwrap();
+        let scheme = self.ctx.def_type(*def_id).unwrap();
         let (resolved, subst) = self.instantiate(&scheme);
 
         let VariantKind::Tuple(tuple) = &variant.kind else {
@@ -82,8 +82,8 @@ impl TyChecker<'_> {
         }
 
         let resolved = Self::apply_subst(&resolved, &subst);
-        self.table.record_monomorphization(*def_id, subst.clone());
-        self.table.record_expr_monomorphization(call_hir_id, *def_id, subst);
+        self.ctx.record_mono(*def_id, subst.clone());
+        self.ctx.record_expr_mono(call_hir_id, *def_id, subst);
 
         resolved
       }
@@ -128,8 +128,8 @@ impl TyChecker<'_> {
     env: &mut TypeEnv,
     def: DefId,
   ) {
-    let function = self.hir.get_function(def).expect("should exist");
-    let def = self.resolver.get_definition(def).expect("couldn't find def");
+    let function = self.ctx.hir_function(def).expect("should exist");
+    let def = self.ctx.get_definition(def).expect("couldn't find def");
     if args.len() != ty_params.len() {
       self.dcx().emit(ArityMismatch {
         callee: format!("function {}", def.name),
@@ -144,7 +144,7 @@ impl TyChecker<'_> {
       let expected_ty = if let Some(name) = arg.name {
         let param = function.params.iter().find_position(|param| {
           let def =
-            self.resolver.get_definition(param.def_id).expect("couldn't find parameter");
+            self.ctx.get_definition(param.def_id).expect("couldn't find parameter");
 
           def.name == name
         });
@@ -166,7 +166,7 @@ impl TyChecker<'_> {
 
     for param in &function.params {
       if set.get(&param.def_id).is_none() {
-        let def = self.resolver.get_definition(param.def_id).unwrap();
+        let def = self.ctx.get_definition(param.def_id).unwrap();
 
         self.dcx().emit(NoValuePassedForParameter {
           param: def.name,
@@ -223,7 +223,7 @@ impl TyChecker<'_> {
     call_hir_id: HirId,
   ) {
     let Some(def_id) = callee_def_id else { panic!("do def id") };
-    let Some(scheme) = self.table.def_type(def_id) else { panic!("no ty scheme") };
+    let Some(scheme) = self.ctx.def_type(def_id) else { panic!("no ty scheme") };
 
     let mut subst = SubstitutionMap::new();
 
@@ -233,16 +233,16 @@ impl TyChecker<'_> {
         self.infer_substitutions_from_instantiation(&scheme, callee_ty, &mut subst);
       }
 
-      self.table.record_monomorphization(def_id, subst.clone());
+      self.ctx.record_mono(def_id, subst.clone());
       self.monomorphize_parent(def_id, &mut subst);
     }
 
-    self.table.record_expr_monomorphization(call_hir_id, def_id, subst);
+    self.ctx.record_expr_mono(call_hir_id, def_id, subst);
   }
 
   fn monomorphize_parent(&mut self, def_id: DefId, subst: &mut SubstitutionMap) {
-    if let Some(parent_struct_id) = self.resolver.find_parent(def_id) {
-      if let Some(struct_scheme) = self.table.def_type(parent_struct_id) {
+    if let Some(parent_struct_id) = self.ctx.adt_parent(def_id) {
+      if let Some(struct_scheme) = self.ctx.def_type(parent_struct_id) {
         if !struct_scheme.vars.is_empty() {
           let mut struct_subst = SubstitutionMap::new();
           for param in &struct_scheme.vars {
@@ -250,7 +250,7 @@ impl TyChecker<'_> {
               struct_subst.add(*param, ty.clone());
             }
           }
-          self.table.record_monomorphization(parent_struct_id, struct_subst);
+          self.ctx.record_mono(parent_struct_id, struct_subst);
         }
       }
     }
@@ -369,8 +369,7 @@ impl TyChecker<'_> {
       return InferTy::Err(span);
     };
 
-    let Some(method_def_id) = self.resolver.lookup_adt_member(struct_def_id, method)
-    else {
+    let Some(method_def_id) = self.ctx.adt_member(struct_def_id, method) else {
       self.dcx().emit(NoMethodForTy {
         span: *method.span(),
         ty: self.format_type(&resolved_receiver),
@@ -378,7 +377,8 @@ impl TyChecker<'_> {
       });
       return InferTy::Err(span);
     };
-    let func = self.hir.get_function(method_def_id).unwrap();
+
+    let func = self.ctx.hir_function(method_def_id).unwrap();
     let method_ty = self.check_path(method_def_id, env, None);
     let resolved_method = self.infcx.resolve(&method_ty);
 
@@ -397,12 +397,12 @@ impl TyChecker<'_> {
     if let InferTy::Fn { params, ret, .. } = resolved_method {
       self.check_fn_call_args(args, &params, env, method_def_id, span);
 
-      let method_scheme = self.table.def_type(method_def_id);
+      let method_scheme = self.ctx.def_type(method_def_id);
       if let Some(method_scheme) = method_scheme {
         if !method_scheme.vars.is_empty() {
           let mut subst = SubstitutionMap::new();
 
-          if let Some(adt_scheme) = self.table.def_type(struct_def_id) {
+          if let Some(adt_scheme) = self.ctx.def_type(struct_def_id) {
             Self::collect_param_substitutions(
               &adt_scheme.ty,
               &resolved_receiver,
@@ -418,15 +418,11 @@ impl TyChecker<'_> {
             &mut subst,
           );
 
-          self.table.record_monomorphization(method_def_id, subst.clone());
+          self.ctx.record_mono(method_def_id, subst.clone());
           self.monomorphize_parent(method_def_id, &mut subst);
-          self.table.record_expr_monomorphization(call_hir_id, method_def_id, subst);
+          self.ctx.record_expr_mono(call_hir_id, method_def_id, subst);
         } else {
-          self.table.record_expr_monomorphization(
-            call_hir_id,
-            method_def_id,
-            SubstitutionMap::new(),
-          );
+          self.ctx.record_expr_mono(call_hir_id, method_def_id, SubstitutionMap::new());
         }
       } else {
         self.handle_monomorphization(Some(method_def_id), &method_ty, &[], call_hir_id);
@@ -447,7 +443,7 @@ impl TyChecker<'_> {
     def: DefId,
     span: Span,
   ) {
-    let def_info = self.resolver.get_definition(def).expect("couldn't find def");
+    let def_info = self.ctx.get_definition(def).expect("couldn't find def");
 
     if args.len() != param_tys.len() {
       self.dcx().emit(ArityMismatch {

@@ -44,7 +44,7 @@ impl TyChecker<'_> {
       }
 
       InferTy::Adt { def_id, args, .. } => {
-        if let Some(def) = self.resolver.get_definition(*def_id) {
+        if let Some(def) = self.ctx.get_definition(*def_id) {
           write!(f, "{}", def.name)?;
         } else {
           write!(f, "{}", def_id.index())?;

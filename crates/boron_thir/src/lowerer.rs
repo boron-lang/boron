@@ -1,19 +1,20 @@
+use boron_analysis::InferTy;
 use boron_analysis::float::construct_float;
 use boron_analysis::int::construct_i128;
 use boron_analysis::interpreter::values::ConstValue;
 use boron_analysis::interpreter::{Interpreter, InterpreterCache, InterpreterContext};
 use boron_analysis::results::BuiltInResults;
-use boron_analysis::{InferTy, TypeTable};
+use boron_context::BCtx;
 use boron_diagnostics::DiagnosticCtx;
-use boron_resolver::{DefId, DefKind, Resolver};
+use boron_resolver::{DefId, DefKind};
 use boron_source::ident_table::Identifier;
 use boron_source::span::Span;
 use boron_types::ast::{BinaryOp, InterpreterMode, UnaryOp};
 use boron_types::hir::{
   AdtEntry, Argument, Block as HirBlock, ElseBranch, Enum as HirEnum, Expr as HirExpr,
-  ExprKind as HirExprKind, FieldInit as HirFieldInit, Function as HirFunction, Hir,
-  HirId, IfExpr, Literal, Local as HirLocal, MatchArm as HirMatchArm,
-  PathExpr as HirPathExpr, Stmt as HirStmt, StmtKind as HirStmtKind, Struct as HirStruct,
+  ExprKind as HirExprKind, FieldInit as HirFieldInit, Function as HirFunction, HirId,
+  IfExpr, Literal, Local as HirLocal, MatchArm as HirMatchArm, PathExpr as HirPathExpr,
+  Stmt as HirStmt, StmtKind as HirStmtKind, Struct as HirStruct,
 };
 use boron_types::infer_ty::SubstitutionMap;
 use boron_types::literal_table::FullLiteral;
@@ -23,63 +24,47 @@ use boron_types::thir::{
 };
 
 #[derive(Debug)]
-pub struct ThirLowerer<'a> {
-  pub hir: &'a Hir,
-  resolver: &'a Resolver,
+pub struct ThirLowerer<'ctx, 'a> {
+  pub(crate) ctx: &'ctx BCtx<'ctx>,
   dcx: &'a DiagnosticCtx,
-  type_table: &'a TypeTable,
   interpreter_cache: InterpreterCache,
-  thir: Thir,
   built_in_results: &'a BuiltInResults,
 }
 
-impl<'a> ThirLowerer<'a> {
+impl<'ctx, 'a> ThirLowerer<'ctx, 'a> {
   pub fn new(
-    hir: &'a Hir,
-    resolver: &'a Resolver,
+    ctx: &'ctx BCtx<'ctx>,
     dcx: &'a DiagnosticCtx,
-    type_table: &'a TypeTable,
     built_in_results: &'a BuiltInResults,
   ) -> Self {
-    Self {
-      hir,
-      resolver,
-      dcx,
-      type_table,
-      interpreter_cache: InterpreterCache::new(),
-      thir: Thir::new(),
-      built_in_results,
-    }
+    Self { ctx, dcx, interpreter_cache: InterpreterCache::new(), built_in_results }
   }
 
-  pub fn lower(mut self) -> Thir {
-    for func in &self.hir.functions {
+  pub fn lower(mut self) {
+    for func in &self.ctx.hir().functions {
       let lowered = self.lower_function(func.value());
-      self.thir.functions.insert(*func.key(), lowered);
+      self.ctx.thir().functions.insert(*func.key(), lowered);
     }
 
-    for adt in &self.hir.adts {
+    for adt in &self.ctx.hir().adts {
       match adt.value() {
         AdtEntry::Struct(strukt) => {
           let lowered = self.lower_struct(strukt);
-          self.thir.structs.insert(strukt.def_id, lowered);
+          self.ctx.thir().structs.insert(strukt.def_id, lowered);
         }
         AdtEntry::Enum(enum_) => {
           let lowered = self.lower_enum(enum_);
-          self.thir.enums.insert(enum_.def_id, lowered);
+          self.ctx.thir().enums.insert(enum_.def_id, lowered);
         }
       }
     }
-
-    self.thir
   }
 
-  pub fn new_interpreter(&'a self, mode: InterpreterMode) -> Interpreter<'a> {
+  pub fn new_interpreter<'b>(&'b self, mode: InterpreterMode) -> Interpreter<'b, 'ctx> {
     Interpreter::new(
       self.dcx,
+      self.ctx,
       &self.interpreter_cache,
-      self.resolver,
-      self.hir,
       self.built_in_results,
       mode,
       InterpreterContext::Other,
@@ -102,8 +87,7 @@ impl<'a> ThirLowerer<'a> {
     let mut params = vec![];
 
     for param in &func.params {
-      let ty =
-        self.type_table.node_type(param.hir_id).unwrap_or(InferTy::Err(param.span));
+      let ty = self.ctx.node_type(param.hir_id).unwrap_or(InferTy::Err(param.span));
 
       params.push(Param {
         name: param.kind.name(),
@@ -115,7 +99,7 @@ impl<'a> ThirLowerer<'a> {
     }
 
     let body = func.body.as_ref().map(|b| self.lower_block(b));
-    let scheme = self.type_table.def_type(func.def_id).expect("should be known");
+    let scheme = self.ctx.def_type(func.def_id).expect("should be known");
 
     let return_type = match &scheme.ty {
       InferTy::Fn { ret, .. } => ret.as_ref().clone(),
@@ -139,10 +123,8 @@ impl<'a> ThirLowerer<'a> {
       .fields
       .iter()
       .map(|f| {
-        let ty = self
-          .type_table
-          .field_type(strukt.def_id, f.name)
-          .unwrap_or(InferTy::Err(f.span));
+        let ty =
+          self.ctx.field_type(strukt.def_id, f.name).unwrap_or(InferTy::Err(f.span));
 
         Field { hir_id: f.hir_id, name: f.name, ty, span: f.span }
       })
@@ -162,7 +144,7 @@ impl<'a> ThirLowerer<'a> {
   pub fn lower_block(&mut self, block: &HirBlock) -> Block {
     let stmts = block.stmts.iter().map(|s| self.lower_stmt(s)).collect();
     let expr = block.expr.as_ref().map(|e| Box::new(self.lower_expr(e)));
-    let ty = self.type_table.node_type(block.hir_id).unwrap_or(InferTy::Err(block.span));
+    let ty = self.ctx.node_type(block.hir_id).unwrap_or(InferTy::Err(block.span));
 
     Block { hir_id: block.hir_id, ty, stmts, expr, span: block.span }
   }
@@ -177,8 +159,7 @@ impl<'a> ThirLowerer<'a> {
   }
 
   pub fn lower_local(&mut self, local: &HirLocal) -> Local {
-    let ty =
-      self.type_table.node_type(local.pat.hir_id).expect("TODO: implement pattern");
+    let ty = self.ctx.node_type(local.pat.hir_id).expect("TODO: implement pattern");
 
     Local {
       hir_id: local.hir_id,
@@ -235,7 +216,7 @@ impl<'a> ThirLowerer<'a> {
     Expr {
       hir_id: expr.hir_id,
       ty: self
-        .type_table
+        .ctx
         .node_type(expr.hir_id)
         .unwrap_or_else(|| panic!("couldn't find node ty for expr {expr:#?}")),
       kind,
@@ -285,7 +266,7 @@ impl<'a> ThirLowerer<'a> {
   }
 
   fn lower_path(&self, path: &HirPathExpr, expr: &HirExpr) -> ExprKind {
-    if let Some(_) = self.hir.get_const(path.def_id) {
+    if self.ctx.hir_const(path.def_id).is_some() {
       return ExprKind::Literal(
         Self::const_value_to_literal(
           self
@@ -297,7 +278,7 @@ impl<'a> ThirLowerer<'a> {
       );
     }
 
-    if let Some(def) = self.resolver.get_definition(path.def_id) {
+    if let Some(def) = self.ctx.get_definition(path.def_id) {
       match def.kind {
         DefKind::Local | DefKind::Param => {
           return ExprKind::LocalRef(path.def_id);
@@ -343,7 +324,7 @@ impl<'a> ThirLowerer<'a> {
   }
 
   fn lower_cast(&mut self, expr: &HirExpr, hir_id: HirId) -> ExprKind {
-    let ty = self.type_table.node_type(hir_id).unwrap();
+    let ty = self.ctx.node_type(hir_id).unwrap();
 
     ExprKind::Cast { expr: Box::new(self.lower_expr(expr)), ty }
   }
@@ -365,7 +346,7 @@ impl<'a> ThirLowerer<'a> {
     let type_args = self.lower_call_type_args(call_hir_id);
 
     ExprKind::Call {
-      callee: if let Some(entry) = self.type_table.expr_monomorphization(call_hir_id) {
+      callee: if let Some(entry) = self.ctx.expr_mono(call_hir_id) {
         entry.def_id
       } else {
         callee_def_id
@@ -377,10 +358,10 @@ impl<'a> ThirLowerer<'a> {
   }
 
   fn lower_call_type_args(&self, call_hir_id: HirId) -> Vec<InferTy> {
-    let Some(mono) = self.type_table.expr_monomorphization(call_hir_id) else {
+    let Some(mono) = self.ctx.expr_mono(call_hir_id) else {
       return vec![];
     };
-    let Some(scheme) = self.type_table.def_type(mono.def_id) else {
+    let Some(scheme) = self.ctx.def_type(mono.def_id) else {
       return vec![];
     };
 
@@ -392,9 +373,11 @@ impl<'a> ThirLowerer<'a> {
   }
 
   fn lower_comptime(&mut self, expr: &HirExpr) -> ExprKind {
-    let comptime = self
-      .resolver
-      .get_recorded_comptime_builtin(self.hir.hir_to_node(&expr.hir_id).unwrap());
+    let node_id = self
+      .ctx
+      .hir_to_node(expr.hir_id)
+      .expect("HIR id should map to NodeId during THIR lowering");
+    let comptime = self.ctx.resolver().get_recorded_comptime_builtin(node_id);
 
     let const_val = if comptime.is_some() {
       self.built_in_results.get(expr.hir_id)
@@ -418,17 +401,15 @@ impl<'a> ThirLowerer<'a> {
     call_hir_id: HirId,
   ) -> ExprKind {
     let receiver_ty =
-      self.type_table.node_type(receiver.hir_id).expect("receiver should have a type");
+      self.ctx.node_type(receiver.hir_id).expect("receiver should have a type");
 
     let struct_def_id = match &receiver_ty {
       InferTy::Adt { def_id, .. } => *def_id,
       _ => panic!("method call on non-ADT type: {receiver_ty:?}"),
     };
 
-    let method_def_id = self
-      .resolver
-      .lookup_adt_member(struct_def_id, method)
-      .expect("method should exist on struct");
+    let method_def_id =
+      self.ctx.adt_member(struct_def_id, method).expect("method should exist on struct");
 
     let lowered_receiver = self.lower_expr(receiver);
     let mut lowered_args = vec![lowered_receiver];
@@ -473,7 +454,7 @@ impl<'a> ThirLowerer<'a> {
     init_hir_id: HirId,
     def_id: DefId,
   ) -> SubstitutionMap {
-    let Some(mono) = self.type_table.expr_monomorphization(init_hir_id) else {
+    let Some(mono) = self.ctx.expr_mono(init_hir_id) else {
       return SubstitutionMap::new();
     };
 
@@ -481,7 +462,7 @@ impl<'a> ThirLowerer<'a> {
       return SubstitutionMap::new();
     }
 
-    mono.type_args
+    mono.type_args.clone()
   }
 
   fn lower_struct_init_type_args(
@@ -489,7 +470,7 @@ impl<'a> ThirLowerer<'a> {
     init_hir_id: HirId,
     def_id: DefId,
   ) -> Vec<InferTy> {
-    let Some(mono) = self.type_table.expr_monomorphization(init_hir_id) else {
+    let Some(mono) = self.ctx.expr_mono(init_hir_id) else {
       return vec![];
     };
 
@@ -497,7 +478,7 @@ impl<'a> ThirLowerer<'a> {
       return vec![];
     }
 
-    let Some(scheme) = self.type_table.def_type(def_id) else {
+    let Some(scheme) = self.ctx.def_type(def_id) else {
       return vec![];
     };
 
@@ -538,13 +519,13 @@ impl<'a> ThirLowerer<'a> {
               &if_expr.else_branch,
             ),
             hir_id: if_expr.id,
-            ty: self.type_table.node_type(if_expr.id).unwrap(),
+            ty: self.ctx.node_type(if_expr.id).unwrap(),
             span: Span::default(),
           },
           ElseBranch::Block(block) => Expr {
             kind: ExprKind::Block(self.lower_block(block)),
             hir_id: block.hir_id,
-            ty: self.type_table.node_type(block.hir_id).unwrap(),
+            ty: self.ctx.node_type(block.hir_id).unwrap(),
             span: Span::default(),
           },
         })
@@ -591,7 +572,7 @@ impl<'a> ThirLowerer<'a> {
     field: &HirFieldInit,
     subst: &SubstitutionMap,
   ) -> FieldInit {
-    let ty = self.type_table.field_type(def_id, field.name).unwrap();
+    let ty = self.ctx.field_type(def_id, field.name).unwrap();
     let ty = Self::apply_subst_by_def_id(&ty, subst);
     FieldInit {
       hir_id: field.hir_id,

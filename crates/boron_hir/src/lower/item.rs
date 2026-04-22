@@ -1,15 +1,18 @@
-use boron_types::hir::item::{
-  Const, Enum, EnumVariantStructField, Field, Function, Param, ParamKind, SelfKind,
-  Struct, Variant, VariantKind,
-};
 use crate::lower::context::LoweringContext;
 use boron_types::ast::items::{
   ConstItem, EnumItem, FunctionItem, Item as AstItem, ItemKind, StructField, StructItem,
   StructMember, Variant as AstVariant, VariantPayload as AstVariantPayload, Visibility,
 };
-use boron_types::ast::{params, EnumMember, GenericParam as AstGenericParam, GenericParams as AstGenericParams, ProgramNode, TypeBound as AstTypeBound};
-use itertools::Itertools as _;
+use boron_types::ast::{
+  params, EnumMember, GenericParam as AstGenericParam,
+  GenericParams as AstGenericParams, ProgramNode, TypeBound as AstTypeBound,
+};
+use boron_types::hir::item::{
+  Const, Enum, EnumVariantStructField, Field, Function, Param, ParamKind, SelfKind,
+  Struct, Variant, VariantKind,
+};
 use boron_types::hir::{AdtEntry, GenericParam, GenericParamKind, Generics, TypeBound};
+use itertools::Itertools as _;
 
 impl LoweringContext<'_> {
   pub fn lower_module(&mut self, node: &ProgramNode) {

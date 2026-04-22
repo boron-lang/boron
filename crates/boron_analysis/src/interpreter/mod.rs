@@ -11,10 +11,10 @@ use crate::interpreter::utils::InterpreterLimits;
 use crate::interpreter::values::ConstValue;
 use crate::literals::int::construct_i128;
 use crate::results::BuiltInResults;
+use boron_context::BCtx;
 use boron_diagnostics::DiagnosticCtx;
-use boron_types::hir::{ComptimeCallee, Const, Expr, ExprKind, Hir, HirId, Literal};
 use boron_types::ast::{BinaryOp, InterpreterMode, UnaryOp};
-use boron_resolver::Resolver;
+use boron_types::hir::{ComptimeCallee, Const, Expr, ExprKind, HirId, Literal};
 use dashmap::DashMap;
 use std::cmp::PartialEq;
 
@@ -55,11 +55,11 @@ impl InterpreterCache {
 }
 
 #[derive(Debug)]
-pub struct Interpreter<'a> {
+pub struct Interpreter<'a, 'ctx> {
   dcx: &'a DiagnosticCtx,
   cache: &'a InterpreterCache,
-  resolver: &'a Resolver,
-  hir: &'a Hir,
+  ctx: &'ctx BCtx<'ctx>,
+
   /// This is only used by the comptime interpreter, in THIR lowering.
   built_in_results: &'a BuiltInResults,
 
@@ -70,21 +70,19 @@ pub struct Interpreter<'a> {
   stack: Stack,
 }
 
-impl<'a> Interpreter<'a> {
+impl<'a, 'ctx> Interpreter<'a, 'ctx> {
   pub fn new(
     dcx: &'a DiagnosticCtx,
+    ctx: &'ctx BCtx<'ctx>,
     cache: &'a InterpreterCache,
-    resolver: &'a Resolver,
-    hir: &'a Hir,
     built_in_results: &'a BuiltInResults,
     mode: InterpreterMode,
     context: InterpreterContext,
   ) -> Self {
     Self {
-      resolver,
       dcx,
+      ctx,
       built_in_results,
-      hir,
       stack: Stack::new(),
       limits: Default::default(),
       mode,
@@ -410,7 +408,7 @@ impl<'a> Interpreter<'a> {
       }
       ExprKind::Binary { op, lhs, rhs } => self.eval_binary(expr, op, lhs, rhs),
       ExprKind::Path(p) => {
-        if let Some(cnst) = self.hir.get_const(p.def_id) {
+        if let Some(cnst) = self.ctx.hir_const(p.def_id) {
           self.evaluate_expr(&cnst.value)
         } else {
           self.dcx.emit(PathNotConst { span: expr.span });

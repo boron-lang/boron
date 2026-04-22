@@ -9,7 +9,7 @@ use boron_target::abi::layout::Alignment;
 use boron_types::ast::InterpreterMode;
 use boron_types::hir::{Enum, Expr, Variant, VariantKind};
 
-pub fn align_of_ty(sz: &BuiltinFunctionCtx<'_>, ty: &InferTy) -> Alignment {
+pub fn align_of_ty<'a>(sz: &BuiltinFunctionCtx<'a, 'a>, ty: &InferTy) -> Alignment {
   let target = sz.sess.target();
 
   match ty {
@@ -17,7 +17,7 @@ pub fn align_of_ty(sz: &BuiltinFunctionCtx<'_>, ty: &InferTy) -> Alignment {
     InferTy::Ptr { .. } => target.pointer_width.size_bytes().into(),
     InferTy::Array { ty, .. } => align_of_ty(sz, ty),
     InferTy::Adt { def_id, args, .. } => {
-      let def = sz.resolver.get_definition(*def_id).unwrap();
+      let def = sz.ctx.get_definition(*def_id).unwrap();
       match def.kind {
         DefKind::Struct => calculate_struct_alignment(sz, def_id, args),
         DefKind::Enum => calculate_enum_alignment(sz, def_id, args),
@@ -29,8 +29,8 @@ pub fn align_of_ty(sz: &BuiltinFunctionCtx<'_>, ty: &InferTy) -> Alignment {
   }
 }
 
-pub fn calculate_struct_alignment(
-  sz: &BuiltinFunctionCtx<'_>,
+pub fn calculate_struct_alignment<'a>(
+  sz: &BuiltinFunctionCtx<'a, 'a>,
   def_id: &DefId,
   args: &Vec<InferTy>,
 ) -> Alignment {
@@ -40,31 +40,31 @@ pub fn calculate_struct_alignment(
     .into()
 }
 
-pub(crate) fn substituted_struct_field_tys(
-  sz: &BuiltinFunctionCtx<'_>,
+pub(crate) fn substituted_struct_field_tys<'a>(
+  sz: &BuiltinFunctionCtx<'a, 'a>,
   def_id: &DefId,
   args: &Vec<InferTy>,
 ) -> Vec<InferTy> {
-  let ty_scheme = sz.ty_table.def_type(*def_id).unwrap();
+  let ty_scheme = sz.ctx.def_type(*def_id).unwrap();
   let (_, subst) = TyChecker::instantiate_with_args(&ty_scheme, args.as_slice());
-  let strct = sz.hir.get_struct(*def_id).unwrap();
+  let strct = sz.ctx.hir_struct(*def_id).unwrap();
 
   strct
     .fields
     .iter()
     .map(|field| {
-      let field_ty = sz.ty_table.field_type(*def_id, field.name).unwrap();
+      let field_ty = sz.ctx.field_type(*def_id, field.name).unwrap();
       TyChecker::apply_subst(&field_ty, &subst)
     })
     .collect()
 }
 
-pub fn calculate_enum_alignment(
-  sz: &BuiltinFunctionCtx<'_>,
+pub fn calculate_enum_alignment<'a>(
+  sz: &BuiltinFunctionCtx<'a, 'a>,
   def_id: &DefId,
   args: &Vec<InferTy>,
 ) -> Alignment {
-  let e = sz.hir.get_enum(*def_id).unwrap();
+  let e = sz.ctx.hir_enum(*def_id).unwrap();
   let tag_size = compute_discriminant_tag_size(sz, &e.variants);
 
   let max_field_align = substituted_enum_variant_field_tys(sz, def_id, &e, args)
@@ -75,13 +75,13 @@ pub fn calculate_enum_alignment(
   max_field_align.into()
 }
 
-pub(crate) fn substituted_enum_variant_field_tys(
-  sz: &BuiltinFunctionCtx<'_>,
+pub(crate) fn substituted_enum_variant_field_tys<'a>(
+  sz: &BuiltinFunctionCtx<'a, 'a>,
   def_id: &DefId,
   e: &Enum,
   args: &Vec<InferTy>,
 ) -> Vec<Vec<InferTy>> {
-  let ty_scheme = sz.ty_table.def_type(*def_id).unwrap();
+  let ty_scheme = sz.ctx.def_type(*def_id).unwrap();
   let (_, subst) = TyChecker::instantiate_with_args(&ty_scheme, args.as_slice());
 
   e.variants
@@ -91,7 +91,7 @@ pub(crate) fn substituted_enum_variant_field_tys(
       VariantKind::Struct(fields) => fields
         .iter()
         .map(|field| {
-          let field_ty = sz.ty_table.field_type(variant.def_id, field.name).unwrap();
+          let field_ty = sz.ctx.field_type(variant.def_id, field.name).unwrap();
           TyChecker::apply_subst(&field_ty, &subst)
         })
         .collect(),
@@ -100,7 +100,7 @@ pub(crate) fn substituted_enum_variant_field_tys(
         .enumerate()
         .map(|(i, _)| {
           let field_ty = sz
-            .ty_table
+            .ctx
             .field_type(variant.def_id, get_or_intern(&i.to_string(), None))
             .unwrap();
           TyChecker::apply_subst(&field_ty, &subst)
@@ -110,8 +110,8 @@ pub(crate) fn substituted_enum_variant_field_tys(
     .collect()
 }
 
-pub fn compute_discriminant_tag_size(
-  ctx: &BuiltinFunctionCtx<'_>,
+pub fn compute_discriminant_tag_size<'a>(
+  ctx: &BuiltinFunctionCtx<'a, 'a>,
   variants: &[Variant],
 ) -> usize {
   let discriminants = compute_variant_discriminants(ctx, variants);
@@ -119,8 +119,8 @@ pub fn compute_discriminant_tag_size(
   discriminant_size_for_value(max_discr)
 }
 
-pub fn compute_variant_discriminants(
-  ctx: &BuiltinFunctionCtx<'_>,
+pub fn compute_variant_discriminants<'a>(
+  ctx: &BuiltinFunctionCtx<'a, 'a>,
   variants: &[Variant],
 ) -> Vec<u128> {
   compute_variant_discriminants_from_exprs(
@@ -132,17 +132,16 @@ pub fn compute_variant_discriminants(
   )
 }
 
-pub fn compute_variant_discriminants_from_exprs<'a>(
-  ctx: &BuiltinFunctionCtx<'_>,
-  explicit_discriminants: impl IntoIterator<Item = Option<&'a Expr>>,
+pub fn compute_variant_discriminants_from_exprs<'a, 'e>(
+  ctx: &BuiltinFunctionCtx<'a, 'a>,
+  explicit_discriminants: impl IntoIterator<Item = Option<&'e Expr>>,
 ) -> Vec<u128> {
   let cache = InterpreterCache::new();
   let results = BuiltInResults::new();
   let interpreter = Interpreter::new(
     ctx.sess.dcx(),
+    &ctx.ctx,
     &cache,
-    ctx.resolver,
-    ctx.hir,
     &results,
     InterpreterMode::Const,
     InterpreterContext::EnumDiscriminant,

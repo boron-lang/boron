@@ -13,18 +13,14 @@ mod ty;
 
 pub use context::LoweringContext;
 
+use boron_context::BCtx;
 use boron_diagnostics::DiagnosticCtx;
-use boron_resolver::Resolver;
-use boron_types::ast::module::Modules;
-use boron_types::hir::Hir;
 
-pub fn lower_to_hir(resolver: &Resolver, modules: &Modules, _dcx: &DiagnosticCtx) -> Hir {
-  let hir = Hir::new();
+pub fn lower_to_hir<'ctx>(ctx: &'ctx BCtx<'ctx>, _dcx: &DiagnosticCtx) {
+  let hir = ctx.hir();
 
-  for module in modules.all() {
-    let mut ctx = LoweringContext::new(resolver, &hir, module.source_file_id);
+  for module in ctx.modules().all() {
+    let mut ctx = LoweringContext::new(ctx.resolver(), hir, module.source_file_id);
     ctx.lower_module(&module.node);
   }
-
-  hir
 }

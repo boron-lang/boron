@@ -18,6 +18,7 @@ rustc_apfloat = { workspace = true }
 itertools = { workspace = true }
 boron_target = { workspace = true }
 boron_types = { workspace = true }
+boron_context = { workspace = true }
 
 [lints]
 workspace = true

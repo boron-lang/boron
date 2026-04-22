@@ -2,6 +2,7 @@ mod errors;
 mod types;
 
 use crate::validator::errors::ComptimeNoGenerics;
+use boron_context::BCtx;
 use boron_resolver::{DefId, Resolver};
 use boron_session::prelude::{debug, DiagnosticCtx};
 use boron_types::hir::{
@@ -9,15 +10,14 @@ use boron_types::hir::{
 };
 
 pub struct ComptimeValidator<'a> {
-  pub hir: &'a Hir,
   pub dcx: &'a DiagnosticCtx,
-  pub resolver: &'a Resolver,
+  pub ctx: &'a BCtx<'a>,
 }
 
-pub fn validate_comptime(hir: &Hir, dcx: &DiagnosticCtx, resolver: &Resolver) {
-  let validator = ComptimeValidator { hir, dcx, resolver };
+pub fn validate_comptime<'a>(dcx: &'a DiagnosticCtx, ctx: &'a BCtx<'a>) {
+  let validator = ComptimeValidator { ctx, dcx };
 
-  for entry in &hir.functions {
+  for entry in &ctx.hir().functions {
     let def_id = *entry.key();
     let func = entry.value();
     validator.validate_function(def_id, func);

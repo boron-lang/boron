@@ -10,6 +10,7 @@ boron_types = { workspace = true }
 dashmap = { workspace = true }
 paste = { workspace = true }
 boron_source = { workspace = true }
+boron_queries_macro = { workspace = true }
 
 [lints]
 workspace = true

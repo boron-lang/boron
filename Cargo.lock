@@ -169,6 +169,7 @@ dependencies = [
 name = "boron_analysis"
 version = "0.1.0"
 dependencies = [
+ "boron_context",
  "boron_diagnostic_macro",
  "boron_diagnostics",
  "boron_hir",
@@ -241,6 +242,7 @@ dependencies = [
 name = "boron_context"
 version = "0.1.0"
 dependencies = [
+ "boron_queries_macro",
  "boron_source",
  "boron_types",
  "dashmap 7.0.0-rc2",
@@ -278,7 +280,7 @@ dependencies = [
  "boron_diagnostics",
  "proc-macro2",
  "quote",
- "syn 2.0.114",
+ "syn 2.0.117",
  "thiserror",
 ]
 
@@ -303,6 +305,7 @@ dependencies = [
 name = "boron_hir"
 version = "0.1.0"
 dependencies = [
+ "boron_context",
  "boron_diagnostics",
  "boron_parser",
  "boron_resolver",
@@ -317,6 +320,7 @@ name = "boron_ir"
 version = "0.1.0"
 dependencies = [
  "boron_analysis",
+ "boron_context",
  "boron_hir",
  "boron_parser",
  "boron_resolver",
@@ -358,6 +362,17 @@ dependencies = [
  "stringcase",
  "unicode-normalization",
  "unicode-xid",
+]
+
+[[package]]
+name = "boron_queries_macro"
+version = "0.1.0"
+dependencies = [
+ "boron_diagnostics",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
+ "thiserror",
 ]
 
 [[package]]
@@ -420,6 +435,7 @@ name = "boron_thir"
 version = "0.1.0"
 dependencies = [
  "boron_analysis",
+ "boron_context",
  "boron_diagnostics",
  "boron_hir",
  "boron_parser",
@@ -538,7 +554,7 @@ dependencies = [
  "heck 0.5.0",
  "proc-macro2",
  "quote",
- "syn 2.0.114",
+ "syn 2.0.117",
 ]
 
 [[package]]
@@ -916,7 +932,7 @@ checksum = "6cfe97ee860815a90ed17e09639513269e39420a7440f3f4c996f238c514cf8d"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.114",
+ "syn 2.0.117",
 ]
 
 [[package]]
@@ -1187,9 +1203,9 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.44"
+version = "1.0.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21b2ebcf727b7760c461f091f9f0f539b77b8e87f2fd88131e7f1b433b3cece4"
+checksum = "41f2619966050689382d2b44f664f4bc593e129785a36d6ee376ddf37259b924"
 dependencies = [
  "proc-macro2",
 ]
@@ -1329,7 +1345,7 @@ checksum = "d540f220d3187173da220f885ab66608367b6574e925011a9353e4badda91d79"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.114",
+ "syn 2.0.117",
 ]
 
 [[package]]
@@ -1453,7 +1469,7 @@ dependencies = [
  "heck 0.5.0",
  "proc-macro2",
  "quote",
- "syn 2.0.114",
+ "syn 2.0.117",
 ]
 
 [[package]]
@@ -1469,9 +1485,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.114"
+version = "2.0.117"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4d107df263a3013ef9b1879b0df87d706ff80f65a86ea879bd9c31f9b307c2a"
+checksum = "e665b8803e7b1d2a727f4023456bbbbe74da67099c585258af0ad9c5013b9b99"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1509,7 +1525,7 @@ checksum = "ebc4ee7f67670e9b64d05fa4253e753e016c6c95ff35b89b7941d6b856dec1d5"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.114",
+ "syn 2.0.117",
 ]
 
 [[package]]
@@ -1594,7 +1610,7 @@ checksum = "7490cfa5ec963746568740651ac6781f701c9c5ea257c58e057f3ba8cf69e8da"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.114",
+ "syn 2.0.117",
 ]
 
 [[package]]
@@ -1729,7 +1745,7 @@ dependencies = [
  "bumpalo",
  "proc-macro2",
  "quote",
- "syn 2.0.114",
+ "syn 2.0.117",
  "wasm-bindgen-shared",
 ]
 
@@ -1838,7 +1854,7 @@ checksum = "053e2e040ab57b9dc951b72c264860db7eb3b0200ba345b4e4c3b14f67855ddf"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.114",
+ "syn 2.0.117",
 ]
 
 [[package]]
@@ -1849,7 +1865,7 @@ checksum = "3f316c4a2570ba26bbec722032c4099d8c8bc095efccdc15688708623367e358"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.114",
+ "syn 2.0.117",
 ]
 
 [[package]]
@@ -1939,7 +1955,7 @@ checksum = "4122cd3169e94605190e77839c9a40d40ed048d305bfdc146e7df40ab0f3e517"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.114",
+ "syn 2.0.117",
 ]
 
 [[package]]

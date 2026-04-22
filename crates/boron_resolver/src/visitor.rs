@@ -5,7 +5,7 @@ use crate::errors::{
 use crate::module_resolver::ModuleResolver;
 use boron_context::BCtx;
 use boron_diagnostics::DiagnosticCtx;
-use boron_session::prelude::{Session, get_or_intern};
+use boron_session::prelude::{get_or_intern, Session};
 use boron_source::prelude::{SourceFileId, Span};
 use boron_types::ast::{
   Block, ComptimeArg, ElseBranch, EnumItem, EnumMember, Expr, ExprKind, FunctionItem,

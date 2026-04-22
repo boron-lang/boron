@@ -1,29 +1,29 @@
 use crate::errors::ArrayLenNotANumber;
-use crate::interpreter::InterpreterContext;
 use crate::interpreter::values::ConstValue;
-use boron_types::infer_ty::{ArrayLength, TyParam, TyVarKind};
+use crate::interpreter::InterpreterContext;
 use crate::{InferTy, TyChecker, TypeEnv};
 use boron_resolver::DefKind;
 use boron_types::ast::InterpreterMode;
 use boron_types::hir::{ArrayLen, Expr, GenericParamKind, Generics, Ty, TyKind};
+use boron_types::infer_ty::{ArrayLength, TyParam, TyVarKind};
 
 impl TyChecker<'_> {
   pub fn is_numeric(&self, ty: &InferTy) -> bool {
     ty.is_numeric()
       || if let InferTy::Var(var, _) = ty {
-      self.infcx.var_kind(*var) != TyVarKind::General
-    } else {
-      false
-    }
+        self.infcx.var_kind(*var) != TyVarKind::General
+      } else {
+        false
+      }
   }
 
   pub fn is_int(&self, ty: &InferTy) -> bool {
     ty.is_integer()
       || if let InferTy::Var(var, _) = ty {
-      self.infcx.var_kind(*var) == TyVarKind::Integer
-    } else {
-      false
-    }
+        self.infcx.var_kind(*var) == TyVarKind::Integer
+      } else {
+        false
+      }
   }
 }
 impl TyChecker<'_> {
@@ -32,7 +32,7 @@ impl TyChecker<'_> {
       TyKind::Infer => self.infcx.fresh(ty.span),
       TyKind::Primitive(p) => InferTy::Primitive(*p, ty.span),
       TyKind::Path { def_id, segments } => {
-        if let Some(def) = self.resolver.get_definition(*def_id)
+        if let Some(def) = self.ctx.get_definition(*def_id)
           && def.kind == DefKind::TypeParam
         {
           return InferTy::Param(TyParam {

@@ -1,21 +1,24 @@
 use crate::errors::{DuplicateDefinition, SelfOutsideMethod};
 use crate::visitor::Namespace;
 use crate::{
-  DefId, DefKind, Definition, ResolveVisitor, Resolver, ScopeId, ScopeKind, Symbol,
-  SymbolKind,
+  DefId, DefKind, Definition, ResolveVisitor, ScopeId, ScopeKind, Symbol, SymbolKind,
 };
 use boron_context::BCtx;
 use boron_session::prelude::Session;
-use boron_source::ident_table::{Identifier, get_or_intern};
-use boron_source::prelude::Span;
-use boron_types::ast::module::Modules;
+use boron_source::ident_table::{get_or_intern, Identifier};
+use boron_source::prelude::{SourceFileId, Span};
 use boron_types::ast::{
   ConstItem, EnumItem, EnumMember, FunctionItem, Item, ItemKind, ModItem, NodeId, Param,
   ProgramNode, StructItem, StructMember, Visibility,
 };
+use boron_types::resolver::import_order::ResolutionOrder;
 
 impl<'a> ResolveVisitor<'a> {
-  pub fn resolve_modules(ctx: &'a BCtx<'a>, sess: &'a Session) {
+  pub fn resolve_modules(
+    entrypoint: SourceFileId,
+    ctx: &'a BCtx<'a>,
+    sess: &'a Session,
+  ) -> bool {
     // collect all top-level definitions
     for module in ctx.modules().all() {
       let mut visitor = ResolveVisitor::new(ctx, sess, module.source_file_id);
@@ -26,8 +29,14 @@ impl<'a> ResolveVisitor<'a> {
       Ok(order) => order,
       Err(err) => {
         sess.dcx().emit(err);
-        return;
+        return false;
       }
+    };
+    let order = if order.is_empty() {
+      // with no imports the graph is empty so we use the entrypoint
+      ResolutionOrder::order(vec![entrypoint])
+    } else {
+      order
     };
 
     // resolve all references
@@ -39,6 +48,8 @@ impl<'a> ResolveVisitor<'a> {
       let mut visitor = ResolveVisitor::new(ctx, sess, *file_id);
       visitor.resolve_module(&module.node);
     }
+
+    true
   }
 
   fn collect_definitions(&mut self, node: &ProgramNode) {

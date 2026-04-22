@@ -6,33 +6,30 @@ use boron_analysis::align_of::{
   calculate_enum_alignment, compute_variant_discriminants_from_exprs,
 };
 use boron_analysis::size_of::{calculate_enum_payload_layout, calculate_enum_size};
-use boron_analysis::{BuiltinFunctionCtx, InferTy, TypeScheme, TypeTable};
-use boron_resolver::{DefId, Resolver};
-use boron_session::prelude::{debug, Session};
+use boron_analysis::{BuiltinFunctionCtx, InferTy, TypeScheme};
+use boron_context::BCtx;
+use boron_resolver::DefId;
+use boron_session::prelude::{Session, debug};
 use boron_source::ident_table::get_or_intern;
 use boron_target::abi::layout::Layout;
-use boron_types::hir::{EnumVariant, Hir, Pat, PatKind, SemanticTy};
+use boron_types::hir::{EnumVariant, Pat, PatKind, SemanticTy};
 use boron_types::infer_ty::SubstitutionMap;
 use boron_types::ir::{Ir, IrId};
 use boron_types::thir::{
   Block as ThirBlock, Enum as ThirEnum, Expr as ThirExpr, ExprKind as ThirExprKind,
   FieldInit as ThirFieldInit, Function as ThirFunction, StmtKind, Struct as ThirStruct,
-  Thir, VariantKind,
+  VariantKind,
 };
 use itertools::Itertools as _;
 
 #[derive(Debug)]
 struct LoweringContext {
-  owner: DefId,
   type_args: SubstitutionMap,
 }
 
 pub struct IrLowerer<'a> {
-  hir: &'a Hir,
-  thir: &'a Thir,
-  type_table: &'a TypeTable,
   sess: &'a Session,
-  resolver: &'a Resolver,
+  ctx: &'a BCtx<'a>,
   mangler: SymbolMangler<'a>,
   lowering_context: Option<LoweringContext>,
 
@@ -41,33 +38,19 @@ pub struct IrLowerer<'a> {
 }
 
 impl<'a> IrLowerer<'a> {
-  pub fn new(
-    hir: &'a Hir,
-    thir: &'a Thir,
-    type_table: &'a TypeTable,
-    sess: &'a Session,
-    resolver: &'a Resolver,
-  ) -> Self {
+  pub fn new(sess: &'a Session, ctx: &'a BCtx<'a>) -> Self {
     Self {
-      hir,
-      thir,
-      type_table,
       sess,
-      resolver,
       ir: Ir::default(),
-      mangler: SymbolMangler::new(hir),
+      ctx,
+      mangler: SymbolMangler::new(ctx),
       current_function: IrId::dummy(),
       lowering_context: None,
     }
   }
 
-  fn builtin_ctx(&self) -> BuiltinFunctionCtx<'a> {
-    BuiltinFunctionCtx {
-      sess: self.sess,
-      resolver: self.resolver,
-      hir: self.hir,
-      ty_table: self.type_table,
-    }
+  fn builtin_ctx(&self) -> BuiltinFunctionCtx<'a, 'a> {
+    BuiltinFunctionCtx { sess: self.sess, ctx: self.ctx }
   }
 
   pub fn mangler(&self) -> &SymbolMangler<'a> {
@@ -79,15 +62,15 @@ impl<'a> IrLowerer<'a> {
   }
 
   pub fn lower(&mut self) -> Ir {
-    for func in &self.thir.functions {
+    for func in &self.ctx.thir().functions {
       self.lower_function(func.value());
     }
 
-    for strukt in &self.thir.structs {
+    for strukt in &self.ctx.thir().structs {
       self.lower_struct(strukt.value());
     }
 
-    for enum_ in &self.thir.enums {
+    for enum_ in &self.ctx.thir().enums {
       self.lower_enum(enum_.value());
     }
 
@@ -95,11 +78,11 @@ impl<'a> IrLowerer<'a> {
   }
 
   pub fn lower_function(&mut self, func: &ThirFunction) {
-    let scheme = self.type_table.def_type(func.def_id).unwrap();
+    let scheme = self.ctx.def_type(func.def_id).unwrap();
     let id = IrId::new();
 
     self.current_function = id;
-    let Some(monomorphizations) = self.type_table.monomorphizations.get(&func.def_id)
+    let Some(monomorphizations) = self.ctx.tt().monomorphizations.get(&func.def_id)
     else {
       if scheme.vars.is_empty() {
         let empty_subst = SubstitutionMap::new();
@@ -148,17 +131,11 @@ impl<'a> IrLowerer<'a> {
     func: &ThirFunction,
     type_args: &SubstitutionMap,
   ) -> Vec<IrParam> {
-    let hir_func = self.thir.get_function(&func.def_id);
     func
       .params
       .iter()
       .map(|p| {
-        let name = hir_func
-          .params
-          .iter()
-          .find(|hp| hp.hir_id == p.hir_id)
-          .map(|hp| hp.name.to_string())
-          .unwrap_or_else(|| format!("param_{}", p.def_id.index()));
+        let name = p.name.to_string();
 
         let substituted_ty = Self::apply_subst_by_def_id(&p.ty, type_args);
         IrParam { def_id: p.def_id, name, ty: self.lower_type(&substituted_ty) }
@@ -170,9 +147,9 @@ impl<'a> IrLowerer<'a> {
     &mut self,
     block: &ThirBlock,
     type_args: &SubstitutionMap,
-    owner: DefId,
+    _owner: DefId,
   ) -> IrBody {
-    self.lowering_context = Some(LoweringContext { owner, type_args: type_args.clone() });
+    self.lowering_context = Some(LoweringContext { type_args: type_args.clone() });
 
     let ir_block = self.lower_block(block);
 
@@ -266,7 +243,7 @@ impl<'a> IrLowerer<'a> {
         let object = self.lower_expr(object);
         let field_idx = match &object.ty {
           SemanticTy::Struct { def_id, .. } => {
-            let strukt = self.thir.get_struct(def_id);
+            let strukt = self.ctx.thir().get_struct(def_id);
 
             strukt
               .fields
@@ -342,8 +319,8 @@ impl<'a> IrLowerer<'a> {
   }
 
   pub fn lower_struct(&mut self, strukt: &ThirStruct) {
-    let scheme = self.type_table.def_type(strukt.def_id).unwrap();
-    let Some(monomorphizations) = self.type_table.monomorphizations.get(&strukt.def_id)
+    let scheme = self.ctx.def_type(strukt.def_id).unwrap();
+    let Some(monomorphizations) = self.ctx.tt().monomorphizations.get(&strukt.def_id)
     else {
       if scheme.vars.is_empty() {
         let empty_subst = SubstitutionMap::new();
@@ -361,8 +338,8 @@ impl<'a> IrLowerer<'a> {
   }
 
   pub fn lower_enum(&mut self, enum_: &ThirEnum) {
-    let scheme = self.type_table.def_type(enum_.def_id).unwrap();
-    let Some(monomorphizations) = self.type_table.monomorphizations.get(&enum_.def_id)
+    let scheme = self.ctx.def_type(enum_.def_id).unwrap();
+    let Some(monomorphizations) = self.ctx.tt().monomorphizations.get(&enum_.def_id)
     else {
       if scheme.vars.is_empty() {
         let empty_subst = SubstitutionMap::new();
@@ -440,9 +417,9 @@ impl<'a> IrLowerer<'a> {
               .map(|(i, _)| {
                 let field_name = get_or_intern(&i.to_string(), None);
                 let infer_ty =
-                  self.type_table.field_type(variant.def_id, field_name).unwrap_or_else(
-                    || panic!("tuple variant field {i} should have a type"),
-                  );
+                  self.ctx.field_type(variant.def_id, field_name).unwrap_or_else(|| {
+                    panic!("tuple variant field {i} should have a type")
+                  });
                 let subst_ty = Self::apply_subst_by_def_id(&infer_ty, type_args);
                 self.lower_type(&subst_ty)
               })
@@ -453,15 +430,8 @@ impl<'a> IrLowerer<'a> {
             let types = fields
               .iter()
               .map(|field| {
-                let infer_ty = self
-                  .type_table
-                  .field_type(variant.def_id, field.name)
-                  .unwrap_or_else(|| {
-                    panic!(
-                      "struct variant field '{}' should have a type",
-                      field.name.text()
-                    )
-                  });
+                let infer_ty = self.ctx.field_type(variant.def_id, field.name).unwrap();
+
                 let subst_ty = Self::apply_subst_by_def_id(&infer_ty, type_args);
                 self.lower_type(&subst_ty)
               })
@@ -540,7 +510,7 @@ impl<'a> IrLowerer<'a> {
         }
       }
       PatKind::Struct { fields, def_id, rest: _ } => {
-        let struct_fields = self.thir.get_struct(def_id);
+        let struct_fields = self.ctx.thir().get_struct(def_id);
 
         for field in fields {
           let Some((field_idx, _)) =
@@ -583,11 +553,11 @@ impl<'a> IrLowerer<'a> {
       InferTy::Adt { def_id, args, .. } => {
         let args = args.iter().map(|a| self.lower_type(a)).collect();
 
-        if self.thir.structs.iter().any(|s| s.def_id == *def_id) {
+        if self.ctx.thir().structs.iter().any(|s| s.def_id == *def_id) {
           return SemanticTy::Struct { def_id: *def_id, args };
         }
 
-        if let Some(enum_entry) = self.thir.enums.get(def_id) {
+        if let Some(enum_entry) = self.ctx.thir().enums.get(def_id) {
           let ctx = self.builtin_ctx();
           let discriminants = compute_variant_discriminants_from_exprs(
             &ctx,

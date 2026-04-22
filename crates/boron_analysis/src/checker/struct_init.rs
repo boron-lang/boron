@@ -14,19 +14,17 @@ impl TyChecker<'_> {
     env: &mut TypeEnv,
     expr: &Expr,
   ) -> InferTy {
-    let def = self.resolver.get_definition(*def_id).unwrap();
+    let def = self.ctx.get_definition(*def_id).unwrap();
 
     if !matches!(def.kind, DefKind::Struct | DefKind::Variant) {
       self.dcx().emit(InvalidStructInit { span: expr.span, found: def.kind.to_string() });
       return InferTy::Err(expr.span);
     }
 
-    let scheme = self.table.def_type(*def_id).unwrap();
+    let scheme = self.ctx.def_type(*def_id).unwrap();
     let (def_ty, subst) = self.instantiate(&scheme);
 
-    if DefKind::Struct == def.kind {
-      let strukt = self.hir.get_struct(def.id).unwrap().clone();
-
+    if let Some(strukt) = self.ctx.hir_struct(def.id).as_ref() {
       for field in fields {
         if !strukt.has_field(field.name) {
           self.dcx().emit(NoFieldForStructInit {
@@ -35,10 +33,8 @@ impl TyChecker<'_> {
             ty: self.format_type(&def_ty),
           });
         } else {
-          let field_ty = Self::apply_subst(
-            &self.table.field_type(*def_id, field.name).unwrap(),
-            &subst,
-          );
+          let field_ty =
+            Self::apply_subst(&self.ctx.field_type(*def_id, field.name).unwrap(), &subst);
           let arg_ty =
             self.check_expr(&field.value, env, &Expectation::has_type(field_ty.clone()));
 
@@ -58,10 +54,10 @@ impl TyChecker<'_> {
 
       let resolved_subst = self.substitutions_from_instantiation(&scheme, &def_ty);
       if !scheme.vars.is_empty() {
-        self.table.record_monomorphization(*def_id, resolved_subst.clone());
+        self.ctx.record_mono(*def_id, resolved_subst.clone());
       }
 
-      self.table.record_expr_monomorphization(expr.hir_id, *def_id, resolved_subst);
+      self.ctx.record_expr_mono(expr.hir_id, *def_id, resolved_subst);
     }
 
     def_ty

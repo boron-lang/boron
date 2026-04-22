@@ -3,8 +3,8 @@ use boron_source::prelude::{SourceFileId, Span};
 use parking_lot::RwLock;
 use petgraph::algo::{has_path_connecting, toposort};
 use petgraph::graph::{DiGraph, NodeIndex};
-use std::collections::{HashMap, HashSet};
 use petgraph::Direction;
+use std::collections::{HashMap, HashSet};
 
 /// Graph of import dependencies between modules.
 #[derive(Debug)]
@@ -72,6 +72,8 @@ impl ImportGraph {
       Ok(order) => {
         let files: Vec<SourceFileId> =
           order.into_iter().map(|idx| inner.graph[idx]).collect();
+        println!("{:?} {:?}", files, inner.graph);
+
         Ok(ResolutionOrder { order: files })
       }
       Err(cycle) => {
@@ -147,6 +149,10 @@ pub struct ResolutionOrder {
 impl ResolutionOrder {
   pub fn empty() -> Self {
     Self { order: Vec::new() }
+  }
+
+  pub fn order(order: Vec<SourceFileId>) -> Self {
+    Self { order }
   }
 
   pub fn iter(&self) -> impl Iterator<Item = &SourceFileId> {

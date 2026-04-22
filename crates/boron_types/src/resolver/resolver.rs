@@ -76,6 +76,7 @@ impl Resolver {
   }
 
   pub fn add_import_edge(&self, from: SourceFileId, to: SourceFileId) {
+    println!("{:?} => {:?}", from, to);
     self.import_graph.add_import(from, to);
   }
 

@@ -2,7 +2,8 @@ use crate::align_of::align_of_ty;
 use crate::interpreter::values::ConstValue;
 use crate::results::BuiltInResults;
 use crate::size_of::size_of_ty;
-use crate::{BuiltinFunctionCtx, InferTy, TypeTable};
+use crate::{BuiltinFunctionCtx, InferTy};
+use boron_context::BCtx;
 use boron_diagnostics::DiagnosticCtx;
 use boron_resolver::prelude::BuiltInKind;
 use boron_resolver::Resolver;
@@ -13,21 +14,13 @@ use boron_types::hir::{
 };
 
 pub struct BuiltInExpander<'a> {
-  pub bctx: BuiltinFunctionCtx<'a>,
+  pub bctx: BuiltinFunctionCtx<'a, 'a>,
   pub results: BuiltInResults,
 }
 
 impl<'a> BuiltInExpander<'a> {
-  pub fn new(
-    sess: &'a Session,
-    resolver: &'a Resolver,
-    ty_table: &'a TypeTable,
-    hir: &'a Hir,
-  ) -> Self {
-    Self {
-      results: BuiltInResults::new(),
-      bctx: BuiltinFunctionCtx { sess, resolver, hir, ty_table },
-    }
+  pub fn new(sess: &'a Session, ctx: &'a BCtx<'a>) -> Self {
+    Self { results: BuiltInResults::new(), bctx: BuiltinFunctionCtx { sess, ctx } }
   }
 
   pub fn dcx(&self) -> &'a DiagnosticCtx {
@@ -77,7 +70,7 @@ impl<'a> BuiltInExpander<'a> {
       }
 
       ExprKind::Comptime { callee, args: _ } => {
-        if let Some(ty) = self.bctx.ty_table.node_type(expr.hir_id)
+        if let Some(ty) = self.bctx.ctx.node_type(expr.hir_id)
           && let InferTy::Err(_) = ty
         {
           self.results.insert(expr.hir_id, ConstValue::Poison);
@@ -85,7 +78,7 @@ impl<'a> BuiltInExpander<'a> {
         }
 
         if let ComptimeCallee::BuiltIn(builtin) = callee {
-          let Some(args) = self.bctx.ty_table.comptime_args.get(&expr.hir_id) else {
+          let Some(args) = self.bctx.ctx.comptime_arg(expr.hir_id) else {
             debug!("skipping builtin because there might have been an error before");
             return;
           };

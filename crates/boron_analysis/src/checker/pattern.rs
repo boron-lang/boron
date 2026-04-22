@@ -4,9 +4,9 @@ use crate::table::TypeEnv;
 use crate::unify::Expectation;
 use boron_resolver::{DefId, DefKind};
 use boron_source::span::Span;
+use boron_types::hir::{Literal, Pat, PatKind};
 use boron_types::infer_ty::{ArrayLength, InferTy, SubstitutionMap};
 use itertools::Itertools as _;
-use boron_types::hir::{Literal, Pat, PatKind};
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum ExpectedPattern {
@@ -74,7 +74,7 @@ impl TyChecker<'_> {
     _ctx: PatternContext,
     require_full_struct: bool,
   ) -> PatternRefutability {
-    self.table.record_node_type(pat.hir_id, expected.clone());
+    self.ctx.record_node_type(pat.hir_id, expected.clone());
 
     match &pat.kind {
       PatKind::Wild => PatternRefutability::Irrefutable,
@@ -124,7 +124,7 @@ impl TyChecker<'_> {
 
       PatKind::Struct { rest, fields, def_id } => {
         let subst = self.struct_subst_from_expected(*def_id, expected, pat.span);
-        let strukt = self.hir.get_struct(*def_id).expect("should exist");
+        let strukt = self.ctx.hir_struct(*def_id).expect("should exist");
         let mut missing_fields = vec![];
 
         for field in &strukt.fields {
@@ -347,14 +347,14 @@ impl TyChecker<'_> {
 
   fn def_kind_is_struct(&self, def_id: DefId) -> bool {
     self
-      .resolver
+      .ctx
       .get_definition(def_id)
       .map(|def| def.kind == DefKind::Struct)
       .unwrap_or(false)
   }
 
   fn ensure_struct_type(&self, def_id: DefId, expected: &InferTy, span: Span) {
-    if let Some(scheme) = self.table.def_type(def_id) {
+    if let Some(scheme) = self.ctx.def_type(def_id) {
       let (struct_ty, _subst) = self.instantiate(&scheme);
       let result = self.unify(expected, &struct_ty);
       self.handle_unify_result(result, span);
@@ -367,7 +367,7 @@ impl TyChecker<'_> {
     expected: &InferTy,
     span: Span,
   ) -> SubstitutionMap {
-    let Some(scheme) = self.table.def_type(def_id) else {
+    let Some(scheme) = self.ctx.def_type(def_id) else {
       return SubstitutionMap::new();
     };
 

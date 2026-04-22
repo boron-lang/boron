@@ -1,9 +1,9 @@
-use boron_types::hir::{ComptimeArg, ComptimeCallee, Expr};
-use crate::builtins::{BuiltInFunction, BuiltInParam, get_builtin};
+use crate::builtins::{get_builtin, BuiltInFunction, BuiltInParam};
 use crate::errors::{ArityMismatch, FuncArgMismatch};
-use crate::functions::FinalComptimeArg;
 use crate::unify::{Expectation, UnifyError, UnifyResult};
 use crate::{InferTy, TyChecker, TypeEnv};
+use boron_types::comptime::FinalComptimeArg;
+use boron_types::hir::{ComptimeArg, ComptimeCallee, Expr};
 
 impl TyChecker<'_> {
   pub fn check_comptime(
@@ -28,7 +28,7 @@ impl TyChecker<'_> {
       }
       let final_args = self.check_builtin_args(func, env, args);
 
-      self.table.comptime_args.insert(expr.hir_id, final_args);
+      self.ctx.insert_comptime_arg(expr.hir_id, final_args);
       return func.return_type.clone();
     }
 

@@ -4,11 +4,11 @@ use boron_types::ast::{InterpreterMode, UnaryOp};
 use boron_types::hir::{expr::Expr as HirExpr, expr::ExprKind as HirExprKind};
 use boron_types::literal_table::FullLiteral;
 
-impl<'a> ThirLowerer<'a> {
+impl<'ctx, 'a> ThirLowerer<'ctx, 'a> {
   pub fn can_const_fold(&self, expr: &HirExpr) -> bool {
     match &expr.kind {
       HirExprKind::Literal(_) => true,
-      HirExprKind::Path(path) => self.hir.get_const(path.def_id).is_some(),
+      HirExprKind::Path(path) => self.ctx.hir_const(path.def_id).is_some(),
       HirExprKind::Binary { lhs, rhs, .. } => {
         self.can_const_fold(lhs) && self.can_const_fold(rhs)
       }
@@ -24,7 +24,7 @@ impl<'a> ThirLowerer<'a> {
     }
   }
 
-  pub fn try_const_fold(&'a self, expr: &HirExpr) -> Option<FullLiteral> {
+  pub fn try_const_fold(&self, expr: &HirExpr) -> Option<FullLiteral> {
     if !self.can_const_fold(expr) {
       return None;
     }

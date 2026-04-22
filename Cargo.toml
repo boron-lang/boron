@@ -42,6 +42,9 @@ ar = "0.9.0"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 paste = "1.0.15"
+proc-macro2 = "1.0.106"
+quote = "1.0.45"
+syn = { version = "2.0.117", features = ["extra-traits"] }
 
 boron_compiler = { path = "crates/boron_compiler" }
 boron_cli = { path = "crates/boron_cli" }
@@ -61,6 +64,7 @@ boron_thir = { path = "crates/boron_thir" }
 boron_lib = { path = "crates/boron_lib" }
 boron_types = { path = "crates/boron_types" }
 boron_context = { path = "crates/boron_context" }
+boron_queries_macro = { path = "crates/boron_queries_macro" }
 
 [workspace.lints.rust]
 elided_lifetimes_in_paths = "warn"

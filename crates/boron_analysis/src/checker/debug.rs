@@ -17,14 +17,14 @@ impl TyChecker<'_> {
     }
 
     println!("\n=== Resolved Node Types ===");
-    for entry in &self.table.node_types {
+    for entry in &self.ctx.tt().node_types {
       let hir_id = entry.key();
       let ty = entry.value();
       let resolved = self.infcx.resolve(ty);
       println!("  {:?} => {:?}", hir_id, self.format_type(&resolved));
     }
     println!("\n=== Type Schemes ===");
-    for entry in &self.table.def_types {
+    for entry in &self.ctx.tt().def_types {
       let def_id = entry.key();
       let scheme = entry.value();
       println!("  {def_id:?} => {scheme:?}");
@@ -32,7 +32,7 @@ impl TyChecker<'_> {
     println!();
 
     println!("\n=== Monomorphizations ===");
-    for mono in &self.table.monomorphizations {
+    for mono in &self.ctx.tt().monomorphizations {
       let def_id = mono.key();
       let scheme = mono.value();
       println!("  {def_id:?} => {scheme:?}");

@@ -1,7 +1,9 @@
 [package]
-name = "boron_diagnostic_macro"
-version = "0.1.0"
-edition = "2024"
+name = "boron_queries_macro"
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+edition.workspace = true
 
 [lib]
 proc-macro = true

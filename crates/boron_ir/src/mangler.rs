@@ -1,7 +1,8 @@
+use boron_context::BCtx;
 use boron_resolver::DefId;
 use boron_target::primitive::PrimitiveKind;
 use boron_types::ast::Mutability;
-use boron_types::hir::{Hir, SemanticTy};
+use boron_types::hir::SemanticTy;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -22,13 +23,13 @@ impl MangledSymbolKey {
 
 #[derive(Debug)]
 pub struct SymbolMangler<'a> {
-  hir: &'a Hir,
+  ctx: &'a BCtx<'a>,
   cache: HashMap<MangledSymbolKey, String>,
 }
 
 impl<'a> SymbolMangler<'a> {
-  pub fn new(hir: &'a Hir) -> Self {
-    Self { hir, cache: HashMap::new() }
+  pub fn new(ctx: &'a BCtx<'a>) -> Self {
+    Self { ctx, cache: HashMap::new() }
   }
 
   pub fn mangle_struct(&mut self, def_id: DefId, type_args: &[SemanticTy]) -> String {
@@ -39,8 +40,9 @@ impl<'a> SymbolMangler<'a> {
     }
 
     let base_name = self
-      .hir
-      .get_struct(def_id)
+      .ctx
+      .hir_struct(def_id)
+      .as_ref()
       .map(|s| s.name.text())
       .unwrap_or_else(|| format!("struct_{}", def_id.index()));
 
@@ -56,7 +58,7 @@ impl<'a> SymbolMangler<'a> {
       return name.clone();
     }
 
-    let func = self.hir.get_function(def_id).unwrap();
+    let func = self.ctx.hir_function(def_id).unwrap();
 
     if func.modifiers.external.is_some() {
       let mangled = func.name.text();
@@ -64,10 +66,10 @@ impl<'a> SymbolMangler<'a> {
       return mangled;
     }
 
-    let mangled = if let Some(parent_struct) = self.hir.find_adt_parent(&def_id) {
+    let mangled = if let Some(parent_struct) = self.ctx.adt_parent(def_id) {
       let struct_generic_count = self
-        .hir
-        .get_adt_generics(&parent_struct)
+        .ctx
+        .adt_generics(parent_struct)
         .map(|generics| generics.params.len())
         .unwrap_or(0);
 
@@ -75,7 +77,7 @@ impl<'a> SymbolMangler<'a> {
       let (struct_type_args, fn_type_args) = type_args.split_at(split);
 
       let struct_part = self.mangle_name_with_type_args(
-        &self.hir.get_adt_name(&parent_struct).unwrap().text(),
+        &self.ctx.adt_name(parent_struct).unwrap().text(),
         struct_type_args,
       );
       let fn_part = self.mangle_name_with_type_args(&func.name.text(), fn_type_args);
@@ -97,8 +99,9 @@ impl<'a> SymbolMangler<'a> {
     }
 
     let base_name = self
-      .hir
-      .get_enum(def_id)
+      .ctx
+      .hir_enum(def_id)
+      .as_ref()
       .map(|e| e.name.text())
       .unwrap_or_else(|| format!("enum_{}", def_id.index()));
 
@@ -154,8 +157,9 @@ impl<'a> SymbolMangler<'a> {
 
       SemanticTy::Struct { def_id, args } => {
         let base = self
-          .hir
-          .get_struct(*def_id)
+          .ctx
+          .hir_struct(*def_id)
+          .as_ref()
           .map(|s| s.name.text())
           .unwrap_or_else(|| format!("s{}", def_id.index()));
 
@@ -169,8 +173,9 @@ impl<'a> SymbolMangler<'a> {
       }
 
       SemanticTy::Enum { def_id, .. } => self
-        .hir
-        .get_enum(*def_id)
+        .ctx
+        .hir_enum(*def_id)
+        .as_ref()
         .map(|e| e.name.text())
         .unwrap_or_else(|| format!("e{}", def_id.index())),
 

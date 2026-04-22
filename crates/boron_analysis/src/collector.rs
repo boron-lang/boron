@@ -5,10 +5,10 @@ use boron_types::hir::{AdtEntry, Function, Generics, Param, ParamKind, VariantKi
 
 impl TyChecker<'_> {
   fn function_signature(&self, func: &Function) -> TypeScheme {
-    let generics = if let Some(parent) = self.hir.find_adt_parent(&func.def_id) {
+    let generics = if let Some(parent) = self.ctx.adt_parent(func.def_id) {
       let mut generics = Generics { span: Span::dummy(), params: vec![] };
 
-      if let Some(parent_generics) = self.hir.get_adt_generics(&parent) {
+      if let Some(parent_generics) = self.ctx.adt_generics(parent) {
         generics.params.extend(parent_generics.params);
       }
 
@@ -40,14 +40,14 @@ impl TyChecker<'_> {
   }
 
   pub fn collect_signatures(&self) {
-    for entry in &self.hir.functions {
+    for entry in &self.hir().functions {
       let def_id = *entry.key();
       let func = entry.value();
       let scheme = self.function_signature(func);
-      self.table.record_def_type(def_id, scheme);
+      self.ctx.record_def_type(def_id, scheme);
     }
 
-    for adt in &self.hir.adts {
+    for adt in &self.hir().adts {
       match adt.value() {
         AdtEntry::Struct(strukt) => {
           let def_id = strukt.def_id;
@@ -55,7 +55,7 @@ impl TyChecker<'_> {
           let generics = self.register_generics(&strukt.generics);
           for field in &strukt.fields {
             let field_ty = self.lower_hir_ty(&field.ty);
-            self.table.record_field_type(def_id, field.name, field_ty);
+            self.ctx.record_field_type(def_id, field.name, field_ty);
           }
 
           let struct_ty = InferTy::Adt {
@@ -64,9 +64,7 @@ impl TyChecker<'_> {
             span: strukt.span,
           };
 
-          self
-            .table
-            .record_def_type(def_id, TypeScheme { vars: generics, ty: struct_ty });
+          self.ctx.record_def_type(def_id, TypeScheme { vars: generics, ty: struct_ty });
         }
         AdtEntry::Enum(_enum) => {
           let def_id = _enum.def_id;
@@ -78,13 +76,13 @@ impl TyChecker<'_> {
               VariantKind::Struct(fields) => {
                 for field in fields {
                   let field_ty = self.lower_hir_ty(&field.ty);
-                  self.table.record_field_type(variant.def_id, field.name, field_ty);
+                  self.ctx.record_field_type(variant.def_id, field.name, field_ty);
                 }
               }
               VariantKind::Tuple(types) => {
                 for (field, ty) in types.iter().enumerate() {
                   let field_ty = self.lower_hir_ty(ty);
-                  self.table.record_field_type(
+                  self.ctx.record_field_type(
                     variant.def_id,
                     get_or_intern(&field.to_string(), None),
                     field_ty,
@@ -100,18 +98,16 @@ impl TyChecker<'_> {
             span: _enum.span,
           };
 
-          self
-            .table
-            .record_def_type(def_id, TypeScheme { vars: generics, ty: struct_ty });
+          self.ctx.record_def_type(def_id, TypeScheme { vars: generics, ty: struct_ty });
         }
       }
     }
 
-    for entry in &self.hir.consts {
+    for entry in &self.hir().consts {
       let def_id = *entry.key();
       let konst = entry.value();
       let ty = self.lower_hir_ty(&konst.ty);
-      self.table.record_def_type(def_id, TypeScheme::mono(ty));
+      self.ctx.record_def_type(def_id, TypeScheme::mono(ty));
     }
   }
 }

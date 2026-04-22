@@ -1,7 +1,7 @@
 use anyhow::{Result, anyhow};
-use boron_ir::{Ir, IrId};
 use boron_resolver::DefId;
 use boron_session::prelude::{Identifier, Mode, Session};
+use boron_types::ir::{Ir, IrId};
 use dashmap::DashMap;
 use inkwell::basic_block::BasicBlock;
 use inkwell::builder::Builder;

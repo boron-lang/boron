@@ -1,30 +1,31 @@
-use boron_target::primitive::PrimitiveKind;
-use crate::monomorphizations::MonomorphizationEntry;
 use crate::{InferTy, TyChecker, TyVar, TyVarKind};
+use boron_target::primitive::PrimitiveKind;
 use boron_types::infer_ty::SubstitutionMap;
+use boron_types::type_table::MonomorphizationEntry;
 
 impl TyChecker<'_> {
   pub fn finalize_types(&self) {
     let node_entries: Vec<_> =
-      self.table.node_types.iter().map(|e| (*e.key(), e.value().clone())).collect();
+      self.ctx.tt().node_types.iter().map(|e| (*e.key(), e.value().clone())).collect();
 
     for (hir_id, ty) in node_entries {
       let resolved = self.infcx.resolve(&ty);
       let defaulted = self.default_ty_vars(resolved);
-      self.table.node_types.insert(hir_id, defaulted);
+      self.ctx.record_node_type(hir_id, defaulted);
     }
 
     let field_entries: Vec<_> =
-      self.table.field_types.iter().map(|e| (*e.key(), e.value().clone())).collect();
+      self.ctx.tt().field_types.iter().map(|e| (*e.key(), e.value().clone())).collect();
 
-    for (key, ty) in field_entries {
+    for ((def_id, ident), ty) in field_entries {
       let resolved = self.infcx.resolve(&ty);
       let defaulted = self.default_ty_vars(resolved);
-      self.table.field_types.insert(key, defaulted);
+      self.ctx.record_field_type(def_id, ident, defaulted);
     }
 
     let mono_entries: Vec<_> = self
-      .table
+      .ctx
+      .tt()
       .monomorphizations
       .iter()
       .map(|e| (*e.key(), e.value().clone()))
@@ -49,11 +50,12 @@ impl TyChecker<'_> {
           MonomorphizationEntry { def_id: entry.def_id, type_args: resolved_type_args }
         })
         .collect();
-      self.table.monomorphizations.insert(def_id, resolved_entries);
+      self.ctx.tt().monomorphizations.insert(def_id, resolved_entries);
     }
 
     let expr_mono_entries: Vec<_> = self
-      .table
+      .ctx
+      .tt()
       .expr_monomorphizations
       .iter()
       .map(|e| (*e.key(), e.value().clone()))
@@ -72,10 +74,7 @@ impl TyChecker<'_> {
         .collect();
 
       let resolved_type_args = SubstitutionMap::with_values(resolved_type_args);
-      self.table.expr_monomorphizations.insert(
-        hir_id,
-        MonomorphizationEntry { def_id: entry.def_id, type_args: resolved_type_args },
-      );
+      self.ctx.record_expr_mono(hir_id, entry.def_id, resolved_type_args);
     }
   }
 
