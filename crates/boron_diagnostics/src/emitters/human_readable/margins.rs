@@ -1,7 +1,7 @@
 use crate::emitters::fmt::Fmt as _;
 use crate::emitters::human_readable::label::{LabelInfo, LineLabel};
 use crate::emitters::human_readable::{
-  HumanReadableEmitter, CROSS_GAPS, LINE_NUMBER_COLOR, MARGIN_COLOR,
+  CROSS_GAPS, HumanReadableEmitter, LINE_NUMBER_COLOR, MARGIN_COLOR,
 };
 use boron_source::prelude::SourceFile;
 use boron_source::span::Span;

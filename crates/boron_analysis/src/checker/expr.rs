@@ -4,7 +4,7 @@ use crate::errors::{
 };
 use crate::table::TypeEnv;
 use crate::unify::{Expectation, UnifyError, UnifyResult};
-use boron_session::prelude::{warn, Span};
+use boron_session::prelude::{Span, warn};
 use boron_target::primitive::PrimitiveKind;
 use boron_types::ast::{BinaryOp, Mutability};
 use boron_types::hir::{Block, ElseBranch, Expr, ExprKind, IfExpr, Literal};

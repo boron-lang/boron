@@ -1,5 +1,5 @@
-use boron_source::prelude::Span;
 use crate::ast::{Expr, NodeId, Pattern, Type};
+use boron_source::prelude::Span;
 
 #[derive(Debug, Clone)]
 pub struct Block {

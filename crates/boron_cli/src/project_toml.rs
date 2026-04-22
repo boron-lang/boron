@@ -108,7 +108,7 @@ pub fn build_project_config(
       continue;
     }
 
-    let dependency = resolve_dependency(&output, &mode, &root, &alias, pkg, false)?;
+    let dependency = resolve_dependency(&output, &mode, root, alias, pkg, false)?;
     packages.push(dependency);
   }
 
@@ -149,7 +149,7 @@ pub fn resolve_dependency(
   let build = dep_project.build;
   let project = dep_project.project;
 
-  let name = pkg.name.clone().or(project.name).unwrap_or_else(|| alias.to_string());
+  let name = pkg.name.clone().or(project.name).unwrap_or_else(|| alias.to_owned());
   let entrypoint = resolve_entrypoint(
     &dep_root,
     alias,

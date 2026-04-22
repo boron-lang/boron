@@ -1,7 +1,7 @@
+use crate::TyChecker;
 use crate::builtin::results::BuiltInResults;
 use crate::interpreter::values::ConstValue;
 use crate::interpreter::{Interpreter, InterpreterCache, InterpreterContext};
-use crate::TyChecker;
 use crate::{BuiltinFunctionCtx, InferTy};
 use boron_resolver::{DefId, DefKind};
 use boron_source::ident_table::get_or_intern;
@@ -140,7 +140,7 @@ pub fn compute_variant_discriminants_from_exprs<'a, 'e>(
   let results = BuiltInResults::new();
   let interpreter = Interpreter::new(
     ctx.sess.dcx(),
-    &ctx.ctx,
+    ctx.ctx,
     &cache,
     &results,
     InterpreterMode::Const,

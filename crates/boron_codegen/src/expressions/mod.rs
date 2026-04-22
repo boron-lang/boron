@@ -1,5 +1,5 @@
 use crate::codegen::LLVMCodegen;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use boron_ir::{IrExpr, IrExprKind};
 use boron_types::ast::UnaryOp;
 use boron_types::hir::SemanticTy;

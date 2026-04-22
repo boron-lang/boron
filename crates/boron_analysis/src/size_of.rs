@@ -4,7 +4,7 @@ use crate::align_of::{
 };
 pub(crate) use crate::{BuiltinFunctionCtx, InferTy};
 use boron_resolver::{DefId, DefKind};
-use boron_target::abi::layout::{align_up, Layout};
+use boron_target::abi::layout::{Layout, align_up};
 
 pub fn size_of_ty<'a>(ctx: &BuiltinFunctionCtx<'a, 'a>, ty: &InferTy) -> usize {
   let target = ctx.sess.target();

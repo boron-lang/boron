@@ -1,5 +1,5 @@
-use crate::parser::errors::{AliasingABinding, ImportNotAPath, UnexpectedImportKind};
 use crate::parser::Parser;
+use crate::parser::errors::{AliasingABinding, ImportNotAPath, UnexpectedImportKind};
 use boron_types::ast::{
   ImportDecl, ImportKind, ImportSpec, NodeId, Path, PathParsingContext,
 };

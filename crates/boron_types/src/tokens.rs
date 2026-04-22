@@ -1,5 +1,5 @@
-use std::fmt;
 use boron_source::span::Span;
+use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenType {

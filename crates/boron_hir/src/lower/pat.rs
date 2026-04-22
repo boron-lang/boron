@@ -1,6 +1,6 @@
 use crate::lower::context::LoweringContext;
 use boron_session::prelude::debug;
-use boron_types::ast::{Pattern, PatternKind, FieldPat as AstFieldPat};
+use boron_types::ast::{FieldPat as AstFieldPat, Pattern, PatternKind};
 use boron_types::hir::{FieldPat, Pat, PatKind};
 
 impl LoweringContext<'_> {

@@ -10,7 +10,7 @@ use boron_compiler::CompilerBuild;
 use boron_context::BCtx;
 use boron_hir::lower::lower_to_hir;
 use boron_ir::IrLowerer;
-use boron_parser::{parser::parse, Lexer};
+use boron_parser::{Lexer, parser::parse};
 use boron_resolver::{DefId, ResolveVisitor};
 use boron_source::source_file::SourceFileId;
 use boron_thir::ThirLowerer;
@@ -35,7 +35,7 @@ macro_rules! steps {
 
 impl<'ctx> CompilationUnit<'ctx> {
   fn ctx_ref(&self) -> &'ctx BCtx<'ctx> {
-    unsafe { &*(&self.ctx as *const BCtx<'ctx>) }
+    unsafe { &*std::ptr::from_ref::<BCtx<'ctx>>(&self.ctx) }
   }
 
   pub fn new(entry_point: SourceFileId, sess: &'ctx Session) -> Self {
@@ -57,7 +57,6 @@ impl<'ctx> CompilationUnit<'ctx> {
       "Import graph" => |this| this.build_import_graph(),
       "Name resolution" => |this| {
         if !ResolveVisitor::resolve_modules(this.entry_point, this.ctx_ref(), self.sess) {
-          return;
         }
       },
       "HIR lowering" => |this| this.lower_to_hir(),

@@ -1,5 +1,5 @@
-use crate::parser::errors::{ExpectedIdentOrDots, VariadicNoDefault};
 use crate::parser::Parser;
+use crate::parser::errors::{ExpectedIdentOrDots, VariadicNoDefault};
 use boron_types::ast::{
   NodeId, Param, RegularParam, SelfKind, SelfParam, Type, VariadicParam,
 };

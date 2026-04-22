@@ -1,5 +1,5 @@
-use crate::parser::items::ITEM_TOKENS;
 use crate::parser::Parser;
+use crate::parser::items::ITEM_TOKENS;
 use boron_types::ast::{Item, NodeId, ProgramNode};
 use boron_types::tokens::TokenType;
 

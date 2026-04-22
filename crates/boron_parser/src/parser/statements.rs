@@ -1,5 +1,5 @@
-use crate::parser::errors::{AllVarsInitialized, UseVarNotConst};
 use crate::parser::Parser;
+use crate::parser::errors::{AllVarsInitialized, UseVarNotConst};
 use boron_types::ast::{Block, ExprStmt, NodeId, Statement, VarDecl};
 use boron_types::tokens::TokenType;
 

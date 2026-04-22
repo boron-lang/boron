@@ -1,5 +1,5 @@
-use std::fmt::{Display, Formatter};
 use crate::resolver::def::DefId;
+use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct HirId {

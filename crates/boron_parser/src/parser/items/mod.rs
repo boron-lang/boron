@@ -1,13 +1,16 @@
 use crate::log_parse_failure;
+use crate::parser::Parser;
 use crate::parser::errors::{
   ABIMustBeExplicit, ComptimeExternTogether, ConstCannotBeUninitialized,
   ConstExpectedFuncOrIdent, ConstItemsNeedTypeAnnotation, InvalidAbi, ModStringLit,
 };
-use crate::parser::Parser;
 use boron_session::prelude::debug;
 use boron_source::prelude::Span;
 use boron_target::abi::Abi;
-use boron_types::ast::{ConstItem, Expr, FunctionModifiers, Item, ItemKind, NodeId, Path, PathParsingContext, Type, Visibility};
+use boron_types::ast::{
+  ConstItem, Expr, FunctionModifiers, Item, ItemKind, NodeId, Path, PathParsingContext,
+  Type, Visibility,
+};
 use boron_types::tokens::TokenType;
 
 mod enums;

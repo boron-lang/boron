@@ -1,12 +1,12 @@
-use crate::parser::errors::{ExpectedParenToOpenList, ExternNoBody, FunctionCamelCase};
 use crate::parser::Parser;
+use crate::parser::errors::{ExpectedParenToOpenList, ExternNoBody, FunctionCamelCase};
 use boron_source::ident_table::Identifier;
 use boron_source::prelude::Span;
 use boron_types::ast::{
   FunctionItem, FunctionModifiers, NeverType, NodeId, Type, UnitType,
 };
-use stringcase::camel_case;
 use boron_types::tokens::TokenType;
+use stringcase::camel_case;
 
 impl Parser<'_> {
   pub(crate) fn parse_function(

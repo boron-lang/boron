@@ -1,5 +1,5 @@
-use crate::parser::errors::{ExpectedPattern, InvalidFieldPattern};
 use crate::parser::Parser;
+use crate::parser::errors::{ExpectedPattern, InvalidFieldPattern};
 use boron_source::prelude::Span;
 use boron_types::ast::{
   BoolLit, Expr, ExprKind, FieldPat, Literal, NodeId, Path, PathParsingContext, Pattern,

@@ -3,9 +3,9 @@ use anyhow::Result;
 use boron_ir::IrExpr;
 use boron_types::ast::BinaryOp;
 use boron_types::hir::SemanticTy;
-use inkwell::values::BasicValueEnum;
 use inkwell::FloatPredicate;
 use inkwell::IntPredicate;
+use inkwell::values::BasicValueEnum;
 
 impl<'ctx> LLVMCodegen<'ctx> {
   pub fn generate_binary_op(

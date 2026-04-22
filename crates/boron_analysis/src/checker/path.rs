@@ -5,7 +5,7 @@ use boron_resolver::{DefId, DefKind};
 use boron_types::ast::InterpreterMode;
 use boron_types::infer_ty::{InferTy, SubstitutionMap, TypeScheme};
 
-impl<'a> TyChecker<'a> {
+impl TyChecker<'_> {
   pub(crate) fn check_path(
     &self,
     id: DefId,

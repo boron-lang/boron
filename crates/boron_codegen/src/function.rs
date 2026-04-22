@@ -3,8 +3,8 @@ use crate::expressions::ValueKind;
 use anyhow::Result;
 use boron_ir::{IrFunction, Projection};
 use boron_resolver::DefId;
-use boron_types::ir::IrId;
 use boron_types::hir::{HirId, SemanticTy};
+use boron_types::ir::IrId;
 use inkwell::module::Linkage;
 use inkwell::types::{
   BasicMetadataTypeEnum, BasicType as _, BasicTypeEnum, FunctionType,
@@ -152,7 +152,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
       for projection in &local.projections {
         match projection {
           Projection::Binding(def_id) => {
-            self.locals.insert(def_id.clone(), p_val);
+            self.locals.insert(*def_id, p_val);
           }
           Projection::Field { field_idx, struct_ty, def_id: projection_def_id } => {
             let SemanticTy::Struct { def_id: struct_def_id, args } = &struct_ty else {
@@ -167,7 +167,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
               p_val.into(),
             )?;
             if let Some(def_id) = projection_def_id {
-              self.locals.insert(def_id.clone(), field_ptr);
+              self.locals.insert(*def_id, field_ptr);
             }
           }
         }

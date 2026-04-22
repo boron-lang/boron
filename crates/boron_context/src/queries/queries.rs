@@ -1,8 +1,8 @@
 use crate::BCtx;
 use boron_queries_macro::queries;
 use boron_source::ident_table::Identifier;
-use boron_types::ast::module::Modules;
 use boron_types::ast::NodeId;
+use boron_types::ast::module::Modules;
 use boron_types::comptime::FinalComptimeArg;
 use boron_types::hir::{Const as HirConst, Enum, Function, Generics, Hir, HirId, Struct};
 use boron_types::infer_ty::{InferTy, SubstitutionMap, TypeScheme};
@@ -10,7 +10,7 @@ use boron_types::resolver::def::{DefId, Definition};
 use boron_types::resolver::import_order::ImportGraph;
 use boron_types::resolver::resolver::Resolver;
 use boron_types::thir::{
-    Enum as ThirEnum, Function as ThirFunction, Struct as ThirStruct, Thir,
+  Enum as ThirEnum, Function as ThirFunction, Struct as ThirStruct, Thir,
 };
 use boron_types::type_table::{MonomorphizationEntry, TypeTable};
 
@@ -22,7 +22,7 @@ queries! {
     fn get_resolution(id: NodeId): Option<DefId>;
     fn hir(): &'ctx Hir;
     fn thir(): &'ctx Thir;
-    /// Converts HirId into NodeId and get the node type.
+    /// Converts `HirId` into `NodeId` and get the node type.
     fn node_type(id: HirId): Option<InferTy>;
     fn comptime_arg(id: HirId): Option<Vec<FinalComptimeArg>>;
     fn def_type(def_id: DefId): Option<TypeScheme>;

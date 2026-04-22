@@ -1,10 +1,10 @@
-use boron_source::ident_table::Identifier;
-use boron_source::span::Span;
 use crate::ast::{BinaryOp, FloatSuffix, IntSuffix, InterpreterMode, UnaryOp};
 use crate::hir::{HirId, Pat, Ty};
 use crate::resolver::builtin_kind::BuiltInKind;
 use crate::resolver::def::DefId;
 use crate::tokens::IntBase;
+use boron_source::ident_table::Identifier;
+use boron_source::span::Span;
 
 #[derive(Debug, Clone)]
 pub struct Expr {

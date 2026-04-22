@@ -1,15 +1,19 @@
-use crate::queries::queries::Queries;
 use crate::BCtx;
+use crate::queries::queries::Queries;
 use boron_source::ident_table::Identifier;
-use boron_types::ast::module::Modules;
 use boron_types::ast::NodeId;
+use boron_types::ast::module::Modules;
 use boron_types::comptime::FinalComptimeArg;
-use boron_types::hir::{AdtEntry, Const as HirConst, Enum, Function, Generics, Hir, HirId, Struct};
+use boron_types::hir::{
+  AdtEntry, Const as HirConst, Enum, Function, Generics, Hir, HirId, Struct,
+};
 use boron_types::infer_ty::{InferTy, SubstitutionMap, TypeScheme};
 use boron_types::resolver::def::{DefId, Definition};
 use boron_types::resolver::import_order::ImportGraph;
 use boron_types::resolver::resolver::Resolver;
-use boron_types::thir::{Enum as ThirEnum, Function as ThirFunction, Struct as ThirStruct, Thir};
+use boron_types::thir::{
+  Enum as ThirEnum, Function as ThirFunction, Struct as ThirStruct, Thir,
+};
 use boron_types::type_table::{MonomorphizationEntry, TypeTable};
 
 pub trait QueryProvider<'ctx> {
@@ -55,71 +59,71 @@ impl<'ctx> QueryProvider<'ctx> for BCtx<'ctx> {
 }
 
 impl<'ctx> BCtx<'ctx> {
-  fn q_modules(ctx: &'ctx BCtx<'ctx>, (): ()) -> &'ctx Modules {
+  fn q_modules(ctx: &'ctx Self, (): ()) -> &'ctx Modules {
     &ctx.modules
   }
 
-  fn q_import_graph(ctx: &'ctx BCtx<'ctx>, (): ()) -> &'ctx ImportGraph {
+  fn q_import_graph(ctx: &'ctx Self, (): ()) -> &'ctx ImportGraph {
     &ctx.import_graph
   }
 
-  fn q_resolver(ctx: &'ctx BCtx<'ctx>, (): ()) -> &'ctx Resolver {
+  fn q_resolver(ctx: &'ctx Self, (): ()) -> &'ctx Resolver {
     &ctx.resolver
   }
 
-  fn q_get_definition(ctx: &'ctx BCtx<'ctx>, (id,): (DefId,)) -> Option<Definition> {
+  fn q_get_definition(ctx: &'ctx Self, (id,): (DefId,)) -> Option<Definition> {
     ctx.resolver.definitions.get(&id).map(|def| def.clone())
   }
 
-  fn q_get_resolution(ctx: &'ctx BCtx<'ctx>, (id,): (NodeId,)) -> Option<DefId> {
+  fn q_get_resolution(ctx: &'ctx Self, (id,): (NodeId,)) -> Option<DefId> {
     ctx.resolver.symbols.resolutions.get(&id).map(|def_id| *def_id)
   }
 
-  fn q_hir(ctx: &'ctx BCtx<'ctx>, (): ()) -> &'ctx Hir {
+  fn q_hir(ctx: &'ctx Self, (): ()) -> &'ctx Hir {
     &ctx.hir
   }
 
-  fn q_thir(ctx: &'ctx BCtx<'ctx>, (): ()) -> &'ctx Thir {
+  fn q_thir(ctx: &'ctx Self, (): ()) -> &'ctx Thir {
     &ctx.thir
   }
 
-  fn q_node_type(ctx: &'ctx BCtx<'ctx>, (id,): (HirId,)) -> Option<InferTy> {
+  fn q_node_type(ctx: &'ctx Self, (id,): (HirId,)) -> Option<InferTy> {
     ctx.table.node_types.get(&id).map(|ty| ty.clone())
   }
 
-  fn q_comptime_arg(ctx: &'ctx BCtx<'ctx>, (id,): (HirId,)) -> Option<Vec<FinalComptimeArg>> {
+  fn q_comptime_arg(ctx: &'ctx Self, (id,): (HirId,)) -> Option<Vec<FinalComptimeArg>> {
     ctx.table.comptime_args.get(&id).map(|args| args.clone())
   }
 
-  fn q_def_type(ctx: &'ctx BCtx<'ctx>, (def_id,): (DefId,)) -> Option<TypeScheme> {
+  fn q_def_type(ctx: &'ctx Self, (def_id,): (DefId,)) -> Option<TypeScheme> {
     ctx.table.def_types.get(&def_id).map(|scheme| scheme.clone())
   }
 
   fn q_record_field_type(
-    ctx: &'ctx BCtx<'ctx>,
+    ctx: &'ctx Self,
     (def_id, name, ty): (DefId, Identifier, InferTy),
   ) {
     ctx.table.field_types.insert((def_id, name), ty);
   }
 
-  fn q_record_def_type(ctx: &'ctx BCtx<'ctx>, (def_id, scheme): (DefId, TypeScheme)) {
+  fn q_record_def_type(ctx: &'ctx Self, (def_id, scheme): (DefId, TypeScheme)) {
     ctx.table.def_types.insert(def_id, scheme);
   }
 
-  fn q_record_node_type(ctx: &'ctx BCtx<'ctx>, (hir_id, ty): (HirId, InferTy)) -> InferTy {
+  fn q_record_node_type(ctx: &'ctx Self, (hir_id, ty): (HirId, InferTy)) -> InferTy {
     let ret = ty.clone();
     ctx.table.node_types.insert(hir_id, ty);
     ret
   }
 
   fn q_field_type(
-    ctx: &'ctx BCtx<'ctx>,
+    ctx: &'ctx Self,
     (struct_id, field_name): (DefId, Identifier),
   ) -> Option<InferTy> {
     ctx.table.field_types.get(&(struct_id, field_name)).map(|ty| ty.clone())
   }
 
-  fn q_adt_parent(ctx: &'ctx BCtx<'ctx>, (id,): (DefId,)) -> Option<DefId> {
+  fn q_adt_parent(ctx: &'ctx Self, (id,): (DefId,)) -> Option<DefId> {
     ctx
       .hir
       .adts
@@ -135,65 +139,61 @@ impl<'ctx> BCtx<'ctx> {
       })
       .or_else(|| {
         ctx.resolver.adt_members.iter().find_map(|members| {
-          members
-            .value()
-            .iter()
-            .any(|member| *member == id)
-            .then_some(*members.key())
+          members.value().iter().any(|member| *member == id).then_some(*members.key())
         })
       })
   }
 
-  fn q_hir_const(ctx: &'ctx BCtx<'ctx>, (id,): (DefId,)) -> Option<HirConst> {
+  fn q_hir_const(ctx: &'ctx Self, (id,): (DefId,)) -> Option<HirConst> {
     ctx.hir.consts.get(&id).map(|c| c.clone())
   }
 
-  fn q_self_mapping(ctx: &'ctx BCtx<'ctx>, (id,): (DefId,)) -> Option<DefId> {
+  fn q_self_mapping(ctx: &'ctx Self, (id,): (DefId,)) -> Option<DefId> {
     ctx.resolver.self_to_struct.get(&id).map(|mapping| *mapping)
   }
 
-  fn q_adt_generics(ctx: &'ctx BCtx<'ctx>, (id,): (DefId,)) -> Option<Generics> {
+  fn q_adt_generics(ctx: &'ctx Self, (id,): (DefId,)) -> Option<Generics> {
     ctx.hir.adts.get(&id).map(|adt| match adt.value() {
       AdtEntry::Struct(s) => s.generics.clone(),
       AdtEntry::Enum(e) => e.generics.clone(),
     })
   }
 
-  fn q_hir_enum(ctx: &'ctx BCtx<'ctx>, (id,): (DefId,)) -> Option<Enum> {
+  fn q_hir_enum(ctx: &'ctx Self, (id,): (DefId,)) -> Option<Enum> {
     ctx.hir.adts.get(&id).map(|adt| match adt.value() {
       AdtEntry::Enum(e) => e.clone(),
       AdtEntry::Struct(_) => panic!("expected Enum for {id:?}, found Struct"),
     })
   }
 
-  fn q_expr_mono(ctx: &'ctx BCtx<'ctx>, (expr_id,): (HirId,)) -> Option<MonomorphizationEntry> {
+  fn q_expr_mono(ctx: &'ctx Self, (expr_id,): (HirId,)) -> Option<MonomorphizationEntry> {
     ctx.table.expr_monomorphizations.get(&expr_id).map(|m| m.clone())
   }
 
-  fn q_mono(ctx: &'ctx BCtx<'ctx>, (def_id,): (DefId,)) -> Option<Vec<MonomorphizationEntry>> {
+  fn q_mono(ctx: &'ctx Self, (def_id,): (DefId,)) -> Option<Vec<MonomorphizationEntry>> {
     ctx.table.monomorphizations.get(&def_id).map(|m| m.clone())
   }
 
-  fn q_hir_struct(ctx: &'ctx BCtx<'ctx>, (id,): (DefId,)) -> Option<Struct> {
+  fn q_hir_struct(ctx: &'ctx Self, (id,): (DefId,)) -> Option<Struct> {
     ctx.hir.adts.get(&id).map(|adt| match adt.value() {
       AdtEntry::Struct(s) => s.clone(),
       AdtEntry::Enum(_) => panic!("expected Struct for {id:?}, found Enum"),
     })
   }
 
-  fn q_hir_function(ctx: &'ctx BCtx<'ctx>, (id,): (DefId,)) -> Option<Function> {
+  fn q_hir_function(ctx: &'ctx Self, (id,): (DefId,)) -> Option<Function> {
     ctx.hir.functions.get(&id).map(|f| f.clone())
   }
 
   fn q_adt_member(
-    ctx: &'ctx BCtx<'ctx>,
+    ctx: &'ctx Self,
     (struct_def, name): (DefId, &Identifier),
   ) -> Option<DefId> {
     let members = ctx.resolver.adt_members.get(&struct_def)?;
     members.get(name).map(|def_id| *def_id)
   }
 
-  fn q_record_mono(ctx: &'ctx BCtx<'ctx>, (def_id, subst): (DefId, SubstitutionMap)) {
+  fn q_record_mono(ctx: &'ctx Self, (def_id, subst): (DefId, SubstitutionMap)) {
     let entry = MonomorphizationEntry { def_id, type_args: subst };
     if let Some(mut existing) = ctx.table.monomorphizations.get_mut(&def_id) {
       existing.push(entry);
@@ -203,7 +203,7 @@ impl<'ctx> BCtx<'ctx> {
   }
 
   fn q_record_expr_mono(
-    ctx: &'ctx BCtx<'ctx>,
+    ctx: &'ctx Self,
     (hir_id, def_id, subst): (HirId, DefId, SubstitutionMap),
   ) {
     ctx
@@ -212,34 +212,39 @@ impl<'ctx> BCtx<'ctx> {
       .insert(hir_id, MonomorphizationEntry { def_id, type_args: subst });
   }
 
-  fn q_insert_comptime_arg(ctx: &'ctx BCtx<'ctx>, (id, args): (HirId, Vec<FinalComptimeArg>)) {
+  fn q_insert_comptime_arg(ctx: &'ctx Self, (id, args): (HirId, Vec<FinalComptimeArg>)) {
     ctx.table.comptime_args.insert(id, args);
   }
 
-  fn q_tt(ctx: &'ctx BCtx<'ctx>, (): ()) -> &'ctx TypeTable {
+  fn q_tt(ctx: &'ctx Self, (): ()) -> &'ctx TypeTable {
     &ctx.table
   }
 
-  fn q_adt_name(ctx: &'ctx BCtx<'ctx>, (def_id,): (DefId,)) -> Option<Identifier> {
+  fn q_adt_name(ctx: &'ctx Self, (def_id,): (DefId,)) -> Option<Identifier> {
     ctx.hir.adts.get(&def_id).map(|adt| match adt.value() {
       AdtEntry::Struct(s) => s.name,
       AdtEntry::Enum(e) => e.name,
     })
   }
 
-  fn q_thir_enum(ctx: &'ctx BCtx<'ctx>, (def_id,): (DefId,)) -> Option<ThirEnum> {
+  fn q_thir_enum(ctx: &'ctx Self, (def_id,): (DefId,)) -> Option<ThirEnum> {
     ctx.thir.enums.get(&def_id).map(|e| e.clone())
   }
 
-  fn q_thir_struct(ctx: &'ctx BCtx<'ctx>, (def_id,): (DefId,)) -> Option<ThirStruct> {
+  fn q_thir_struct(ctx: &'ctx Self, (def_id,): (DefId,)) -> Option<ThirStruct> {
     ctx.thir.structs.get(&def_id).map(|s| s.clone())
   }
 
-  fn q_thir_function(ctx: &'ctx BCtx<'ctx>, (def_id,): (DefId,)) -> Option<ThirFunction> {
+  fn q_thir_function(ctx: &'ctx Self, (def_id,): (DefId,)) -> Option<ThirFunction> {
     ctx.thir.functions.get(&def_id).map(|f| f.clone())
   }
 
-  fn q_hir_to_node(ctx: &'ctx BCtx<'ctx>, (hir_id,): (HirId,)) -> Option<NodeId> {
-    ctx.hir.node_to_hir.iter().find(|entry| *entry.value() == hir_id).map(|entry| *entry.key())
+  fn q_hir_to_node(ctx: &'ctx Self, (hir_id,): (HirId,)) -> Option<NodeId> {
+    ctx
+      .hir
+      .node_to_hir
+      .iter()
+      .find(|entry| *entry.value() == hir_id)
+      .map(|entry| *entry.key())
   }
 }

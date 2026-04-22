@@ -1,6 +1,6 @@
-use boron_target::primitive::PrimitiveKind;
 use crate::ast::Mutability;
 use crate::resolver::def::DefId;
+use boron_target::primitive::PrimitiveKind;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SemanticTy {

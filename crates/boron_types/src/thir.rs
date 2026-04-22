@@ -5,8 +5,8 @@ use crate::literal_table::FullLiteral;
 use crate::resolver::def::DefId;
 use boron_source::ident_table::Identifier;
 use boron_source::prelude::Span;
-use dashmap::mapref::one::Ref;
 use dashmap::DashMap;
+use dashmap::mapref::one::Ref;
 
 #[derive(Debug, Clone)]
 pub struct Function {

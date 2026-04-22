@@ -1,8 +1,8 @@
+use crate::parser::Parser;
 use crate::parser::errors::{
   ConstAloneInType, ExpectedIdentifierInGeneric, ExpectedType, ExpectedTypePathForBound,
   TrailingPlusInTypeBound,
 };
-use crate::parser::Parser;
 use boron_source::span::Span;
 use boron_target::primitive::PrimitiveKind;
 use boron_types::ast::{

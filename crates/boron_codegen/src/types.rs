@@ -1,11 +1,11 @@
 use crate::codegen::LLVMCodegen;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use boron_resolver::DefId;
 use boron_session::prelude::warn;
 use boron_target::primitive::PrimitiveKind;
 use boron_types::hir::SemanticTy;
-use inkwell::types::{BasicType as _, BasicTypeEnum, StructType};
 use inkwell::AddressSpace;
+use inkwell::types::{BasicType as _, BasicTypeEnum, StructType};
 use std::num::NonZeroU32;
 
 impl<'ctx> LLVMCodegen<'ctx> {

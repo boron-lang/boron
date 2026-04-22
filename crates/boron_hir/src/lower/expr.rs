@@ -1,10 +1,10 @@
 use crate::lower::context::LoweringContext;
-use boron_session::prelude::{debug, Identifier};
+use boron_session::prelude::{Identifier, debug};
 use boron_source::prelude::Span;
 use boron_types::ast::{
-  expressions, statements, AssignOp,
-  ComptimeArg as AstComptimeArg, ElseBranch as AstElseBranch, ExprKind as AstExprKind, IfExpr as AstIfExpr, IntSuffix,
-  InterpreterMode,
+  AssignOp, ComptimeArg as AstComptimeArg, ElseBranch as AstElseBranch,
+  ExprKind as AstExprKind, IfExpr as AstIfExpr, IntSuffix, InterpreterMode, expressions,
+  statements,
 };
 use boron_types::hir::{
   Argument, Block, ComptimeArg, ComptimeCallee, ElseBranch, Expr, ExprKind, FieldInit,

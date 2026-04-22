@@ -2,11 +2,11 @@ use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote};
 use syn::{
-  parse::{Parse, ParseStream}, parse_macro_input, punctuated::Punctuated, token::Comma, Attribute, FnArg, Ident,
-  Pat,
-  Result,
-  Token,
-  Type,
+  Attribute, FnArg, Ident, Pat, Result, Token, Type,
+  parse::{Parse, ParseStream},
+  parse_macro_input,
+  punctuated::Punctuated,
+  token::Comma,
 };
 
 struct QueryItem {

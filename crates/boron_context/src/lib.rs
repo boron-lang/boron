@@ -1,6 +1,6 @@
 mod queries;
 
-use crate::queries::provider::QueryProvider;
+use crate::queries::provider::QueryProvider as _;
 use crate::queries::queries::Queries;
 use boron_types::ast::module::Modules;
 use boron_types::hir::Hir;
@@ -22,7 +22,7 @@ pub struct BCtx<'ctx> {
   table: TypeTable,
 }
 
-impl<'ctx> BCtx<'ctx> {
+impl BCtx<'_> {
   pub fn new() -> Self {
     let mut queries = Queries::default();
     Self::default().provide(&mut queries);

@@ -1,6 +1,6 @@
+use crate::parser::Parser;
 use crate::parser::errors::InvalidVariantStart;
 use crate::parser::items::ADT_ITEM_TOKENS;
-use crate::parser::Parser;
 use boron_source::span::Span;
 use boron_types::ast::{
   EnumItem, EnumMember, EnumVariantStructField, NodeId, Variant, VariantPayload,

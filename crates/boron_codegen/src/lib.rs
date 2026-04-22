@@ -7,10 +7,10 @@ mod structs;
 mod types;
 
 use crate::codegen::LLVMCodegen;
-use anyhow::{anyhow, Result};
-use boron_types::ir::Ir;
+use anyhow::{Result, anyhow};
 use boron_resolver::DefId;
 use boron_session::prelude::Session;
+use boron_types::ir::Ir;
 use dashmap::DashMap;
 use inkwell::context::Context as LLVMContext;
 

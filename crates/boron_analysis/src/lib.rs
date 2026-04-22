@@ -15,6 +15,6 @@ mod vars;
 
 pub use boron_types::infer_ty::{InferTy, TyVar, TyVarKind, TypeScheme};
 pub use builtin::*;
-pub use checker::{typeck_hir, TyChecker};
+pub use checker::{TyChecker, typeck_hir};
 pub use literals::*;
 pub use table::{InferCtx, TypeEnv};

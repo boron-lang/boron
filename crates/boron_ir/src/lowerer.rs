@@ -396,11 +396,7 @@ impl<'a> IrLowerer<'a> {
     let ctx = self.builtin_ctx();
     let discriminants = compute_variant_discriminants_from_exprs(
       &ctx,
-      enum_.variants.iter().map(|variant| match &variant.kind {
-        // TODO: fix
-        // VariantKind::Discriminant(expr) => Some(expr),
-        _ => None,
-      }),
+      enum_.variants.iter().map(|_variant| None),
     );
 
     enum_
@@ -561,11 +557,7 @@ impl<'a> IrLowerer<'a> {
           let ctx = self.builtin_ctx();
           let discriminants = compute_variant_discriminants_from_exprs(
             &ctx,
-            enum_entry.variants.iter().map(|variant| match &variant.kind {
-              // TODO: fix
-              // VariantKind::Discriminant(expr) => Some(expr),
-              _ => None,
-            }),
+            enum_entry.variants.iter().map(|_variant| None),
           );
 
           let variants = enum_entry

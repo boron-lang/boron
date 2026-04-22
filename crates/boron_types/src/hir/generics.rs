@@ -1,9 +1,8 @@
-
+use crate::hir::expr::PathSegment;
+use crate::hir::{HirId, Ty};
+use crate::resolver::def::DefId;
 use boron_source::ident_table::Identifier;
 use boron_source::prelude::Span;
-use crate::hir::{HirId, Ty};
-use crate::hir::expr::PathSegment;
-use crate::resolver::def::DefId;
 
 #[derive(Debug, Clone, Default)]
 pub struct Generics {

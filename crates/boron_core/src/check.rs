@@ -1,12 +1,12 @@
-use std::collections::HashMap;
-use crate::prelude::{debug, info, CompilationUnit, FILE_EXTENSION};
-use anyhow::bail;
+use crate::prelude::{CompilationUnit, FILE_EXTENSION, debug, info};
 use anyhow::Result;
+use anyhow::bail;
+use boron_cli::prelude::{TomlPackage, resolve_dependency};
 use boron_diagnostics::DiagnosticWriter;
 use boron_session::dependency::Dependency;
 use boron_session::prelude::{ProjectConfig, Session};
+use std::collections::HashMap;
 use yansi::Paint as _;
-use boron_cli::prelude::{resolve_dependency, TomlPackage};
 
 pub fn compiler_entrypoint(
   session: &mut Session,
@@ -29,10 +29,17 @@ pub fn compiler_entrypoint(
       continue;
     }
 
-    let dependency = resolve_dependency(&session.config.output, &session.config.mode, &session.config.root, &alias, &pkg, true)?;
+    let dependency = resolve_dependency(
+      &session.config.output,
+      &session.config.mode,
+      &session.config.root,
+      &alias,
+      &pkg,
+      true,
+    )?;
     packages.push(dependency);
   }
-  
+
   session.config.packages = packages;
 
   compile_single(session)?;

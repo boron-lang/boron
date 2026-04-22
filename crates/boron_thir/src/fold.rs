@@ -4,7 +4,7 @@ use boron_types::ast::{InterpreterMode, UnaryOp};
 use boron_types::hir::{expr::Expr as HirExpr, expr::ExprKind as HirExprKind};
 use boron_types::literal_table::FullLiteral;
 
-impl<'ctx, 'a> ThirLowerer<'ctx, 'a> {
+impl ThirLowerer<'_, '_> {
   pub fn can_const_fold(&self, expr: &HirExpr) -> bool {
     match &expr.kind {
       HirExprKind::Literal(_) => true,

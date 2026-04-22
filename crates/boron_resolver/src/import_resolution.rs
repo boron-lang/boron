@@ -5,7 +5,7 @@ use crate::{
   DefId, DefKind, Definition, ModuleResolver, ResolveVisitor, Symbol, SymbolKind,
 };
 use boron_session::prelude::debug;
-use boron_source::ident_table::{get_or_intern, Identifier};
+use boron_source::ident_table::Identifier;
 use boron_source::prelude::{SourceFileId, Span};
 use boron_types::ast::{
   ImportDecl, ImportKind, ImportSpec, NodeId, PathRoot, Visibility,
@@ -44,7 +44,7 @@ impl<'a> ResolveVisitor<'a> {
     let dep_name = &import.path.segments[0].identifier;
 
     debug!(packages = ?self.sess.config.packages);
-    if let Some(dep) = self.sess.find_dependency(dep_name) {
+    if let Some(_dep) = self.sess.find_dependency(dep_name) {
       // self.resolver().add_external_import_mapping(&import.path, dep.id)
     } else {
       self.dcx().emit(ExternalDependencyNotFound { span: import.span, dep: *dep_name });

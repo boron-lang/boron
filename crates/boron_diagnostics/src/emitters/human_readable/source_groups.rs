@@ -1,5 +1,5 @@
-use crate::emitters::human_readable::label::{LabelInfo, LabelKind};
 use crate::emitters::human_readable::HumanReadableEmitter;
+use crate::emitters::human_readable::label::{LabelInfo, LabelKind};
 use crate::{Diag, Label};
 use boron_source::line::Line;
 use boron_source::prelude::{SourceFile, SourceFileId};

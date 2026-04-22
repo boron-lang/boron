@@ -4,8 +4,8 @@ use boron_types::ast::items::{
   StructMember, Variant as AstVariant, VariantPayload as AstVariantPayload, Visibility,
 };
 use boron_types::ast::{
-  params, EnumMember, GenericParam as AstGenericParam,
-  GenericParams as AstGenericParams, ProgramNode, TypeBound as AstTypeBound,
+  EnumMember, GenericParam as AstGenericParam, GenericParams as AstGenericParams,
+  ProgramNode, TypeBound as AstTypeBound, params,
 };
 use boron_types::hir::item::{
   Const, Enum, EnumVariantStructField, Field, Function, Param, ParamKind, SelfKind,

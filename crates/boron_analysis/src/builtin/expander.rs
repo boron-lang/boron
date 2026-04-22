@@ -6,10 +6,9 @@ use crate::{BuiltinFunctionCtx, InferTy};
 use boron_context::BCtx;
 use boron_diagnostics::DiagnosticCtx;
 use boron_resolver::prelude::BuiltInKind;
-use boron_resolver::Resolver;
-use boron_session::prelude::{debug, Session};
+use boron_session::prelude::{Session, debug};
 use boron_types::hir::{
-  Block, ComptimeCallee, ElseBranch, Expr, ExprKind, Function, Hir, IfExpr, ParamKind,
+  Block, ComptimeCallee, ElseBranch, Expr, ExprKind, Function, IfExpr, ParamKind,
   StmtKind,
 };
 

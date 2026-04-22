@@ -1,8 +1,8 @@
+use crate::ast::{NodeId, Visibility};
+use boron_source::ident_table::Identifier;
 use boron_source::new_id;
 use boron_source::prelude::{SourceFileId, Span};
 use std::fmt::{Display, Formatter};
-use boron_source::ident_table::Identifier;
-use crate::ast::{NodeId, Visibility};
 
 new_id!(DefId);
 

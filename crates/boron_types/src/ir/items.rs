@@ -1,8 +1,8 @@
-use boron_target::abi::layout::Layout;
 use crate::hir::SemanticTy;
-use crate::ir::exprs::IrBlock;
 use crate::ir::IrId;
+use crate::ir::exprs::IrBlock;
 use crate::resolver::def::DefId;
+use boron_target::abi::layout::Layout;
 
 #[derive(Debug, Clone)]
 pub struct IrFunction {

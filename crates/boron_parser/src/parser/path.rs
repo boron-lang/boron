@@ -1,8 +1,8 @@
+use crate::parser::Parser;
 use crate::parser::errors::{
   DepInRootOnly, ExpectedIdentifierInNormalPath, ExpectedSuperOrIdentPath,
   GenericsInImportOrMod, PackageInRootOnly, SuperOnlyInModOrImport,
 };
-use crate::parser::Parser;
 use boron_types::ast::{NodeId, Path, PathParsingContext, PathRoot, PathSegment};
 use boron_types::tokens::TokenType;
 

@@ -5,7 +5,7 @@ use crate::{
 };
 use boron_context::BCtx;
 use boron_session::prelude::Session;
-use boron_source::ident_table::{get_or_intern, Identifier};
+use boron_source::ident_table::{Identifier, get_or_intern};
 use boron_source::prelude::{SourceFileId, Span};
 use boron_types::ast::{
   ConstItem, EnumItem, EnumMember, FunctionItem, Item, ItemKind, ModItem, NodeId, Param,

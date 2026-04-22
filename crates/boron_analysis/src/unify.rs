@@ -1,5 +1,5 @@
-use boron_types::ast::Mutability;
 use crate::{InferTy, TyChecker, TyVar, TyVarKind};
+use boron_types::ast::Mutability;
 use boron_types::infer_ty::ArrayLength;
 
 impl TyChecker<'_> {

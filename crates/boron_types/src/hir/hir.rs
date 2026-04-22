@@ -1,10 +1,10 @@
-use dashmap::DashMap;
-use dashmap::mapref::one::Ref;
-use boron_source::ident_table::Identifier;
-use boron_source::prelude::SourceFileId;
 use crate::ast::NodeId;
 use crate::hir::{Const, Enum, Function, Generics, HirId, Struct};
 use crate::resolver::def::DefId;
+use boron_source::ident_table::Identifier;
+use boron_source::prelude::SourceFileId;
+use dashmap::DashMap;
+use dashmap::mapref::one::Ref;
 
 #[derive(Debug)]
 pub enum AdtEntry {

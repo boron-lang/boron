@@ -1,6 +1,6 @@
+use crate::parser::Parser;
 use crate::parser::errors::UnexpectedTokenInStruct;
 use crate::parser::items::ADT_ITEM_TOKENS;
-use crate::parser::Parser;
 use boron_source::span::Span;
 use boron_types::ast::{NodeId, StructField, StructItem, StructMember, Visibility};
 use boron_types::tokens::TokenType;

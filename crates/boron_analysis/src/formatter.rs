@@ -1,8 +1,8 @@
 use crate::{InferTy, TyChecker, TyVarKind};
 use boron_source::span::Span;
+use boron_target::primitive::PrimitiveKind;
 use boron_types::infer_ty::ArrayLength;
 use std::fmt::Write as _;
-use boron_target::primitive::PrimitiveKind;
 
 impl TyChecker<'_> {
   pub fn format_type(&self, ty: &InferTy) -> String {

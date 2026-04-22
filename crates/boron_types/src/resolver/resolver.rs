@@ -1,3 +1,4 @@
+use crate::DepId;
 use crate::ast::module::Modules;
 use crate::ast::{NodeId, Path};
 use crate::resolver::builtin_kind::BuiltInKind;
@@ -6,11 +7,10 @@ use crate::resolver::import_order::ImportGraph;
 use crate::resolver::ribs::Rib;
 use crate::resolver::scope::{ScopeId, ScopeKind, Scopes};
 use crate::resolver::symbol::SymbolTable;
-use crate::DepId;
 use boron_source::ident_table::Identifier;
 use boron_source::prelude::SourceFileId;
-use dashmap::mapref::one::Ref;
 use dashmap::DashMap;
+use dashmap::mapref::one::Ref;
 use parking_lot::RwLock;
 
 #[derive(Debug)]
@@ -76,7 +76,7 @@ impl Resolver {
   }
 
   pub fn add_import_edge(&self, from: SourceFileId, to: SourceFileId) {
-    println!("{:?} => {:?}", from, to);
+    println!("{from:?} => {to:?}");
     self.import_graph.add_import(from, to);
   }
 

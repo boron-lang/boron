@@ -2,7 +2,17 @@ use serde::{Deserialize, Serialize};
 use strum::Display;
 
 #[derive(
-  Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display, Deserialize, Serialize, Default
+  Copy,
+  Clone,
+  PartialEq,
+  Eq,
+  PartialOrd,
+  Ord,
+  Debug,
+  Display,
+  Deserialize,
+  Serialize,
+  Default,
 )]
 #[serde(rename_all = "lowercase")]
 #[strum(serialize_all = "lowercase")]

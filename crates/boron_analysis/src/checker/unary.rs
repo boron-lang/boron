@@ -1,7 +1,7 @@
-use boron_target::primitive::PrimitiveKind;
 use crate::errors::{InvalidUnaryOp, TyCantBeDereferenced, UnaryNotOnNumeric};
 use crate::unify::{Expectation, UnifyError, UnifyResult};
 use crate::{InferTy, TyChecker, TypeEnv};
+use boron_target::primitive::PrimitiveKind;
 use boron_types::ast::UnaryOp;
 use boron_types::hir::Expr;
 
