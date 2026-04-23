@@ -1,7 +1,7 @@
 use crate::hir::SemanticTy;
-use crate::ir::IrId;
 use crate::ir::exprs::IrBlock;
-use crate::resolver::def::DefId;
+use crate::ir::IrId;
+use boron_source::DefId;
 use boron_target::abi::layout::Layout;
 
 #[derive(Debug, Clone)]

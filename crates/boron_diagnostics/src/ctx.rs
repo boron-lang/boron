@@ -7,7 +7,7 @@ use boron_source::prelude::Sources;
 use dashmap::DashMap;
 use dashmap::mapref::one::{Ref, RefMut};
 use derivative::Derivative;
-use log::debug;
+use tracing::debug;
 use std::io::{Write as _, stderr};
 use std::sync::Arc;
 

@@ -44,7 +44,7 @@ impl<'a> SymbolMangler<'a> {
       .hir_struct(def_id)
       .as_ref()
       .map(|s| s.name.text())
-      .unwrap_or_else(|| format!("struct_{}", def_id.index()));
+      .unwrap_or_else(|| format!("struct_{}", def_id));
 
     let mangled = self.mangle_name(&base_name, type_args, false);
     self.cache.insert(key, mangled.clone());
@@ -103,7 +103,7 @@ impl<'a> SymbolMangler<'a> {
       .hir_enum(def_id)
       .as_ref()
       .map(|e| e.name.text())
-      .unwrap_or_else(|| format!("enum_{}", def_id.index()));
+      .unwrap_or_else(|| format!("enum_{}", def_id));
 
     let mangled = self.mangle_name(&base_name, type_args, false);
     self.cache.insert(key, mangled.clone());
@@ -161,7 +161,7 @@ impl<'a> SymbolMangler<'a> {
           .hir_struct(*def_id)
           .as_ref()
           .map(|s| s.name.text())
-          .unwrap_or_else(|| format!("s{}", def_id.index()));
+          .unwrap_or_else(|| format!("s{}", def_id));
 
         if args.is_empty() {
           base
@@ -177,7 +177,7 @@ impl<'a> SymbolMangler<'a> {
         .hir_enum(*def_id)
         .as_ref()
         .map(|e| e.name.text())
-        .unwrap_or_else(|| format!("e{}", def_id.index())),
+        .unwrap_or_else(|| format!("e{}", def_id)),
 
       SemanticTy::Ptr { mutability, inner } => {
         let mut_str = match mutability {

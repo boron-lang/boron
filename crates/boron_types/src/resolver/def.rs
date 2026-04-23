@@ -1,10 +1,8 @@
 use crate::ast::{NodeId, Visibility};
 use boron_source::ident_table::Identifier;
-use boron_source::new_id;
-use boron_source::prelude::{SourceFileId, Span};
+pub use boron_source::prelude::{SourceFileId, Span};
+pub use boron_source::{DefId, PackageId};
 use std::fmt::{Display, Formatter};
-
-new_id!(DefId);
 
 /// A definition in the program is the "thing" that a name refers to.
 #[derive(Debug, Clone)]
@@ -22,13 +20,22 @@ pub struct Definition {
 impl Definition {
   pub fn new(
     name: Identifier,
+    package_index: PackageId,
     node_id: NodeId,
     source_file: SourceFileId,
     kind: DefKind,
     span: Span,
     visibility: Visibility,
   ) -> Self {
-    Self { name, id: DefId::new(), node_id, source_file, kind, span, visibility }
+    Self {
+      name,
+      id: DefId::new(package_index),
+      node_id,
+      source_file,
+      kind,
+      span,
+      visibility,
+    }
   }
 }
 

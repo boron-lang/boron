@@ -1,8 +1,9 @@
-use crate::BCtx;
 use crate::queries::queries::Queries;
+use crate::BCtx;
 use boron_source::ident_table::Identifier;
-use boron_types::ast::NodeId;
+use boron_source::{PackageId, StablePackageId};
 use boron_types::ast::module::Modules;
+use boron_types::ast::NodeId;
 use boron_types::comptime::FinalComptimeArg;
 use boron_types::hir::{
   AdtEntry, Const as HirConst, Enum, Function, Generics, Hir, HirId, Struct,
@@ -55,10 +56,25 @@ impl<'ctx> QueryProvider<'ctx> for BCtx<'ctx> {
     queries.thir_struct = Some(Self::q_thir_struct);
     queries.thir_function = Some(Self::q_thir_function);
     queries.hir_to_node = Some(Self::q_hir_to_node);
+    queries.current_pkg_id = Some(Self::q_current_pkg_id);
+    queries.pkg_id = Some(Self::q_pkg_id);
+    queries.set_current_pkg_id = Some(Self::q_set_current_pkg_id)
   }
 }
 
 impl<'ctx> BCtx<'ctx> {
+  fn q_pkg_id(ctx: &'ctx Self, (id,): (StablePackageId,)) -> PackageId {
+    ctx.id_interner.intern_package_id(id)
+  }
+
+  fn q_set_current_pkg_id(ctx: &'ctx Self, (id,): (PackageId,)) {
+    *ctx.current_package.write() = Some(id);
+  }
+
+  fn q_current_pkg_id(ctx: &'ctx Self, (): ()) -> PackageId {
+    ctx.current_package.read().expect("no package set as current")
+  }
+
   fn q_modules(ctx: &'ctx Self, (): ()) -> &'ctx Modules {
     &ctx.modules
   }

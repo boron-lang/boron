@@ -1,8 +1,7 @@
 use crate::hir::SemanticTy;
 use crate::ir::exprs::IrLocal;
 use crate::ir::items::{IrEnum, IrFunction, IrStruct};
-use crate::resolver::def::DefId;
-use boron_source::new_id;
+use boron_source::{new_id, DefId};
 use dashmap::DashMap;
 
 pub mod exprs;

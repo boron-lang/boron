@@ -115,6 +115,7 @@ impl<'a> ResolveVisitor<'a> {
         let span = *param.name.span();
         let def = Definition::new(
           param.name,
+          self.ctx.current_pkg_id(),
           param.id,
           self.current_file(),
           DefKind::TypeParam,
@@ -218,6 +219,7 @@ impl<'a> ResolveVisitor<'a> {
       PatternKind::Binding { subpat, name, .. } => {
         let def = Definition::new(
           *name,
+          self.ctx.current_pkg_id(),
           pat.id,
           self.current_file(),
           DefKind::Local,
@@ -458,6 +460,7 @@ impl<'a> ResolveVisitor<'a> {
         let span = *for_expr.binding.span();
         let def = Definition::new(
           for_expr.binding,
+          self.ctx.current_pkg_id(),
           for_expr.id,
           self.current_file(),
           DefKind::Local,

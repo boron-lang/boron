@@ -1,9 +1,9 @@
 use crate::ast::{BinaryOp, UnaryOp};
 use crate::hir::{HirId, SemanticTy};
 use crate::literal_table::FullLiteral;
-use crate::resolver::def::DefId;
 use boron_source::ident_table::Identifier;
 use boron_source::prelude::Span;
+use boron_source::DefId;
 
 #[derive(Debug, Clone)]
 pub struct IrExpr {

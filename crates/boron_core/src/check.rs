@@ -2,6 +2,7 @@ use crate::prelude::{CompilationUnit, FILE_EXTENSION, debug, info};
 use anyhow::Result;
 use anyhow::bail;
 use boron_cli::prelude::{TomlPackage, resolve_dependency};
+use boron_context::BCtx;
 use boron_diagnostics::DiagnosticWriter;
 use boron_session::dependency::Dependency;
 use boron_session::prelude::{ProjectConfig, Session};
@@ -12,15 +13,20 @@ pub fn compiler_entrypoint(
   session: &mut Session,
   dependencies: HashMap<String, TomlPackage>,
 ) -> Result<()> {
-  let packages = session.sorted_packages()?;
+  let ctx = BCtx::new();
+  let package_deps = session.sorted_packages()?;
+  let mut package_sessions = Vec::new();
 
-  for package in packages {
+  for package in package_deps {
     let config = dependency_config(session, package)?;
     debug!(name: "compiling package: ", config = ?config);
     let pkg_session =
       Session::new(config, DiagnosticWriter::stderr(), session.compilation_mode());
+    package_sessions.push(pkg_session);
+  }
 
-    compile_single(&pkg_session)?;
+  for pkg_session in &package_sessions {
+    compile_single(pkg_session, &ctx)?;
   }
 
   let mut packages: Vec<Dependency> = vec![];
@@ -42,7 +48,7 @@ pub fn compiler_entrypoint(
 
   session.config.packages = packages;
 
-  compile_single(session)?;
+  compile_single(session, &ctx)?;
 
   Ok(())
 }
@@ -59,6 +65,7 @@ fn dependency_config(session: &Session, package: &Dependency) -> Result<ProjectC
       packages: vec![],
       mode: main_cfg.mode,
       name: package.name.clone(),
+      version: package.version.clone(),
       lib_type,
       output: main_cfg.output.clone(),
       root: package.root.clone(),
@@ -77,7 +84,7 @@ fn dependency_config(session: &Session, package: &Dependency) -> Result<ProjectC
   unreachable!()
 }
 
-fn compile_single(session: &Session) -> Result<()> {
+fn compile_single<'ctx>(session: &'ctx Session, ctx: &'ctx BCtx<'ctx>) -> Result<()> {
   let file = &session.config.entrypoint;
   if let Some(ext) = file.extension() {
     if ext != FILE_EXTENSION {
@@ -93,7 +100,7 @@ fn compile_single(session: &Session) -> Result<()> {
   let contents = fs_err::read_to_string(file.clone())?;
 
   let file_id = session.sources().add(contents, file.clone());
-  let mut unit = CompilationUnit::new(file_id, session);
+  let mut unit = CompilationUnit::new(file_id, session, ctx);
 
   if session.config().check_only {
     unit.check();

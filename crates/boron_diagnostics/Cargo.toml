@@ -15,7 +15,7 @@ parking_lot = { workspace = true }
 boron_source = { workspace = true }
 yansi = { workspace = true }
 unicode-width = "0.2.1"
-log = { workspace = true }
+tracing = { workspace = true }
 derivative = { workspace = true }
 strum = { workspace = true }
 

@@ -1,9 +1,9 @@
 use crate::comptime::FinalComptimeArg;
 use crate::hir::HirId;
 use crate::infer_ty::{InferTy, SubstitutionMap, TypeScheme};
-use crate::resolver::def::DefId;
 use boron_source::ident_table::Identifier;
 use dashmap::DashMap;
+use boron_source::DefId;
 
 #[derive(Debug, Clone)]
 pub struct MonomorphizationEntry {

@@ -7,7 +7,7 @@ repository.workspace = true
 
 [dependencies]
 anyhow = { workspace = true }
-log = { workspace = true }
+tracing = { workspace = true }
 boron_session = { workspace = true }
 boron_target = { workspace = true }
 serde = { workspace = true }

@@ -11,6 +11,7 @@ dashmap = { workspace = true }
 paste = { workspace = true }
 boron_source = { workspace = true }
 boron_queries_macro = { workspace = true }
+parking_lot = { workspace = true }
 
 [lints]
 workspace = true

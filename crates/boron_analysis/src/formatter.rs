@@ -47,7 +47,7 @@ impl TyChecker<'_> {
         if let Some(def) = self.ctx.get_definition(*def_id) {
           write!(f, "{}", def.name)?;
         } else {
-          write!(f, "{}", def_id.index())?;
+          write!(f, "{}", def_id)?;
         }
 
         if !args.is_empty() {

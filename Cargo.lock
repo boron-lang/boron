@@ -231,9 +231,9 @@ dependencies = [
  "boron_session",
  "boron_target",
  "fs-err",
- "log",
  "serde",
  "thiserror",
+ "tracing",
  "which",
  "yansi",
 ]
@@ -246,6 +246,7 @@ dependencies = [
  "boron_source",
  "boron_types",
  "dashmap 7.0.0-rc2",
+ "parking_lot",
  "paste",
 ]
 
@@ -293,10 +294,10 @@ dependencies = [
  "dashmap 7.0.0-rc2",
  "derivative",
  "generational-arena",
- "log",
  "parking_lot",
  "serde",
  "strum 0.28.0",
+ "tracing",
  "unicode-width",
  "yansi",
 ]
@@ -419,6 +420,7 @@ dependencies = [
  "parking_lot",
  "paste",
  "serde",
+ "tracing",
 ]
 
 [[package]]

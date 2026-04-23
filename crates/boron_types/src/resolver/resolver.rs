@@ -1,17 +1,18 @@
-use crate::DepId;
 use crate::ast::module::Modules;
 use crate::ast::{NodeId, Path};
 use crate::resolver::builtin_kind::BuiltInKind;
-use crate::resolver::def::{DefId, Definition};
+use crate::resolver::def::Definition;
 use crate::resolver::import_order::ImportGraph;
 use crate::resolver::ribs::Rib;
 use crate::resolver::scope::{ScopeId, ScopeKind, Scopes};
 use crate::resolver::symbol::SymbolTable;
+use crate::DepId;
 use boron_source::ident_table::Identifier;
 use boron_source::prelude::SourceFileId;
-use dashmap::DashMap;
 use dashmap::mapref::one::Ref;
+use dashmap::DashMap;
 use parking_lot::RwLock;
+use boron_source::DefId;
 
 #[derive(Debug)]
 pub struct Resolver {

@@ -10,6 +10,7 @@ use std::path::PathBuf;
 pub struct Dependency {
   pub id: DepId,
   pub name: String,
+  pub version: String,
   pub root: PathBuf,
   pub entrypoint: PathBuf,
   pub depends_on: Vec<String>,
@@ -24,6 +25,7 @@ pub struct Dependency {
 impl Dependency {
   pub fn new(
     name: String,
+    version: String,
     blib: Option<BLibMetadata>,
     entrypoint: PathBuf,
     root: PathBuf,
@@ -31,6 +33,7 @@ impl Dependency {
     Self {
       id: DepId::new(),
       name,
+      version,
       root,
       entrypoint,
       depends_on: Vec::new(),

@@ -12,6 +12,7 @@ pub struct ProjectConfig {
   pub packages: Vec<Dependency>,
   pub mode: Mode,
   pub name: String,
+  pub version: String,
   pub lib_type: LibType,
   pub output: PathBuf,
   pub root: PathBuf,

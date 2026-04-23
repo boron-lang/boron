@@ -1,8 +1,8 @@
 use crate::ast::Mutability;
 use crate::hir::expr::PathSegment;
 use crate::hir::{Expr, HirId};
-use crate::resolver::def::DefId;
 use boron_source::prelude::Span;
+use boron_source::DefId;
 use boron_target::primitive::PrimitiveKind;
 
 #[derive(Debug, Clone)]

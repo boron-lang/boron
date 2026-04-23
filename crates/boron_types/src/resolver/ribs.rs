@@ -1,7 +1,7 @@
-use crate::resolver::def::DefId;
 use crate::resolver::scope::ScopeId;
 use boron_source::ident_table::Identifier;
 use std::collections::HashMap;
+use boron_source::DefId;
 
 #[derive(Debug, Clone)]
 pub struct Rib {

@@ -1,8 +1,7 @@
 use crate::ast::Mutability;
-use crate::resolver::def::DefId;
 use boron_source::ident_table::Identifier;
-use boron_source::new_id;
 use boron_source::prelude::Span;
+use boron_source::{new_id, DefId};
 use boron_target::primitive::PrimitiveKind;
 use std::collections::HashMap;
 

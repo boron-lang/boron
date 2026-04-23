@@ -1,12 +1,12 @@
 use crate::compiler::{Compiler, CompilerKind};
 use crate::compilers::compiler_tool;
-use anyhow::{Context as _, Result, anyhow};
+use anyhow::{anyhow, Context as _, Result};
 use boron_session::prelude::Session;
-use log::debug;
 use std::path::PathBuf;
+use tracing::debug;
 
 pub fn resolve_from_kind(kind: CompilerKind, sess: &Session) -> Result<Compiler> {
-  debug!("Resolving compiler of kind: {kind:?}");
+  debug!(?kind, "resolving compiler:");
 
   let tool = compiler_tool(kind.clone());
   if !tool.is_available_on(sess) {

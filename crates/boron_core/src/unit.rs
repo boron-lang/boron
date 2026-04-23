@@ -12,6 +12,7 @@ use boron_hir::lower::lower_to_hir;
 use boron_ir::IrLowerer;
 use boron_parser::{Lexer, parser::parse};
 use boron_resolver::{DefId, ResolveVisitor};
+use boron_source::StablePackageId;
 use boron_source::source_file::SourceFileId;
 use boron_thir::ThirLowerer;
 use boron_types::ast::module::Module;
@@ -22,9 +23,10 @@ use std::time::Instant;
 pub struct CompilationUnit<'ctx> {
   pub entry_point: SourceFileId,
   pub sess: &'ctx Session,
-  pub ctx: BCtx<'ctx>,
+  pub ctx: &'ctx BCtx<'ctx>,
   pub builtin_results: Option<BuiltInResults>,
   pub main_function: Option<DefId>,
+  pub stable_id: StablePackageId,
 }
 
 macro_rules! steps {
@@ -34,17 +36,22 @@ macro_rules! steps {
 }
 
 impl<'ctx> CompilationUnit<'ctx> {
-  fn ctx_ref(&self) -> &'ctx BCtx<'ctx> {
-    unsafe { &*std::ptr::from_ref::<BCtx<'ctx>>(&self.ctx) }
-  }
-
-  pub fn new(entry_point: SourceFileId, sess: &'ctx Session) -> Self {
+  pub fn new(
+    entry_point: SourceFileId,
+    sess: &'ctx Session,
+    ctx: &'ctx BCtx<'ctx>,
+  ) -> Self {
     Self {
       entry_point,
       sess,
-      ctx: BCtx::new(),
+      ctx,
       builtin_results: None,
       main_function: None,
+      stable_id: StablePackageId::new(
+        sess.config.name.clone(),
+        sess.config.version.clone(),
+        sess.config.package_type == PackageType::Binary,
+      ),
     }
   }
 
@@ -52,11 +59,12 @@ impl<'ctx> CompilationUnit<'ctx> {
     let Some(_entrypoint) = self.file_to_module(self.entry_point) else {
       return;
     };
+    self.ctx.set_current_pkg_id(self.ctx.pkg_id(self.stable_id));
 
     steps!(self;
       "Import graph" => |this| this.build_import_graph(),
       "Name resolution" => |this| {
-        if !ResolveVisitor::resolve_modules(this.entry_point, this.ctx_ref(), self.sess) {
+        if !ResolveVisitor::resolve_modules(this.entry_point, this.ctx, self.sess) {
         }
       },
       "HIR lowering" => |this| this.lower_to_hir(),
@@ -70,8 +78,7 @@ impl<'ctx> CompilationUnit<'ctx> {
   }
 
   fn build_import_graph(&self) {
-    let ctx = self.ctx_ref();
-    ctx.resolver().build_import_graph(ctx.modules());
+    self.ctx.resolver().build_import_graph(self.ctx.modules());
   }
 
   fn find_main_function(&mut self) {
@@ -79,7 +86,7 @@ impl<'ctx> CompilationUnit<'ctx> {
       return;
     }
 
-    let ctx = self.ctx_ref();
+    let ctx = self.ctx;
     let main = ctx.hir().functions.iter().find(|func| func.name.text() == "main");
 
     if let Some(main) = main {
@@ -112,7 +119,7 @@ impl<'ctx> CompilationUnit<'ctx> {
       self.sess().dcx().bug("failed to create output directory");
     }
 
-    let ir = IrLowerer::new(self.sess, self.ctx_ref()).lower();
+    let ir = IrLowerer::new(self.sess, self.ctx).lower();
 
     let start = Instant::now();
     if let Err(err) = run_codegen(self.sess, &ir, self.main_function) {
@@ -143,28 +150,28 @@ impl<'ctx> CompilationUnit<'ctx> {
       return;
     };
 
-    ThirLowerer::new(self.ctx_ref(), self.sess.dcx(), builtin_results).lower();
+    ThirLowerer::new(self.ctx, self.sess.dcx(), builtin_results).lower();
   }
 
   fn lower_to_ir(&mut self) {}
 
   fn expand_builtins(&mut self) {
-    self.builtin_results = Some(expand_builtins(self.sess, self.ctx_ref()));
+    self.builtin_results = Some(expand_builtins(self.sess, self.ctx));
   }
 
   fn validate_comptime(&self) {
     let dcx = self.sess.dcx();
 
-    validate_comptime(dcx, self.ctx_ref());
+    validate_comptime(dcx, self.ctx);
   }
 
   fn typeck(&mut self) {
-    typeck_hir(self.sess, self.ctx_ref());
+    typeck_hir(self.sess, self.ctx);
   }
 
   fn lower_to_hir(&mut self) {
     let dcx = self.sess.dcx();
-    lower_to_hir(self.ctx_ref(), dcx);
+    lower_to_hir(self.ctx, dcx);
   }
 
   pub fn sess(&self) -> &Session {
@@ -207,10 +214,10 @@ impl<'ctx> CompilationUnit<'ctx> {
     }
 
     let module = Module::new(id, node);
-    self.ctx_ref().modules().add(module);
+    self.ctx.modules().add(module);
 
     let files_to_process: Vec<_> = {
-      let this = self.ctx_ref().modules().get_unchecked(id);
+      let this = self.ctx.modules().get_unchecked(id);
       let dcx = self.sess.dcx();
       let mut files = Vec::new();
 

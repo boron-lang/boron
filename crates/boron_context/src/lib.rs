@@ -1,5 +1,8 @@
 mod queries;
+mod id_interner;
 
+use parking_lot::RwLock;
+use boron_source::{PackageId, StablePackageId};
 use crate::queries::provider::QueryProvider as _;
 use crate::queries::queries::Queries;
 use boron_types::ast::module::Modules;
@@ -9,6 +12,7 @@ use boron_types::resolver::import_order::ImportGraph;
 use boron_types::resolver::resolver::Resolver;
 use boron_types::thir::Thir;
 use boron_types::type_table::TypeTable;
+use crate::id_interner::IdInterner;
 
 #[derive(Debug, Default)]
 pub struct BCtx<'ctx> {
@@ -20,6 +24,8 @@ pub struct BCtx<'ctx> {
   thir: Thir,
   ir: Ir,
   table: TypeTable,
+  current_package: RwLock<Option<PackageId>>,
+  id_interner: IdInterner
 }
 
 impl BCtx<'_> {

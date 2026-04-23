@@ -1,13 +1,12 @@
 use crate::{
   compiler::{Compiler, CompilerKind},
-  compilers::{CompilerArgStyle, compiler_tool},
+  compilers::{compiler_tool, CompilerArgStyle},
   detect::resolve_from_kind,
 };
-use anyhow::{Context as _, Result, bail, ensure};
+use anyhow::{bail, ensure, Context as _, Result};
 use boron_lib::container::write_container_file;
 use boron_session::prelude::{LibType, PackageType, Session};
 use fs_err::create_dir_all;
-use log::{debug, info};
 use std::{
   collections::HashSet,
   ffi::OsStr,
@@ -15,6 +14,7 @@ use std::{
   process::Command,
   sync::Arc,
 };
+use tracing::{debug, info};
 use yansi::Paint as _;
 
 pub struct CompilerBuild<'a> {

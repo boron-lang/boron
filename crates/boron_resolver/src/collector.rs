@@ -1,10 +1,11 @@
 use crate::errors::{DuplicateDefinition, SelfOutsideMethod};
 use crate::visitor::Namespace;
 use crate::{
-  DefId, DefKind, Definition, ResolveVisitor, ScopeId, ScopeKind, Symbol, SymbolKind,
+  DefKind, Definition, ResolveVisitor, ScopeId, ScopeKind, Symbol, SymbolKind,
 };
 use boron_context::BCtx;
 use boron_session::prelude::Session;
+use boron_source::DefId;
 use boron_source::ident_table::{Identifier, get_or_intern};
 use boron_source::prelude::{SourceFileId, Span};
 use boron_types::ast::{
@@ -107,7 +108,15 @@ impl<'a> ResolveVisitor<'a> {
       }
     }
 
-    let def = Definition::new(name, node_id, self.current_file(), kind, span, vis);
+    let def = Definition::new(
+      name,
+      self.ctx.current_pkg_id(),
+      node_id,
+      self.current_file(),
+      kind,
+      span,
+      vis,
+    );
     let def_id = self.resolver().add_definition(def);
 
     match namespace {
@@ -225,8 +234,15 @@ impl<'a> ResolveVisitor<'a> {
     let name = m.name;
     let span = *m.name.span();
 
-    let def =
-      Definition::new(name, m.id, self.current_file(), DefKind::Module, span, vis);
+    let def = Definition::new(
+      name,
+      self.ctx.current_pkg_id(),
+      m.id,
+      self.current_file(),
+      DefKind::Module,
+      span,
+      vis,
+    );
     let def_id = self.resolver().add_definition(def);
 
     self.module_resolver.define_value(name, def_id);
@@ -303,7 +319,15 @@ impl<'a> ResolveVisitor<'a> {
       Param::SelfParam(s) => (get_or_intern("self", Some(s.span)), s.id, s.span),
     };
 
-    let def = Definition::new(name, id, self.current_file(), DefKind::Param, span, vis);
+    let def = Definition::new(
+      name,
+      self.ctx.current_pkg_id(),
+      id,
+      self.current_file(),
+      DefKind::Param,
+      span,
+      vis,
+    );
     let def_id = self.resolver().add_definition(def);
     self.module_resolver.define_value(name, def_id);
     self.resolver().symbols.record_resolution(id, def_id);

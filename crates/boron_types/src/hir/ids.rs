@@ -1,5 +1,5 @@
-use crate::resolver::def::DefId;
 use std::fmt::{Display, Formatter};
+use boron_source::DefId;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct HirId {
@@ -23,7 +23,7 @@ impl HirId {
 
 impl Display for HirId {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    write!(f, "{}.{}", self.owner.index(), self.local_id.0)
+    write!(f, "{}.{}", self.owner, self.local_id.0)
   }
 }
 

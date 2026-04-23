@@ -1,16 +1,17 @@
 use crate::BCtx;
 use boron_queries_macro::queries;
 use boron_source::ident_table::Identifier;
-use boron_types::ast::NodeId;
+use boron_source::{DefId, PackageId, StablePackageId};
 use boron_types::ast::module::Modules;
+use boron_types::ast::NodeId;
 use boron_types::comptime::FinalComptimeArg;
 use boron_types::hir::{Const as HirConst, Enum, Function, Generics, Hir, HirId, Struct};
 use boron_types::infer_ty::{InferTy, SubstitutionMap, TypeScheme};
-use boron_types::resolver::def::{DefId, Definition};
+use boron_types::resolver::def::Definition;
 use boron_types::resolver::import_order::ImportGraph;
 use boron_types::resolver::resolver::Resolver;
 use boron_types::thir::{
-  Enum as ThirEnum, Function as ThirFunction, Struct as ThirStruct, Thir,
+    Enum as ThirEnum, Function as ThirFunction, Struct as ThirStruct, Thir,
 };
 use boron_types::type_table::{MonomorphizationEntry, TypeTable};
 
@@ -51,4 +52,7 @@ queries! {
     fn thir_struct(def_id: DefId): Option<ThirStruct>;
     fn thir_function(def_id: DefId): Option<ThirFunction>;
     fn hir_to_node(hir_id: HirId): Option<NodeId>;
+    fn current_pkg_id(): PackageId;
+    fn pkg_id(s: StablePackageId): PackageId;
+    fn set_current_pkg_id(id: PackageId);
 }

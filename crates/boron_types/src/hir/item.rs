@@ -1,8 +1,8 @@
 use crate::ast::{FunctionModifiers, Visibility};
 use crate::hir::{Block, Expr, Generics, HirId, Ty};
-use crate::resolver::def::DefId;
-use boron_source::ident_table::{Identifier, get_or_intern};
+use boron_source::ident_table::{get_or_intern, Identifier};
 use boron_source::prelude::Span;
+use boron_source::DefId;
 
 #[derive(Debug, Clone)]
 pub struct Function {

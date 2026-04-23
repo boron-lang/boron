@@ -91,7 +91,7 @@ impl Path {
     } else {
       Some(path.with_extension("bo"))
     };
-    debug!("constructed path = {:?}", path);
+    debug!(?path, "constructed path");
     path
   }
 }

@@ -1,10 +1,9 @@
 use crate::errors::{
   ExternalDependencyNotFound, PrivateItem, UndefinedModule, UndefinedNameInModule,
 };
-use crate::{
-  DefId, DefKind, Definition, ModuleResolver, ResolveVisitor, Symbol, SymbolKind,
-};
+use crate::{DefKind, Definition, ModuleResolver, ResolveVisitor, Symbol, SymbolKind};
 use boron_session::prelude::debug;
+use boron_source::DefId;
 use boron_source::ident_table::Identifier;
 use boron_source::prelude::{SourceFileId, Span};
 use boron_types::ast::{
@@ -77,6 +76,7 @@ impl<'a> ResolveVisitor<'a> {
   ) {
     let def = Definition::new(
       binding,
+      self.ctx.current_pkg_id(),
       import.id,
       target_file,
       DefKind::Module,

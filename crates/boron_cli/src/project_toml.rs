@@ -1,5 +1,5 @@
 use crate::cli::CliBuild;
-use anyhow::{Context as _, Result, anyhow, bail};
+use anyhow::{anyhow, bail, Context as _, Result};
 use boron_diagnostics::prelude::DiagnosticOutputType;
 use boron_lib::container::read_container_file;
 use boron_session::dependency::{DepId, Dependency};
@@ -7,7 +7,7 @@ use boron_session::enums::lib_type::LibType;
 use boron_session::enums::mode::Mode;
 use boron_session::enums::project_type::PackageType;
 use boron_session::prelude::{
-  BoronError, canonicalize_or_create_dir, canonicalize_with_strip,
+  canonicalize_or_create_dir, canonicalize_with_strip, BoronError,
 };
 use boron_session::project_config::ProjectConfig;
 use boron_target::target::Compiler;
@@ -23,6 +23,7 @@ pub const PROJECT_FILE: &str = "project.toml";
 pub struct TomlPackage {
   pub path: PathBuf,
   pub name: Option<String>,
+  pub version: Option<String>,
   pub entrypoint: Option<PathBuf>,
 }
 
@@ -30,6 +31,7 @@ pub struct TomlPackage {
 #[serde(rename_all = "kebab-case")]
 pub struct TomlProject {
   pub name: Option<String>,
+  pub version: Option<String>,
   pub entrypoint: Option<PathBuf>,
   #[serde(rename = "type")]
   pub ty: Option<PackageType>,
@@ -84,6 +86,10 @@ pub fn build_project_config(
     .project
     .name
     .ok_or_else(|| anyhow!("project name is required (provide via project.toml)"))?;
+  let version = toml
+    .project
+    .version
+    .ok_or_else(|| anyhow!("project version is required (provide via project.toml)"))?;
 
   let output = {
     let path = cli
@@ -119,6 +125,7 @@ pub fn build_project_config(
       packages,
       mode,
       name,
+      version,
       lib_type,
       output,
       root: canonicalize_with_strip(root)?,
@@ -150,6 +157,9 @@ pub fn resolve_dependency(
   let project = dep_project.project;
 
   let name = pkg.name.clone().or(project.name).unwrap_or_else(|| alias.to_owned());
+  let version =
+    pkg.version.clone().or(project.version).unwrap_or_else(|| alias.to_owned());
+
   let entrypoint = resolve_entrypoint(
     &dep_root,
     alias,
@@ -173,6 +183,7 @@ pub fn resolve_dependency(
   Ok(Dependency {
     id: DepId::new(),
     name,
+    version,
     root: dep_root,
     entrypoint,
     depends_on: dep_project.dependencies.into_keys().collect(),

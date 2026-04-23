@@ -1,9 +1,9 @@
 use boron_diagnostic_macro::Diagnostic;
 use boron_source::prelude::{SourceFileId, Span};
 use parking_lot::RwLock;
-use petgraph::Direction;
 use petgraph::algo::{has_path_connecting, toposort};
 use petgraph::graph::{DiGraph, NodeIndex};
+use petgraph::Direction;
 use std::collections::{HashMap, HashSet};
 
 /// Graph of import dependencies between modules.
@@ -72,8 +72,6 @@ impl ImportGraph {
       Ok(order) => {
         let files: Vec<SourceFileId> =
           order.into_iter().map(|idx| inner.graph[idx]).collect();
-        println!("{:?} {:?}", files, inner.graph);
-
         Ok(ResolutionOrder { order: files })
       }
       Err(cycle) => {
