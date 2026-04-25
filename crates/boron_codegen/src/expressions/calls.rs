@@ -22,7 +22,7 @@ impl<'ctx> LLVMCodegen<'ctx> {
     args: &Vec<IrExpr>,
   ) -> Result<ValueKind<'ctx>> {
     if let Some(enum_) = self.ir.get_enum(callee, type_args) {
-      return self.build_enum_tuple(enum_, callee_name, args);
+      return self.build_enum_tuple(&enum_, callee_name, args);
     }
 
     let ir_function = self.ir.find_function(callee, type_args);

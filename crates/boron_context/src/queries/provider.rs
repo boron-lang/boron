@@ -9,6 +9,7 @@ use boron_types::hir::{
   AdtEntry, Const as HirConst, Enum, Function, Generics, Hir, HirId, Struct,
 };
 use boron_types::infer_ty::{InferTy, SubstitutionMap, TypeScheme};
+use boron_types::ir::Ir;
 use boron_types::resolver::def::{DefId, Definition};
 use boron_types::resolver::import_order::ImportGraph;
 use boron_types::resolver::resolver::Resolver;
@@ -58,13 +59,18 @@ impl<'ctx> QueryProvider<'ctx> for BCtx<'ctx> {
     queries.hir_to_node = Some(Self::q_hir_to_node);
     queries.current_pkg_id = Some(Self::q_current_pkg_id);
     queries.pkg_id = Some(Self::q_pkg_id);
-    queries.set_current_pkg_id = Some(Self::q_set_current_pkg_id)
+    queries.set_current_pkg_id = Some(Self::q_set_current_pkg_id);
+    queries.ir = Some(Self::q_ir);
   }
 }
 
 impl<'ctx> BCtx<'ctx> {
   fn q_pkg_id(ctx: &'ctx Self, (id,): (StablePackageId,)) -> PackageId {
     ctx.id_interner.intern_package_id(id)
+  }
+
+  fn q_ir(ctx: &'ctx Self, (): ()) -> &'ctx Ir {
+    &ctx.ir
   }
 
   fn q_set_current_pkg_id(ctx: &'ctx Self, (id,): (PackageId,)) {

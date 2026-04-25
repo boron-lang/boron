@@ -11,42 +11,42 @@ new_id!(IrId);
 
 #[derive(Debug, Default, Clone)]
 pub struct Ir {
-  pub functions: Vec<IrFunction>,
-  pub structs: Vec<IrStruct>,
-  pub enums: Vec<IrEnum>,
+  pub functions: DashMap<DefId, IrFunction>,
+  pub structs: DashMap<DefId, IrStruct>,
+  pub enums: DashMap<DefId, IrEnum>,
   // all variables for current function
   pub locals: DashMap<IrId, Vec<IrLocal>>,
 }
 
 impl Ir {
-  pub fn find_struct(&self, id: &DefId, types: &Vec<SemanticTy>) -> &IrStruct {
-    let strukt = self.structs.iter().find(|s| &s.def_id == id && types == &s.type_args);
-
-    if let Some(strukt) = strukt {
-      strukt
-    } else {
-      panic!("couldn't find struct for {id:?} {types:#?}")
-    }
-  }
-
-  pub fn find_enum(&self, id: &DefId, types: &Vec<SemanticTy>) -> &IrEnum {
-    let _enum = self.enums.iter().find(|s| &s.def_id == id && types == &s.type_args);
-    if let Some(_enum) = _enum {
-      _enum
-    } else {
-      panic!("couldn't find enum for {id:?} {types:#?}")
-    }
-  }
-
-  pub fn get_enum(&self, id: &DefId, types: &Vec<SemanticTy>) -> Option<&IrEnum> {
-    self.enums.iter().find(|s| &s.def_id == id && types == &s.type_args)
-  }
-
-  pub fn find_function(&self, id: &DefId, types: &Vec<SemanticTy>) -> &IrFunction {
-    self
-      .functions
+  pub fn find_struct(&self, id: &DefId, types: &Vec<SemanticTy>) -> IrStruct {
+    self.structs
       .iter()
       .find(|s| &s.def_id == id && types == &s.type_args)
+      .map(|s| s.clone())
+      .unwrap_or_else(|| panic!("couldn't find struct for {id:?} {types:#?}"))
+  }
+
+  pub fn find_enum(&self, id: &DefId, types: &Vec<SemanticTy>) -> IrEnum {
+    self.enums
+      .iter()
+      .find(|s| &s.def_id == id && types == &s.type_args)
+      .map(|e| e.clone())
+      .unwrap_or_else(|| panic!("couldn't find enum for {id:?} {types:#?}"))
+  }
+
+  pub fn get_enum(&self, id: &DefId, types: &Vec<SemanticTy>) -> Option<IrEnum> {
+    self.enums
+      .iter()
+      .find(|s| &s.def_id == id && types == &s.type_args)
+      .map(|e| e.clone())
+  }
+
+  pub fn find_function(&self, id: &DefId, types: &Vec<SemanticTy>) -> IrFunction {
+    self.functions
+      .iter()
+      .find(|s| &s.def_id == id && types == &s.type_args)
+      .map(|f| f.clone())
       .expect("all functions should be known")
   }
 

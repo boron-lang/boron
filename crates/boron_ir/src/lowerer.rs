@@ -9,7 +9,7 @@ use boron_analysis::size_of::{calculate_enum_payload_layout, calculate_enum_size
 use boron_analysis::{BuiltinFunctionCtx, InferTy, TypeScheme};
 use boron_context::BCtx;
 use boron_resolver::DefId;
-use boron_session::prelude::{Session, debug};
+use boron_session::prelude::{debug, Session};
 use boron_source::ident_table::get_or_intern;
 use boron_target::abi::layout::Layout;
 use boron_types::hir::{EnumVariant, Pat, PatKind, SemanticTy};
@@ -33,7 +33,6 @@ pub struct IrLowerer<'a> {
   mangler: SymbolMangler<'a>,
   lowering_context: Option<LoweringContext>,
 
-  pub ir: Ir,
   pub current_function: IrId,
 }
 
@@ -41,12 +40,15 @@ impl<'a> IrLowerer<'a> {
   pub fn new(sess: &'a Session, ctx: &'a BCtx<'a>) -> Self {
     Self {
       sess,
-      ir: Ir::default(),
       ctx,
       mangler: SymbolMangler::new(ctx),
       current_function: IrId::dummy(),
       lowering_context: None,
     }
+  }
+
+  pub fn ir(&self) -> &Ir {
+    self.ctx.ir()
   }
 
   fn builtin_ctx(&self) -> BuiltinFunctionCtx<'a, 'a> {
@@ -74,7 +76,7 @@ impl<'a> IrLowerer<'a> {
       self.lower_enum(enum_.value());
     }
 
-    self.ir.clone()
+    self.ir().clone()
   }
 
   pub fn lower_function(&mut self, func: &ThirFunction) {
@@ -115,15 +117,18 @@ impl<'a> IrLowerer<'a> {
     let return_ty = Self::apply_subst_by_def_id(&func.return_type, type_args);
     let body = func.body.as_ref().map(|b| self.lower_body(b, type_args, func.def_id));
 
-    self.ir.functions.push(IrFunction {
-      name: mangled_name,
-      params,
-      id,
-      type_args: concrete_type_args,
-      return_type: self.lower_type(&return_ty),
-      def_id: func.def_id,
-      body,
-    });
+    self.ir().functions.insert(
+      func.def_id,
+      IrFunction {
+        name: mangled_name,
+        params,
+        id,
+        type_args: concrete_type_args,
+        return_type: self.lower_type(&return_ty),
+        def_id: func.def_id,
+        body,
+      },
+    );
   }
 
   fn lower_function_params(
@@ -179,7 +184,7 @@ impl<'a> IrLowerer<'a> {
             span: local.span,
             projections,
           };
-          self.ir.add_local(self.current_function, local);
+          self.ir().add_local(self.current_function, local);
 
           stmts.push(IrStmt {
             hir_id: stmt.hir_id,
@@ -377,15 +382,18 @@ impl<'a> IrLowerer<'a> {
     let alignment = calculate_enum_alignment(&ctx, &enum_.def_id, &infer_args);
     let payload_layout = calculate_enum_payload_layout(&ctx, &enum_.def_id, &infer_args);
 
-    self.ir.enums.push(IrEnum {
-      name: mangled_name,
-      id: IrId::new(),
-      type_args: concrete_type_args,
-      def_id: enum_.def_id,
-      variants,
-      layout: Layout::new(size, alignment.get()),
-      payload_layout,
-    });
+    self.ir().enums.insert(
+      enum_.def_id,
+      IrEnum {
+        name: mangled_name,
+        id: IrId::new(),
+        type_args: concrete_type_args,
+        def_id: enum_.def_id,
+        variants,
+        layout: Layout::new(size, alignment.get()),
+        payload_layout,
+      },
+    );
   }
 
   fn lower_enum_variants(
@@ -455,7 +463,7 @@ impl<'a> IrLowerer<'a> {
     let concrete_type_args = self.collect_type_args(scheme, type_args);
     let mangled_name = self.mangler.mangle_struct(strukt.def_id, &concrete_type_args);
 
-    self.ir.structs.push(IrStruct {
+    self.ir().structs.insert(strukt.def_id, IrStruct {
       name: mangled_name,
       fields,
       id: IrId::new(),

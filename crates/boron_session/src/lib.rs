@@ -10,7 +10,7 @@ mod session;
 
 pub mod prelude {
   pub use crate::{package_graph::*, path::*, project_config::*, session::*};
-  pub use anyhow::{Result, anyhow, bail};
+  pub use anyhow::{anyhow, bail, Result};
   pub use fs_err as fs;
   pub use parking_lot::*;
   pub use rayon::prelude::*;

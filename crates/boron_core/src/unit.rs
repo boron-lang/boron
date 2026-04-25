@@ -153,7 +153,9 @@ impl<'ctx> CompilationUnit<'ctx> {
     ThirLowerer::new(self.ctx, self.sess.dcx(), builtin_results).lower();
   }
 
-  fn lower_to_ir(&mut self) {}
+  fn lower_to_ir(&mut self) {
+    IrLowerer::new(self.sess, self.ctx).lower();
+  }
 
   fn expand_builtins(&mut self) {
     self.builtin_results = Some(expand_builtins(self.sess, self.ctx));

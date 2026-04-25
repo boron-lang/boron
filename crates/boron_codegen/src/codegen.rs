@@ -29,24 +29,24 @@ pub struct LLVMCodegen<'ctx> {
 impl LLVMCodegen<'_> {
   pub fn generate(&self, ir: &Ir, main_function: &Option<DefId>) -> Result<()> {
     for strukt in &ir.structs {
-      self.create_struct_type(strukt);
+      self.create_struct_type(&strukt);
     }
     for _enum in &ir.enums {
-      self.create_enum_type(_enum);
+      self.create_enum_type(&_enum);
     }
 
     for strukt in &ir.structs {
-      self.generate_struct_body(strukt)?;
+      self.generate_struct_body(&strukt)?;
     }
     for _enum in &ir.enums {
-      self.generate_enum_bodies(_enum)?;
+      self.generate_enum_bodies(&_enum)?;
     }
 
     for func in &ir.functions {
-      self.create_function_body(func)?;
+      self.create_function_body(&func)?;
     }
     for func in &ir.functions {
-      self.generate_function_body(func)?;
+      self.generate_function_body(&func)?;
     }
 
     if let Some(main_id) = main_function {

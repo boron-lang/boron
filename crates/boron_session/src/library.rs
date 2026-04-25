@@ -9,8 +9,6 @@ pub struct BLibMetadata {
   #[serde(default = "default_metadata_version")]
   pub metadata_version: u16,
   #[serde(default)]
-  pub thir_debug: Option<String>,
-  #[serde(default)]
   pub package: BLibPackageIdentity,
   #[serde(default)]
   pub abi_fingerprint: String,
@@ -83,9 +81,6 @@ pub struct BLibExport {
   pub visibility: BLibVisibility,
   pub type_id: Option<u32>,
   pub signature_id: Option<u32>,
-  pub doc: Option<String>,
-  pub deprecated: Option<String>,
-  pub attrs: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
@@ -166,7 +161,6 @@ impl BLibMetadata {
       config,
       target,
       metadata_version: default_metadata_version(),
-      thir_debug: None,
       package: BLibPackageIdentity::default(),
       abi_fingerprint: String::new(),
       modules: Vec::new(),

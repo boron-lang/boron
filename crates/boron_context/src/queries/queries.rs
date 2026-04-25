@@ -7,6 +7,7 @@ use boron_types::ast::NodeId;
 use boron_types::comptime::FinalComptimeArg;
 use boron_types::hir::{Const as HirConst, Enum, Function, Generics, Hir, HirId, Struct};
 use boron_types::infer_ty::{InferTy, SubstitutionMap, TypeScheme};
+use boron_types::ir::Ir;
 use boron_types::resolver::def::Definition;
 use boron_types::resolver::import_order::ImportGraph;
 use boron_types::resolver::resolver::Resolver;
@@ -55,4 +56,5 @@ queries! {
     fn current_pkg_id(): PackageId;
     fn pkg_id(s: StablePackageId): PackageId;
     fn set_current_pkg_id(id: PackageId);
+    fn ir(): &'ctx Ir;
 }
