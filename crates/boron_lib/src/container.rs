@@ -1,5 +1,6 @@
 use crate::builder::build_blib_metadata;
-use anyhow::{Context as _, Result, ensure};
+use anyhow::{ensure, Context as _, Result};
+use boron_context::BCtx;
 use boron_session::library::BLibMetadata;
 use boron_session::prelude::Session;
 use itertools::Itertools as _;
@@ -37,7 +38,11 @@ pub struct BLibContainer {
   pub files: Vec<ContainerFileEntry>,
 }
 
-pub fn write_container_file<P: AsRef<Path>>(path: P, sess: &Session) -> Result<()> {
+pub fn write_container_file<'ctx, P: AsRef<Path>>(
+  path: P,
+  sess: &'ctx Session,
+  ctx: &'ctx BCtx<'ctx>,
+) -> Result<()> {
   let mut offset = 0;
   let mut entries = vec![];
 
@@ -50,10 +55,12 @@ pub fn write_container_file<P: AsRef<Path>>(path: P, sess: &Session) -> Result<(
     offset += data.len() as u64;
   }
 
+  let blib_metadata = build_blib_metadata(sess, ctx)?;
+
   let preliminary_header = ContainerHeader {
     magic: MAGIC,
     version: VERSION,
-    blib_metadata: build_blib_metadata(sess)?,
+    blib_metadata: blib_metadata.clone(),
     files: entries.iter().map(|(entry, _)| entry.clone()).collect_vec(),
   };
   let header_size = to_allocvec(&preliminary_header)?.len() as u64;
@@ -65,7 +72,7 @@ pub fn write_container_file<P: AsRef<Path>>(path: P, sess: &Session) -> Result<(
   let final_header = ContainerHeader {
     magic: MAGIC,
     version: VERSION,
-    blib_metadata: build_blib_metadata(sess)?,
+    blib_metadata,
     files: entries.iter().map(|(entry, _)| entry.clone()).collect_vec(),
   };
   let mut out = to_allocvec(&final_header)?;

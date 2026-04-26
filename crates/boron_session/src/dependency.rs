@@ -6,7 +6,7 @@ pub use boron_types::DepId;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Dependency {
   pub id: DepId,
   pub name: String,

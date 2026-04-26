@@ -1,25 +1,13 @@
+use crate::lowerer::lower_thir_to_blib;
 use anyhow::Result;
+use boron_context::BCtx;
 use boron_session::library::BLibMetadata;
-use boron_session::prelude::{ProjectConfig, Session};
-use boron_target::target::Target;
-use postcard::{from_bytes, to_allocvec};
-use serde::{Deserialize, Serialize};
+use boron_session::prelude::Session;
 
-#[derive(Serialize)]
-pub struct BLibMetadataRef<'a> {
-  config: &'a ProjectConfig,
-  target: &'a Target,
-}
-
-#[derive(Deserialize)]
-struct BLibMetadataCore {
-  config: ProjectConfig,
-  target: Target,
-}
-
-pub fn build_blib_metadata(sess: &Session) -> Result<BLibMetadata> {
-  let metadata_ref = BLibMetadataRef { config: sess.config(), target: sess.target() };
-  let bytes = to_allocvec(&metadata_ref)?;
-  let core: BLibMetadataCore = from_bytes(&bytes)?;
-  Ok(BLibMetadata::from_core(core.config, core.target))
+pub fn build_blib_metadata<'a>(
+  sess: &'a Session,
+  ctx: &'a BCtx<'a>,
+) -> Result<BLibMetadata> {
+  let items = lower_thir_to_blib(sess, ctx);
+  Ok(BLibMetadata { config: sess.config.clone(), items })
 }

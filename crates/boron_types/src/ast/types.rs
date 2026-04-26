@@ -1,6 +1,7 @@
 use crate::ast::{Expr, NodeId, Path};
 use boron_source::prelude::Span;
 use boron_target::primitive::PrimitiveKind;
+use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Clone)]
@@ -37,7 +38,7 @@ pub struct PrimitiveType {
   pub span: Span,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Mutability {
   Mut,
   Const,

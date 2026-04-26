@@ -227,6 +227,7 @@ name = "boron_compiler"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "boron_context",
  "boron_lib",
  "boron_session",
  "boron_target",
@@ -341,8 +342,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "ar",
+ "boron_context",
  "boron_session",
+ "boron_source",
  "boron_target",
+ "boron_types",
  "fs-err",
  "itertools",
  "postcard",

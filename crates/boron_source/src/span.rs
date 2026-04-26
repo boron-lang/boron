@@ -1,8 +1,9 @@
 use crate::source_file::SourceFileId;
 use std::fmt::{Debug, Formatter};
 use std::ops::Range;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Span {
   pub start: usize,
   pub end: usize,

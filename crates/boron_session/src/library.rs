@@ -1,174 +1,272 @@
-use crate::prelude::{LibType, ProjectConfig};
-use boron_target::target::Target;
+use crate::prelude::ProjectConfig;
+use boron_source::ident_table::Identifier;
+use boron_source::StableDefId;
+use boron_target::primitive::PrimitiveKind;
+use boron_types::ast::Mutability;
+use boron_types::ast::{BinaryOp, UnaryOp};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BLibMetadata {
   pub config: ProjectConfig,
-  pub target: Target,
-  #[serde(default = "default_metadata_version")]
-  pub metadata_version: u16,
-  #[serde(default)]
-  pub package: BLibPackageIdentity,
-  #[serde(default)]
-  pub abi_fingerprint: String,
-  #[serde(default)]
-  pub modules: Vec<BLibModule>,
-  #[serde(default)]
-  pub exports: Vec<BLibExport>,
-  #[serde(default)]
-  pub types: Vec<BLibType>,
-  #[serde(default)]
-  pub signatures: Vec<BLibSignature>,
-  #[serde(default)]
-  pub link: BLibLinkInfo,
-  #[serde(default)]
-  pub dependencies: Vec<BLibDependencyRef>,
+  pub items: Vec<BlibItem>,
 }
 
-fn default_metadata_version() -> u16 {
-  1
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum BlibItem {
+  Function(BlibFunction),
+  Struct(BlibStruct),
+  Enum(BlibEnum),
 }
 
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Eq)]
-pub struct BLibPackageIdentity {
-  pub name: String,
-  pub version: Option<String>,
-  pub source_hash: Option<String>,
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct BlibFunction {
+  pub id: StableDefId,
+  pub name: Identifier,
+  pub generics: BlibGenerics,
+  pub params: Vec<BlibParam>,
+  pub return_type: BlibTy,
+  /// Generic functions need to have a body to be instantiated in downstream projects.
+  pub body: Option<BlibBody>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Eq)]
-pub struct BLibModule {
-  pub id: u32,
-  pub path: Vec<String>,
-  pub file_hint: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
-pub enum BLibNamespace {
-  #[default]
-  Value,
-  Type,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
-pub enum BLibExportKind {
-  Function,
-  Struct,
-  Enum,
-  Const,
-  Static,
-  Module,
-  Trait,
-  TypeAlias,
-  #[default]
-  Unknown,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
-pub enum BLibVisibility {
-  #[default]
-  Public,
-  Private,
-}
-
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Eq)]
-pub struct BLibExport {
-  pub name: String,
-  pub namespace: BLibNamespace,
-  pub kind: BLibExportKind,
-  pub module_id: u32,
-  pub visibility: BLibVisibility,
-  pub type_id: Option<u32>,
-  pub signature_id: Option<u32>,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
-pub enum BLibTypeKind {
-  Primitive,
-  Named,
-  Pointer,
-  Reference,
-  Slice,
-  Array,
-  Tuple,
-  Function,
-  GenericParam,
-  #[default]
-  Unknown,
-}
-
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Eq)]
-pub struct BLibType {
-  pub id: u32,
-  pub kind: BLibTypeKind,
-  pub name: Option<String>,
-  pub args: Vec<u32>,
-  pub is_mutable: bool,
-  pub array_len: Option<u64>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Default)]
-pub struct BLibSignature {
-  pub id: u32,
-  pub params: Vec<BLibParam>,
-  pub return_type: Option<u32>,
-  pub generics: Vec<String>,
-  pub where_clauses: Vec<String>,
-  pub calling_convention: Option<String>,
-  pub flags: BLibSignatureFlags,
-  pub abi_hash: Option<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Eq)]
-pub struct BLibParam {
-  pub name: Option<String>,
-  pub type_id: u32,
-}
-
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Eq)]
-pub struct BLibSignatureFlags {
-  pub is_extern: bool,
-  pub is_variadic: bool,
-  pub is_const: bool,
-}
-
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Eq)]
-pub struct BLibLinkInfo {
-  pub library_kind: LibType,
-  pub artifact_name: String,
-  pub search_paths: Vec<String>,
-  pub libraries: Vec<String>,
-  pub linker_flags: Vec<String>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Eq)]
-pub struct BLibDependencyRef {
-  pub name: String,
-  pub version_req: Option<String>,
-  pub abi_fingerprint: Option<String>,
-  #[serde(default = "default_required_dependency")]
-  pub required: bool,
-}
-
-fn default_required_dependency() -> bool {
-  true
-}
-
-impl BLibMetadata {
-  pub fn from_core(config: ProjectConfig, target: Target) -> Self {
-    Self {
-      config,
-      target,
-      metadata_version: default_metadata_version(),
-      package: BLibPackageIdentity::default(),
-      abi_fingerprint: String::new(),
-      modules: Vec::new(),
-      exports: Vec::new(),
-      types: Vec::new(),
-      signatures: Vec::new(),
-      link: BLibLinkInfo::default(),
-      dependencies: Vec::new(),
+impl BlibFunction {
+  pub fn set_body_if_generic(&mut self, body: BlibBody) {
+    if !self.generics.params.is_empty() {
+      self.body = Some(body);
     }
   }
+
+  pub fn is_generic(&self) -> bool {
+    !self.generics.params.is_empty()
+  }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct BlibParam {
+  pub name: Identifier,
+  pub id: StableDefId,
+  pub ty: BlibTy,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct BlibStruct {
+  pub id: StableDefId,
+  pub name: Identifier,
+  pub generics: BlibGenerics,
+  pub fields: Vec<BlibField>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct BlibField {
+  pub name: Identifier,
+  pub ty: BlibTy,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct BlibEnum {
+  pub id: StableDefId,
+  pub name: Identifier,
+  pub generics: BlibGenerics,
+  pub variants: Vec<BlibVariant>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct BlibVariant {
+  pub id: StableDefId,
+  pub name: Identifier,
+  pub kind: BlibVariantKind,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum BlibVariantKind {
+  Unit,
+  Tuple(Vec<BlibTy>),
+  Struct(Vec<BlibEnumField>),
+  Discriminant(),
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct BlibEnumField {
+  pub name: Identifier,
+  pub ty: BlibTy,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum BlibTy {
+  Primitive(PrimitiveKind),
+  Adt { id: StableDefId, args: Vec<Self> },
+  Ptr { mutability: Mutability, ty: Box<Self> },
+  Optional(Box<Self>),
+  Array { ty: Box<Self>, len: usize },
+  Slice(Box<Self>),
+  Tuple(Vec<Self>),
+  Fn { params: Vec<Self>, ret: Box<Self> },
+  Unit,
+  Never,
+  Param(BlibTyParam),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BlibGenerics {
+  pub params: Vec<BlibGenericParam>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BlibGenericParam {
+  pub id: StableDefId,
+  pub name: Identifier,
+  pub kind: BlibGenericParamKind,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum BlibGenericParamKind {
+  Type { bounds: Vec<BlibTypeBound> },
+  Const { ty: BlibTy },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BlibTypeBound {
+  pub id: StableDefId,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BlibTyParam {
+  pub name: Identifier,
+  pub index: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BlibBody {
+  pub block: BlibBlock,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BlibBlock {
+  pub stmts: Vec<BlibStmt>,
+  pub expr: Option<Box<BlibExpr>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum BlibStmt {
+  Local(BlibLocal),
+  Expr(BlibExpr),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BlibLocal {
+  pub id: StableDefId,
+  pub name: Identifier,
+  pub ty: BlibTy,
+  pub init: Option<BlibExpr>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BlibExpr {
+  pub ty: BlibTy,
+  pub kind: BlibExprKind,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum BlibExprKind {
+  Literal(BlibLiteral),
+
+  LocalRef(StableDefId),
+  Path(StableDefId),
+
+  Binary {
+    op: BinaryOp,
+    lhs: Box<BlibExpr>,
+    rhs: Box<BlibExpr>,
+  },
+
+  Unary {
+    op: UnaryOp,
+    operand: Box<BlibExpr>,
+  },
+
+  Assign {
+    target: Box<BlibExpr>,
+    value: Box<BlibExpr>,
+  },
+
+  Cast {
+    expr: Box<BlibExpr>,
+    ty: BlibTy,
+  },
+
+  Call {
+    callee: StableDefId,
+    callee_name: Identifier,
+    type_args: Vec<BlibTy>,
+    args: Vec<BlibExpr>,
+  },
+
+  Field {
+    object: Box<BlibExpr>,
+    field: Identifier,
+  },
+
+  Index {
+    object: Box<BlibExpr>,
+    index: Box<BlibExpr>,
+  },
+
+  Struct {
+    id: StableDefId,
+    type_args: Vec<BlibTy>,
+    fields: Vec<BlibFieldInit>,
+  },
+
+  Tuple(Vec<BlibExpr>),
+  Array(Vec<BlibExpr>),
+
+  Block(BlibBlock),
+
+  If {
+    condition: Box<BlibExpr>,
+    then_block: BlibBlock,
+    else_branch: Option<Box<BlibExpr>>,
+  },
+
+  Match {
+    scrutinee: Box<BlibExpr>,
+    arms: Vec<BlibMatchArm>,
+  },
+
+  Loop {
+    body: BlibBlock,
+  },
+
+  Break {
+    value: Option<Box<BlibExpr>>,
+  },
+  Continue,
+  Return {
+    value: Option<Box<BlibExpr>>,
+  },
+
+  Err,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum BlibLiteral {
+  Int(String),
+  Float(String),
+  Bool(bool),
+  Char(char),
+  String(String),
+  Unit,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BlibFieldInit {
+  pub name: Identifier,
+  pub ty: BlibTy,
+  pub value: BlibExpr,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BlibMatchArm {
+  pub body: BlibExpr,
 }

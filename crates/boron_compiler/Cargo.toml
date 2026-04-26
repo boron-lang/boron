@@ -16,6 +16,7 @@ which = { workspace = true }
 yansi = { workspace = true }
 fs-err = { workspace = true }
 boron_lib = { workspace = true }
+boron_context = { workspace = true }
 
 [lints]
 workspace = true

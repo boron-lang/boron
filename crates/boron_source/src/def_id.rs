@@ -1,4 +1,5 @@
 use crate::new_id;
+use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::hash::{DefaultHasher, Hash, Hasher};
 use tracing::debug;
@@ -24,7 +25,8 @@ impl Display for DefId {
 new_id!(DefIndex);
 new_id!(PackageId);
 
-#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
+/// Stable PackageId that is hashed from package_name, version and the package's type.
+#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub struct StablePackageId(pub u64);
 
 impl StablePackageId {
@@ -37,5 +39,21 @@ impl StablePackageId {
     let id = hasher.finish();
     debug!(id, package_name, version, is_exe, "StablePackageId created");
     Self(id)
+  }
+}
+
+/// Stable definition id that consists of StablePackageId and path to the definition (foo::Bar)
+#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, Serialize, Deserialize)]
+pub struct StableDefId(pub u64, pub u64);
+
+impl StableDefId {
+  pub fn new(stable_package_id: StablePackageId, path: Vec<String>) -> Self {
+    let mut hasher = DefaultHasher::new();
+    path.hash(&mut hasher);
+
+    let id = hasher.finish();
+    debug!(id, ?path, "StableDefId created");
+
+    Self(stable_package_id.0, id)
   }
 }

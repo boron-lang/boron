@@ -291,7 +291,6 @@ impl LoweringContext<'_> {
     TypeBound {
       hir_id: self.next_hir_id(),
       def_id: def_id.unwrap(),
-      path: self.lower_path(&b.path),
       span: b.span,
     }
   }

@@ -12,15 +12,17 @@ use boron_source::span::Span;
 use boron_types::ast::{BinaryOp, InterpreterMode, UnaryOp};
 use boron_types::hir::{
   AdtEntry, Argument, Block as HirBlock, ElseBranch, Enum as HirEnum, Expr as HirExpr,
-  ExprKind as HirExprKind, FieldInit as HirFieldInit, Function as HirFunction, HirId,
+  ExprKind as HirExprKind, FieldInit as HirFieldInit, Function as HirFunction,
+  GenericParam as HirGenericParam, GenericParamKind as HirGenericParamKind, HirId,
   IfExpr, Literal, Local as HirLocal, MatchArm as HirMatchArm, PathExpr as HirPathExpr,
   Stmt as HirStmt, StmtKind as HirStmtKind, Struct as HirStruct,
+  TypeBound as HirTypeBound,
 };
 use boron_types::infer_ty::SubstitutionMap;
 use boron_types::literal_table::FullLiteral;
 use boron_types::thir::{
-  Block, Enum, Expr, ExprKind, Field, FieldInit, Function, Local, MatchArm, Param, Stmt,
-  StmtKind, Struct,
+  Block, Enum, Expr, ExprKind, Field, FieldInit, Function, GenericParam,
+  GenericParamKind, Generics, Local, MatchArm, Param, Stmt, StmtKind, Struct, TypeBound,
 };
 
 #[derive(Debug)]
@@ -73,11 +75,9 @@ impl<'ctx, 'a> ThirLowerer<'ctx, 'a> {
 
   pub fn lower_enum(&mut self, enum_: &HirEnum) -> Enum {
     Enum {
-      hir_id: enum_.hir_id,
       def_id: enum_.def_id,
       name: enum_.name,
-      generics: enum_.generics.clone(),
-      span: enum_.span,
+      generics: self.lower_generics(&enum_.generics),
       items: enum_.items.clone(),
       variants: vec![],
     }
@@ -89,13 +89,7 @@ impl<'ctx, 'a> ThirLowerer<'ctx, 'a> {
     for param in &func.params {
       let ty = self.ctx.node_type(param.hir_id).unwrap_or(InferTy::Err(param.span));
 
-      params.push(Param {
-        name: param.kind.name(),
-        hir_id: param.hir_id,
-        def_id: param.def_id,
-        ty,
-        span: param.span,
-      });
+      params.push(Param { name: param.kind.name(), def_id: param.def_id, ty });
     }
 
     let body = func.body.as_ref().map(|b| self.lower_block(b));
@@ -107,14 +101,12 @@ impl<'ctx, 'a> ThirLowerer<'ctx, 'a> {
     };
 
     Function {
-      hir_id: func.hir_id,
       def_id: func.def_id,
       name: func.name,
-      generics: func.generics.clone(),
+      generics: self.lower_generics(&func.generics),
       params,
       return_type,
       body,
-      span: func.span,
     }
   }
 
@@ -126,19 +118,44 @@ impl<'ctx, 'a> ThirLowerer<'ctx, 'a> {
         let ty =
           self.ctx.field_type(strukt.def_id, f.name).unwrap_or(InferTy::Err(f.span));
 
-        Field { hir_id: f.hir_id, name: f.name, ty, span: f.span }
+        Field { name: f.name, ty }
       })
       .collect();
 
     Struct {
-      hir_id: strukt.hir_id,
       def_id: strukt.def_id,
       name: strukt.name,
-      generics: strukt.generics.clone(),
+      generics: self.lower_generics(&strukt.generics),
       fields,
       items: strukt.items.clone(),
-      span: strukt.span,
     }
+  }
+
+  fn lower_generics(&self, generics: &boron_types::hir::Generics) -> Generics {
+    Generics {
+      params: generics
+        .params
+        .iter()
+        .map(|param| self.lower_generic_param(param))
+        .collect(),
+    }
+  }
+
+  fn lower_generic_param(&self, param: &HirGenericParam) -> GenericParam {
+    let kind = match &param.kind {
+      HirGenericParamKind::Type { bounds } => GenericParamKind::Type {
+        bounds: bounds.iter().map(Self::lower_type_bound).collect(),
+      },
+      HirGenericParamKind::Const { ty } => GenericParamKind::Const {
+        ty: self.ctx.node_type(ty.hir_id).unwrap_or(InferTy::Err(ty.span)),
+      },
+    };
+
+    GenericParam { def_id: param.def_id, name: param.name, kind }
+  }
+
+  fn lower_type_bound(bound: &HirTypeBound) -> TypeBound {
+    TypeBound { def_id: bound.def_id }
   }
 
   pub fn lower_block(&mut self, block: &HirBlock) -> Block {
@@ -558,11 +575,9 @@ impl<'ctx, 'a> ThirLowerer<'ctx, 'a> {
 
   fn lower_hir_match_arm(&mut self, arm: &HirMatchArm) -> MatchArm {
     MatchArm {
-      hir_id: arm.hir_id,
       pat: arm.pat.clone(),
       guard: arm.guard.as_ref().map(|g| self.lower_expr(g)),
       body: self.lower_expr(&arm.body),
-      span: arm.span,
     }
   }
 

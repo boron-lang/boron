@@ -1,7 +1,7 @@
 use crate::queries::queries::Queries;
 use crate::BCtx;
 use boron_source::ident_table::Identifier;
-use boron_source::{PackageId, StablePackageId};
+use boron_source::{PackageId, StableDefId, StablePackageId};
 use boron_types::ast::module::Modules;
 use boron_types::ast::NodeId;
 use boron_types::comptime::FinalComptimeArg;
@@ -59,12 +59,33 @@ impl<'ctx> QueryProvider<'ctx> for BCtx<'ctx> {
     queries.hir_to_node = Some(Self::q_hir_to_node);
     queries.current_pkg_id = Some(Self::q_current_pkg_id);
     queries.pkg_id = Some(Self::q_pkg_id);
+    queries.stable_def_id = Some(Self::q_stable_def_id);
+    queries.is_local = Some(Self::q_is_local);
     queries.set_current_pkg_id = Some(Self::q_set_current_pkg_id);
     queries.ir = Some(Self::q_ir);
   }
 }
 
 impl<'ctx> BCtx<'ctx> {
+  fn q_is_local(ctx: &'ctx Self, (id,): (DefId,)) -> bool {
+    id.package_index == ctx.current_pkg_id()
+  }
+
+  fn q_stable_def_id(ctx: &'ctx Self, (id,): (DefId,)) -> StableDefId {
+    let stable_pkg_id = ctx
+      .id_interner
+      .stable_package_id(id.package_index)
+      .expect("package id was not interned before stable_def_id query");
+
+    let path = if let Some(def) = ctx.get_definition(id) {
+      vec![def.kind.to_string(), def.name.text()]
+    } else {
+      vec![id.to_string()]
+    };
+
+    StableDefId::new(stable_pkg_id, path)
+  }
+
   fn q_pkg_id(ctx: &'ctx Self, (id,): (StablePackageId,)) -> PackageId {
     ctx.id_interner.intern_package_id(id)
   }

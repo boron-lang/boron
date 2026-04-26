@@ -4,6 +4,7 @@ use crate::{
   detect::resolve_from_kind,
 };
 use anyhow::{bail, ensure, Context as _, Result};
+use boron_context::BCtx;
 use boron_lib::container::write_container_file;
 use boron_session::prelude::{LibType, PackageType, Session};
 use fs_err::create_dir_all;
@@ -19,6 +20,7 @@ use yansi::Paint as _;
 
 pub struct CompilerBuild<'a> {
   sess: &'a Session,
+  ctx: &'a BCtx<'a>,
   compiler: Compiler,
   input_files: HashSet<Arc<OsStr>>,
   linker_flags: Vec<Arc<OsStr>>,
@@ -27,7 +29,7 @@ pub struct CompilerBuild<'a> {
 }
 
 impl<'a> CompilerBuild<'a> {
-  pub fn new(sess: &'a Session) -> Result<Self> {
+  pub fn new(sess: &'a Session, ctx: &'a BCtx<'a>) -> Result<Self> {
     let _ = sess.create_output_dir();
 
     let kind =
@@ -37,6 +39,7 @@ impl<'a> CompilerBuild<'a> {
 
     Ok(Self {
       sess,
+      ctx,
       compiler,
       input_files: HashSet::new(),
       linker_flags: Vec::new(),
@@ -173,7 +176,7 @@ impl<'a> CompilerBuild<'a> {
     _object_files: &[Arc<OsStr>],
   ) -> Result<PathBuf> {
     let output_path = self.get_output_path(output_name)?.with_extension("blib");
-    write_container_file(&output_path, self.sess)?;
+    write_container_file(&output_path, self.sess, self.ctx)?;
 
     Ok(output_path.clone())
   }

@@ -1,7 +1,7 @@
 use crate::BCtx;
 use boron_queries_macro::queries;
 use boron_source::ident_table::Identifier;
-use boron_source::{DefId, PackageId, StablePackageId};
+use boron_source::{DefId, PackageId, StableDefId, StablePackageId};
 use boron_types::ast::module::Modules;
 use boron_types::ast::NodeId;
 use boron_types::comptime::FinalComptimeArg;
@@ -55,6 +55,8 @@ queries! {
     fn hir_to_node(hir_id: HirId): Option<NodeId>;
     fn current_pkg_id(): PackageId;
     fn pkg_id(s: StablePackageId): PackageId;
+    fn stable_def_id(id: DefId): StableDefId;
+    fn is_local(id: DefId): bool;
     fn set_current_pkg_id(id: PackageId);
     fn ir(): &'ctx Ir;
 }

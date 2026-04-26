@@ -10,10 +10,10 @@ use boron_compiler::CompilerBuild;
 use boron_context::BCtx;
 use boron_hir::lower::lower_to_hir;
 use boron_ir::IrLowerer;
-use boron_parser::{Lexer, parser::parse};
+use boron_parser::{parser::parse, Lexer};
 use boron_resolver::{DefId, ResolveVisitor};
-use boron_source::StablePackageId;
 use boron_source::source_file::SourceFileId;
+use boron_source::StablePackageId;
 use boron_thir::ThirLowerer;
 use boron_types::ast::module::Module;
 use boron_types::hir::TyKind;
@@ -139,7 +139,7 @@ impl<'ctx> CompilationUnit<'ctx> {
   }
 
   fn link(&self) -> Result<PathBuf> {
-    let mut build = CompilerBuild::new(self.sess)?;
+    let mut build = CompilerBuild::new(self.sess, self.ctx)?;
     build.add_source(self.sess.obj_file());
 
     build.compile(self.sess.config.name.clone())

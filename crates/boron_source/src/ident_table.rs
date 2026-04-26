@@ -3,6 +3,7 @@ use lasso::{Spur, ThreadedRodeo};
 use parking_lot::Mutex;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 pub struct IdentTable {
   interner: ThreadedRodeo,
@@ -101,4 +102,49 @@ pub fn resolve(sym: &Identifier) -> String {
 #[inline]
 pub fn default_ident() -> Identifier {
   get_or_intern("__default_identifier__", None)
+}
+
+impl Serialize for Identifier {
+  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+  where
+    S: Serializer,
+  {
+    use serde::ser::SerializeTupleStruct;
+    let mut s = serializer.serialize_tuple_struct("Identifier", 2)?;
+    s.serialize_field(&resolve(self))?;
+    s.serialize_field(&self.1)?;
+    s.end()
+  }
+}
+
+impl<'de> Deserialize<'de> for Identifier {
+  fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+  where
+    D: Deserializer<'de>,
+  {
+    struct IdentifierVisitor;
+
+    impl<'de> serde::de::Visitor<'de> for IdentifierVisitor {
+      type Value = Identifier;
+
+      fn expecting(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "a tuple struct Identifier with a string and a Span")
+      }
+
+      fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+      where
+        A: serde::de::SeqAccess<'de>,
+      {
+        let text: String = seq
+          .next_element()?
+          .ok_or_else(|| serde::de::Error::invalid_length(0, &self))?;
+        let span: Span = seq
+          .next_element()?
+          .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?;
+        Ok(get_or_intern(&text, Some(span)))
+      }
+    }
+
+    deserializer.deserialize_tuple_struct("Identifier", 2, IdentifierVisitor)
+  }
 }

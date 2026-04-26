@@ -1,10 +1,10 @@
 use crate::dependency::Dependency;
 use crate::module_graph::ModuleGraph;
 use crate::package_graph::{PackageCycleError, PackageGraph};
-use crate::prelude::{PackageType, create_dir_all};
+use crate::prelude::{create_dir_all, PackageType};
 use crate::project_config::ProjectConfig;
 use boron_diagnostics::{DiagnosticCtx, DiagnosticWriter};
-use boron_source::ident_table::{Identifier, get_or_intern};
+use boron_source::ident_table::{get_or_intern, Identifier};
 use boron_source::prelude::Sources;
 use boron_target::target::{Compiler, Target};
 use parking_lot::RwLock;
@@ -19,7 +19,7 @@ pub struct Session {
   pub config: ProjectConfig,
   dcx: DiagnosticCtx,
   module_graph: ModuleGraph,
-  target: Target,
+  pub target: Target,
   compilation_mode: CompilationMode,
   sources: Arc<Sources>,
   timings: RwLock<Vec<(String, Duration)>>,

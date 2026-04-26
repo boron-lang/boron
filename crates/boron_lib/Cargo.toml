@@ -14,6 +14,9 @@ boron_session = { workspace = true }
 fs-err = { workspace = true }
 itertools = { workspace = true }
 anyhow = { workspace = true }
+boron_source = { workspace = true }
+boron_types = { workspace = true }
+boron_context = { workspace = true }
 
 [lints]
 workspace = true

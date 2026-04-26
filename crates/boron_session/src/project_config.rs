@@ -5,7 +5,7 @@ use boron_target::target::Compiler;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ProjectConfig {
   pub entrypoint: PathBuf,
   pub package_type: PackageType,

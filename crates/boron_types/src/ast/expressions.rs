@@ -3,6 +3,7 @@ use crate::tokens::IntBase;
 use boron_source::ident_table::Identifier;
 use boron_source::prelude::Span;
 use boron_target::primitive::PrimitiveKind;
+use serde::{Deserialize, Serialize};
 use strum::Display;
 
 #[derive(Debug, Clone)]
@@ -184,7 +185,7 @@ pub struct Argument {
   pub span: Span,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Display)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Display, Serialize, Deserialize)]
 pub enum BinaryOp {
   // Arithmetic
   #[strum(serialize = "+")]
@@ -268,7 +269,7 @@ impl AssignOp {
   }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Display)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Display, Serialize, Deserialize)]
 pub enum UnaryOp {
   #[strum(serialize = "!")]
   Not,

@@ -41,6 +41,6 @@ pub enum GenericParamKind {
 pub struct TypeBound {
   pub hir_id: HirId,
   pub def_id: DefId,
-  pub path: Vec<PathSegment>,
   pub span: Span,
 }
+
